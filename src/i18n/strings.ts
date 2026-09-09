@@ -95,6 +95,9 @@ type TranslationKey =
   | 'about.privacyPolicy'
   | 'about.open'
   | 'about.addLinksHint'
+  | 'about.rateApp'
+  | 'about.rateAppHint'
+  | 'about.rateButton'
   | 'bible.searchPlaceholder'
   | 'bible.oldTestament'
   | 'bible.newTestament'
@@ -207,7 +210,7 @@ const translations: Translations = {
     'about.developerRole': 'Mpamorona rindranasa',
     'about.developerLine3': "Aza misalasala mifandray amiko raha misy fanehoan-kevitra, bugs, na soso-kevitra.",
     'about.supportLine1': "Ity Application ity dia karakaraina sy hatsaraina amin'ny fotoanako malalaka.",
-    'about.supportLine2': "Raha te hanampy amin'ny fikojakojana sy fanavaozana ianao dia afaka mandray anjara amin'ny.",
+    'about.supportLine2': "Tena ilaina ny fanampianao ahafahana mitazona ny application ho azon'ny rehetra, ary ny fanampiana ara-bola ataonao dia andoavana ny droits App Store sy ireo hetra sy haba mety hiseho isaky ny firenena ampiasana ny application. Mandraisa anjara amin'ny.",
     'about.infoLinePlatforms': 'Misy amin\'ny Android sy iOS.',
     'about.bestPracticeLine1': "Ataovy 'Mise à jour matetika ny Application mba hahazoana fanitsiana sy fanamboarana.",
     'about.bestPracticeLine2': "Lazao ny lesoka na tsy fitoviana amin'ny alalan'ny bokotra Tatero.",
@@ -220,6 +223,10 @@ const translations: Translations = {
     'about.privacyPolicy': 'Privacy Policy',
     'about.open': 'Sokafy',
     'about.addLinksHint': "Ampidiro ny rohy (email/tranonkala/privacy policy) ato amin'ity pejy ity.",
+    // PLACEHOLDER MG copy — needs the app's own wording, not mine.
+    'about.rateApp': 'Omeo naoty ny application',
+    'about.rateAppHint': 'Manampy be ny naoty omenao',
+    'about.rateButton': 'Hanome naoty',
     'bible.searchPlaceholder': 'Tadiavo boky iray...',
     'bible.oldTestament': 'Testamenta taloha',
     'bible.newTestament': 'Testamenta vaovao',

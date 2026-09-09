@@ -1,7 +1,8 @@
-import React, {useMemo} from 'react';
-import {Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
+import React, {useCallback, useMemo} from 'react';
+import {Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {maybeRequestReview} from '../utils/appReview';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {t} from '../i18n/strings';
 import {PRIVACY_POLICY_URL} from '../constants/legal';
@@ -24,6 +25,11 @@ const AboutScreen = () => {
   const linkedInUrl = 'https://www.linkedin.com/in/arotiana/';
   const websiteUrl = '';
   const supportUrl = '';
+
+  // Store listing for the rating link. Fill in the App Store id once the iOS
+  // build is published — an empty id hides the row on iOS, same as websiteUrl.
+  const androidPackageName = 'com.ebaiboly.app';
+  const iosAppStoreId = '';
 
   const sections = useMemo(
     () => [
@@ -62,6 +68,18 @@ const AboutScreen = () => {
     [appVersion, developerName, developerRole, theme.isDark]
   );
 
+  // Reaching About is a deliberate visit, which makes it the least intrusive
+  // place to ask for a rating. Delayed so the screen is actually on-screen
+  // before the store dialog covers it, and cancelled if the user leaves first.
+  useFocusEffect(
+    useCallback(() => {
+      const timer = setTimeout(() => {
+        maybeRequestReview();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }, []),
+  );
+
   const canOpenUrl = (url: string) => typeof url === 'string' && url.trim().length > 0;
 
   const openUrlSafe = async (url: string) => {
@@ -89,6 +107,27 @@ const AboutScreen = () => {
     await openUrlSafe(`tel:${phone}`);
   };
 
+  // market:// and itms-apps:// open the store app straight on the listing.
+  // Android falls back to the web listing when the Play Store app is missing
+  // (emulators, degoogled devices), where openURL rejects.
+  const openStoreListing = async () => {
+    if (Platform.OS === 'ios') {
+      await openUrlSafe(
+        `itms-apps://apps.apple.com/app/id${iosAppStoreId}?action=write-review`
+      );
+      return;
+    }
+    try {
+      await Linking.openURL(`market://details?id=${androidPackageName}`);
+    } catch {
+      await openUrlSafe(
+        `https://play.google.com/store/apps/details?id=${androidPackageName}`
+      );
+    }
+  };
+
+  const canRate = Platform.OS === 'android' || iosAppStoreId.trim().length > 0;
+
   return (
     <SafeAreaView style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}>
       <ScrollView
@@ -98,6 +137,31 @@ const AboutScreen = () => {
         <Text style={[styles.title, {color: theme.colors.textPrimary}]}>
           {t('menu.about')}
         </Text>
+
+        {canRate ? (
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderColor: theme.colors.divider,
+              },
+            ]}
+          >
+            <Text style={[styles.cardTitle, {color: theme.colors.navBackground}]}>
+              {t('about.rateApp')}
+            </Text>
+            <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}>
+              {t('about.rateAppHint')}
+            </Text>
+            <Pressable
+              style={[styles.primaryButton, {backgroundColor: theme.colors.accentBlue}]}
+              onPress={openStoreListing}
+            >
+              <Text style={styles.primaryButtonText}>{t('about.rateButton')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {sections.map(section => (
           <View
