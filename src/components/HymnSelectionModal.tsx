@@ -1,26 +1,21 @@
 // src/components/HymnSelectionModal.tsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   Alert,
   useWindowDimensions,
 } from 'react-native';
 import { Hymn } from '../hooks/useHymnsData';
-import { useHymnSearch, HymnSearchResult } from '../hooks/useHymnSearch';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAdaptiveInsets } from '../hooks/useAdaptiveInsets';
 import { useResponsive } from '../theme/responsive';
 import { useTutorial, useTutorialTarget } from '../contexts/TutorialContext';
 import TutorialOverlay from './TutorialOverlay';
-import { t } from '../i18n/strings';
 
 interface HymnSelectionModalProps {
   visible: boolean;
@@ -40,11 +35,6 @@ const CATEGORIES = [
   { key: 'ff', label: 'F. Fanampiny' },
   { key: 'antema', label: 'Antema' },
 ];
-
-// Search results span every category, so each row needs its own label
-// instead of relying on the (single) selected tab.
-const categoryLabel = (categoryRaw: string): string =>
-  CATEGORIES.find(c => c.key === (categoryRaw || '').trim().toLowerCase())?.label ?? categoryRaw;
 
 // Lighten a hex color by mixing it with white
 const lightenColor = (hex: string, percent: number): string => {
@@ -85,34 +75,12 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   const { verticalScale, fontFor, isSmall } = useResponsive();
   const tabsTopInset = insets.top;
   const tabRowHeight = Math.max(TAB_ROW_BASE_HEIGHT - (isSmall ? 8 : 0), verticalScale(TAB_ROW_BASE_HEIGHT));
-  const searchBarHeight = Math.max(52, verticalScale(56));
   const inputFieldHeight = Math.max(44, verticalScale(56));
   const tabFontSize = fontFor(isSmall ? 15 : 18);
   const inputFontSize = fontFor(isSmall ? 20 : 22);
   const keypadFontSize = fontFor(22);
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory || 'ffpm');
   const [inputNumber, setInputNumber] = useState<string>('');
-
-  // Search fallback: knowing the hymn's number is the fast path, but not
-  // everyone remembers it. Typing searches ALL categories (not just the
-  // selected tab) via the same robust FTS + fuzzy-typo engine as the main
-  // search screens — a result carries its own category, so the tab filter
-  // would only get in the way here.
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<HymnSearchResult[]>([]);
-  const { searchHymns, isLoading: isSearching } = useHymnSearch();
-
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    const id = setTimeout(async () => {
-      const results = await searchHymns(searchQuery);
-      setSearchResults(results);
-    }, 300);
-    return () => clearTimeout(id);
-  }, [searchQuery, searchHymns]);
 
   const maxNumber = CATEGORY_MAX[selectedCategory] ?? 9999;
   const maxDigits = String(maxNumber).length;
@@ -190,22 +158,12 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 
   const handleClose = useCallback(() => {
     setInputNumber('');
-    setSearchQuery('');
     onClose();
   }, [onClose]);
-
-  const handleResultSelect = useCallback(
-    (hymn: HymnSearchResult) => {
-      onHymnSelect(hymn.id, hymn.category || '', hymn.number);
-      onClose();
-    },
-    [onHymnSelect, onClose],
-  );
 
   React.useEffect(() => {
     if (!visible) {
       setInputNumber('');
-      setSearchQuery('');
     }
   }, [visible]);
 
@@ -320,73 +278,11 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 
           <View
             style={[
-              styles.searchBarRow,
-              { height: searchBarHeight, backgroundColor: theme.colors.backgroundPrimary, borderBottomColor: theme.colors.divider },
-            ]}
-          >
-            <TextInput
-              style={[
-                styles.searchInputField,
-                { color: theme.colors.textPrimary, backgroundColor: theme.colors.backgroundTertiary, fontSize: fontFor(15) },
-              ]}
-              placeholder={t('search.placeholderHymns')}
-              placeholderTextColor={theme.colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
-          <View
-            style={[
               styles.keypadPanel,
-              { top: tabsTopInset + tabRowHeight + searchBarHeight },
-              searchQuery.trim() ? styles.keypadPanelSearching : null,
+              { top: tabsTopInset + tabRowHeight },
             ]}
             pointerEvents="box-none"
           >
-            {searchQuery.trim() ? (
-              isSearching ? (
-                <View style={styles.resultLoading}>
-                  <ActivityIndicator color={theme.colors.accentBlue} />
-                </View>
-              ) : searchResults.length > 0 ? (
-                <FlatList
-                  style={styles.resultsList}
-                  contentContainerStyle={styles.resultsListContent}
-                  data={searchResults}
-                  keyExtractor={item => item.id}
-                  keyboardShouldPersistTaps="handled"
-                  renderItem={({ item }) => (
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.resultRow,
-                        { borderBottomColor: theme.colors.divider },
-                        pressed && { opacity: 0.7 },
-                      ]}
-                      onPress={() => handleResultSelect(item)}
-                    >
-                      <Text style={[styles.resultBadge, { backgroundColor: theme.colors.navBackground }]}>
-                        {item.number}
-                      </Text>
-                      <View style={styles.resultTextBlock}>
-                        <Text style={[styles.resultTitle, { color: theme.colors.textPrimary }]} numberOfLines={1}>
-                          {item.title}
-                        </Text>
-                        <Text style={[styles.resultCategory, { color: theme.colors.textSecondary }]}>
-                          {categoryLabel(item.category)}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  )}
-                />
-              ) : (
-                <Text style={[styles.resultEmpty, { color: theme.colors.textSecondary }]}>
-                  {t('search.noResultsHymns')}
-                </Text>
-              )
-            ) : (
             <Pressable ref={keypadRef} collapsable={false} style={styles.keypadCard} onPress={() => {}}>
               <View style={[styles.inputContainer, { width: keypadWidth }]}>
                 <View style={[
@@ -424,7 +320,6 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 
               {renderKeypad()}
             </Pressable>
-            )}
           </View>
         </View>
       </Pressable>
@@ -473,70 +368,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The keypad card is fixed-size and centered; a search-result list needs to
-  // stretch full-width and start from the top instead.
-  keypadPanelSearching: {
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
-  },
   keypadCard: {
-    alignItems: 'center',
-  },
-  searchBarRow: {
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  searchInputField: {
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  resultsList: {
-    flex: 1,
-  },
-  resultsListContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  resultBadge: {
-    minWidth: 32,
-    textAlign: 'center',
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  resultTextBlock: {
-    flex: 1,
-  },
-  resultTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  resultCategory: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  resultEmpty: {
-    textAlign: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 24,
-    fontSize: 14,
-  },
-  resultLoading: {
-    paddingVertical: 24,
     alignItems: 'center',
   },
   inputContainer: {
