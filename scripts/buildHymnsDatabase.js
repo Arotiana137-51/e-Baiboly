@@ -1,7 +1,9 @@
 // scripts/buildHymnsDatabase.js
 //
-// Builds ONLY the Hymns database (dev .db + prod .zip) and copies it into the
-// android and ios asset folders. Bible artifacts are left untouched.
+// Builds ONLY the Hymns database (dev .db + prod .zip) into assets/data/ and
+// copies it into the ios Resources folder. Android reads assets/data directly
+// (see the sourceSets block in android/app/build.gradle), so there is no
+// android copy. Bible artifacts are left untouched.
 //
 // Run:  yarn build:hymns
 
@@ -238,8 +240,6 @@ async function main() {
 
   ensureDirectory(assetsPaths.dev);
   ensureDirectory(assetsPaths.prod);
-  ensureDirectory(assetsPaths.android.dev);
-  ensureDirectory(assetsPaths.android.prod);
   ensureDirectory(assetsPaths.ios.dev);
   ensureDirectory(assetsPaths.ios.prod);
 
@@ -261,8 +261,6 @@ async function main() {
   for (const p of [
     hymnsDev,
     hymnsProd,
-    databasePaths.hymns.androidDev,
-    databasePaths.hymns.androidProd,
     databasePaths.hymns.iosDev,
     databasePaths.hymns.iosProd,
   ]) {
@@ -271,23 +269,19 @@ async function main() {
 
   await buildHymns(hymnsDev, version);
 
-  console.log('\n📦 Copying dev DB to platform asset folders...');
-  copyFileSafe(hymnsDev, databasePaths.hymns.androidDev);
+  console.log('\n📦 Copying dev DB to the iOS asset folder...');
   copyFileSafe(hymnsDev, databasePaths.hymns.iosDev);
 
   console.log('🗜️  Creating max-compression ZIP for prod...');
   await createZipFromDb(hymnsDev, hymnsProd);
 
-  console.log('📦 Copying prod ZIP to platform asset folders...');
-  copyFileSafe(hymnsProd, databasePaths.hymns.androidProd);
+  console.log('📦 Copying prod ZIP to the iOS asset folder...');
   copyFileSafe(hymnsProd, databasePaths.hymns.iosProd);
 
   console.log('\n📊 Hymns size audit\n');
   reportSize('Hymns.db (root)', hymnsDev);
-  reportSize('Hymns.db (android)', databasePaths.hymns.androidDev);
   reportSize('Hymns.db (ios)', databasePaths.hymns.iosDev);
   reportSize('Hymns.zip (root)', hymnsProd);
-  reportSize('Hymns.zip (android)', databasePaths.hymns.androidProd);
   reportSize('Hymns.zip (ios)', databasePaths.hymns.iosProd);
 
   // Persist the bump ONLY after a fully successful build + copy, so the version

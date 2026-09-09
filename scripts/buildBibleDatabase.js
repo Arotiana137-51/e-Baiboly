@@ -1,7 +1,9 @@
 // scripts/buildBibleDatabase.js
 //
-// Builds ONLY the Bible database (dev .db + prod .zip) and copies it into the
-// android and ios asset folders. Hymns artifacts are left untouched.
+// Builds ONLY the Bible database (dev .db + prod .zip) into assets/data/ and
+// copies it into the ios Resources folder. Android reads assets/data directly
+// (see the sourceSets block in android/app/build.gradle), so there is no
+// android copy. Hymns artifacts are left untouched.
 //
 // Run:  yarn build:bible
 
@@ -296,8 +298,6 @@ async function main() {
 
   ensureDirectory(assetsPaths.dev);
   ensureDirectory(assetsPaths.prod);
-  ensureDirectory(assetsPaths.android.dev);
-  ensureDirectory(assetsPaths.android.prod);
   ensureDirectory(assetsPaths.ios.dev);
   ensureDirectory(assetsPaths.ios.prod);
 
@@ -319,8 +319,6 @@ async function main() {
   for (const p of [
     bibleDev,
     bibleProd,
-    databasePaths.bible.androidDev,
-    databasePaths.bible.androidProd,
     databasePaths.bible.iosDev,
     databasePaths.bible.iosProd,
   ]) {
@@ -329,23 +327,19 @@ async function main() {
 
   await buildBible(bibleDev, version);
 
-  console.log('\n📦 Copying dev DB to platform asset folders...');
-  copyFileSafe(bibleDev, databasePaths.bible.androidDev);
+  console.log('\n📦 Copying dev DB to the iOS asset folder...');
   copyFileSafe(bibleDev, databasePaths.bible.iosDev);
 
   console.log('🗜️  Creating max-compression ZIP for prod...');
   await createZipFromDb(bibleDev, bibleProd);
 
-  console.log('📦 Copying prod ZIP to platform asset folders...');
-  copyFileSafe(bibleProd, databasePaths.bible.androidProd);
+  console.log('📦 Copying prod ZIP to the iOS asset folder...');
   copyFileSafe(bibleProd, databasePaths.bible.iosProd);
 
   console.log('\n📊 Bible size audit\n');
   reportSize('Bible.db (root)', bibleDev);
-  reportSize('Bible.db (android)', databasePaths.bible.androidDev);
   reportSize('Bible.db (ios)', databasePaths.bible.iosDev);
   reportSize('Bible.zip (root)', bibleProd);
-  reportSize('Bible.zip (android)', databasePaths.bible.androidProd);
   reportSize('Bible.zip (ios)', databasePaths.bible.iosProd);
 
   // Persist the bump ONLY after a fully successful build + copy, so the version

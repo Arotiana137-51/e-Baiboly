@@ -23,9 +23,10 @@ Last updated: 2026-03-24
 ### DB assets packaging (dev vs prod)
 - Release assets include only `data/prod` (zipped DBs).
 - Debug assets include only `data/dev` (raw .db).
-- Configured in `android/app/build.gradle` via `sourceSets`:
-  - debug: `src/main/assets/data/dev`
-  - release: `src/main/assets/data/prod`
+- Configured in `android/app/build.gradle` via `sourceSets`, pointing straight
+  at the repo-root `assets/` so nothing is duplicated under `src/main/assets`:
+  - debug: `../../assets/data/dev`
+  - release: `../../assets/data/prod`
 
 ### Proguard rules adjustments
 File: `android/app/proguard-rules.pro`

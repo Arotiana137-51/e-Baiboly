@@ -178,12 +178,22 @@ android {
     // .db files at the top level and release ships the .zip files at the top
     // level. Runtime lookups in src/utils/paths.ts -> getDatabaseAssetPath
     // must match this flat layout.
+    // Each variant maps ONLY its own data directory onto the assets root, so
+    // the packaged asset is flat (BibleMG65.zip at the top) — which is what
+    // getDatabaseAssetPath() returns on Android.
+    //
+    // Both point at the repo-root assets/ on purpose. These files used to also
+    // be duplicated under src/main/assets/data/, which the main source set
+    // then merged into EVERY variant: release shipped the dev .db files it
+    // never reads (17.4 MB) plus a second copy of the prod zips (8.1 MB) on
+    // top of the flat ones it does read — 25.5 MB of dead weight in every
+    // user's download. Keep the DB files out of src/main/assets entirely.
     sourceSets {
         debug {
             assets.srcDirs = ['../../assets/data/dev']
         }
         release {
-            assets.srcDirs = ['src/main/assets/data/prod']
+            assets.srcDirs = ['../../assets/data/prod']
         }
     }
 
