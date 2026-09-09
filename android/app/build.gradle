@@ -109,8 +109,13 @@ android {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 21
-        versionName "1.3.0"
+        versionCode 22
+        // Single source of truth for the marketing version: the About screen
+        // reads package.json, Play reads this, and they drifted (About showed
+        // 0.0.1 while Play shipped 1.3.0). versionCode stays manual — Play needs
+        // a monotonic integer that has no equivalent in package.json.
+        versionName new groovy.json.JsonSlurper()
+                .parseText(file("../../package.json").text).version
         resConfigs "fr"
 
         // 16KB page size support - ensures native libs are aligned to 16KB boundaries.
