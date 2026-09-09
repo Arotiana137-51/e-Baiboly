@@ -5,11 +5,7 @@ import {
   normalizeForFtsQuery,
   makeFtsPrefixQuery,
   execWithLikeFallback,
-  generateTrigrams,
-  makeTrigramMatchQuery,
-  trigramOverlapScore,
-  TRIGRAM_MIN_OVERLAP,
-  scoreInChunks,
+  correctQueryViaVocabulary,
 } from '../utils/searchNormalize';
 import {
   JESUS_VARIANTS,
@@ -18,69 +14,6 @@ import {
   looksLikeJesusPrefix,
   makeJesusNameLikeParams,
 } from '../utils/searchSynonyms';
-
-// Typo/merged-word fallback: only reached when the strict query below finds
-// NOTHING. Mirrors it structurally (title arm + verse arm, one hymn row
-// each), but ranks by actual trigram overlap against the query rather than
-// bm25, and re-sorts so title matches still lead (bm25's own TITLE_SCORE_BOOST
-// has no equivalent here since we're not using bm25 to rank).
-const fetchHymnTrigramFallback = async (normalizedQuery: string): Promise<any[]> => {
-  const trigrams = generateTrigrams(normalizedQuery);
-  if (trigrams.length === 0) return [];
-  const trigramExpr = makeTrigramMatchQuery(trigrams);
-
-  try {
-    // No LIMIT here on purpose — the hymn corpus is small and fixed (~1300
-    // hymns, ~5300 verses total), so there's no completeness/perf tradeoff to
-    // make; every candidate feeds the JS-side overlap re-rank below. Each arm
-    // still gets its own bm25() as a regular column so the two arms combine
-    // into one ORDER BY (a UNION ALL with no shared ordering before a LIMIT
-    // truncates in scan order, not relevance order — the verse arm alone can
-    // vastly outnumber the title arm and starve it out; this was a real bug
-    // here before the ORDER BY was added, even back when a LIMIT existed).
-    const { rows } = await hymnsDatabaseService.executeQuerySilent<any>(
-      `
-        SELECT id, number, category, title, authors, matched_verse, verse_number, overlap_text, is_title
-        FROM (
-          SELECT h.id, h.number, h.category, h.title, h.authors,
-                 v.text as matched_verse, v.verse_number,
-                 v.text as overlap_text, 0 as is_title,
-                 bm25(HymnVersesTrigram) as raw_score
-          FROM HymnVersesTrigram t
-          JOIN HymnVerses v ON v.rowid = t.rowid
-          JOIN Hymns h ON h.id = v.hymn_id
-          WHERE HymnVersesTrigram MATCH ?
-
-          UNION ALL
-
-          SELECT h.id, h.number, h.category, h.title, h.authors,
-                 NULL as matched_verse, NULL as verse_number,
-                 (h.title || ' ' || COALESCE(h.authors, '')) as overlap_text, 1 as is_title,
-                 bm25(HymnsTrigram) as raw_score
-          FROM HymnsTrigram ht
-          JOIN Hymns h ON h.rowid = ht.rowid
-          WHERE HymnsTrigram MATCH ?
-        )
-        ORDER BY raw_score ASC
-      `,
-      [trigramExpr, trigramExpr],
-    );
-
-    // Uncapped candidate pool (see the comment above the query) — scoreInChunks
-    // yields to the event loop periodically so scoring it doesn't block the JS
-    // thread (and the app's own input handling) for one unbroken stretch.
-    const scored = await scoreInChunks(rows, row => {
-      const overlap = trigramOverlapScore(trigrams, normalizeForFtsQuery(row.overlap_text));
-      return overlap >= TRIGRAM_MIN_OVERLAP ? {...row, overlap} : null;
-    });
-    return scored.sort((a, b) => Number(b.is_title) - Number(a.is_title) || b.overlap - a.overlap);
-  } catch (e) {
-    // No trigram table (DB not yet rebuilt, or fts5 unavailable) — the caller
-    // already has the strict tier's (empty) result; degrade quietly.
-    console.warn('Hymn trigram fallback unavailable:', (e as any)?.message ?? e);
-    return [];
-  }
-};
 
 export type HymnSearchOptions = {
   matchWholeWord?: boolean;
@@ -244,11 +177,22 @@ export const useHymnSearch = () => {
         )
       ).rows as any[];
 
-      // Strict search found nothing: fall back to trigram fuzzy matching so a
-      // typo or a merged Malagasy elision still surfaces the hymn instead of
-      // an empty result screen.
+      // Strict search found nothing: correct the query's spelling against the
+      // hymn corpus vocabulary and run the SAME search again, so a typo still
+      // finds the hymn — through the normal title-boosted ranking rather than
+      // a separate fuzzy score.
       if (resultRows.length === 0 && !matchWholeWord && normalizedQuery.length >= 3) {
-        resultRows = await fetchHymnTrigramFallback(normalizedQuery);
+        const corrected = await correctQueryViaVocabulary(hymnsDatabaseService, normalizedQuery);
+        if (corrected) {
+          const correctedParam = makeFtsPrefixQuery(corrected, expandJesusToken);
+          resultRows = (
+            await execWithLikeFallback(
+              hymnsDatabaseService,
+              {sql: ftsSearchQuery, params: [correctedParam, correctedParam]},
+              {sql: likeSearchQuery, params: likeParams.flatMap(p => [p, p, p])},
+            )
+          ).rows as any[];
+        }
       }
 
       // Collapse the per-verse rows (already ordered best-score-first) into one

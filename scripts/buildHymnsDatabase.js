@@ -20,6 +20,8 @@ const {
 const {
   normalizeForFtsContent,
   normalizeHymnAuthors,
+  addToVocabulary,
+  writeVocabulary,
   runAsync,
   allAsync,
   finalizeAsync,
@@ -98,17 +100,17 @@ async function buildHymns(dbPath, version) {
     content=''
   )`);
 
-  // Trigram-tokenized twins of HymnsFts/HymnVersesFts, over the SAME
-  // normalized text. Typo/merged-word fuzzy fallback only, used when the
-  // strict prefix query finds nothing — see src/utils/searchNormalize.ts.
-  await runAsync(db, `CREATE VIRTUAL TABLE HymnsTrigram USING fts5(
-    title_plain,
-    authors_plain,
-    tokenize='trigram',
-    content=''
+  // Typo correction runs off the corpus vocabulary rather than trigram copies
+  // of every hymn/verse — see the same pair in buildBibleDatabase.js for why.
+  // `Vocabulary` answers "is this an exact word?", `VocabularyTrigram`
+  // answers "what real words look like this typo?".
+  await runAsync(db, `CREATE TABLE Vocabulary (
+    id INTEGER PRIMARY KEY,
+    word TEXT NOT NULL UNIQUE,
+    freq INTEGER NOT NULL
   )`);
-  await runAsync(db, `CREATE VIRTUAL TABLE HymnVersesTrigram USING fts5(
-    text_plain,
+  await runAsync(db, `CREATE VIRTUAL TABLE VocabularyTrigram USING fts5(
+    word,
     tokenize='trigram',
     content=''
   )`);
@@ -174,11 +176,9 @@ async function buildHymns(dbPath, version) {
   );
   const insHymnsFtsAsync = (p) =>
     new Promise((res, rej) => insHymnsFts.run(p, (e) => (e ? rej(e) : res())));
-  const insHymnsTrigram = db.prepare(
-    `INSERT INTO HymnsTrigram(rowid, title_plain, authors_plain) VALUES (?, ?, ?)`
-  );
-  const insHymnsTrigramAsync = (p) =>
-    new Promise((res, rej) => insHymnsTrigram.run(p, (e) => (e ? rej(e) : res())));
+
+  // Tallied across titles, authors and verses, written once at the end.
+  const vocabulary = new Map();
 
   for (const h of hymnRows) {
     const titlePlain = normalizeForFtsContent(String(h.title || ''));
@@ -193,33 +193,32 @@ async function buildHymns(dbPath, version) {
       Number(h.number) || 0,
       String(h.category || ''),
     ]);
-    await insHymnsTrigramAsync([h.rowid, titlePlain, authorsPlain]);
+    addToVocabulary(vocabulary, titlePlain);
+    addToVocabulary(vocabulary, authorsPlain);
   }
   await finalizeAsync(insHymnsFts);
-  await finalizeAsync(insHymnsTrigram);
 
   const verseRows = await allAsync(db, `SELECT id, text FROM HymnVerses`);
   const insVersesFts = db.prepare(`INSERT INTO HymnVersesFts(rowid, text_plain) VALUES (?, ?)`);
   const insVersesFtsAsync = (p) =>
     new Promise((res, rej) => insVersesFts.run(p, (e) => (e ? rej(e) : res())));
-  const insVersesTrigram = db.prepare(`INSERT INTO HymnVersesTrigram(rowid, text_plain) VALUES (?, ?)`);
-  const insVersesTrigramAsync = (p) =>
-    new Promise((res, rej) => insVersesTrigram.run(p, (e) => (e ? rej(e) : res())));
   for (const r of verseRows) {
     const plain = normalizeForFtsContent(String(r.text || ''));
     await insVersesFtsAsync([r.id, plain]);
-    await insVersesTrigramAsync([r.id, plain]);
+    addToVocabulary(vocabulary, plain);
   }
   await finalizeAsync(insVersesFts);
-  await finalizeAsync(insVersesTrigram);
 
-  console.log(`  ↳ ${hymnRows.length} hymns, ${verseRows.length} verses indexed`);
+  const vocabularySize = await writeVocabulary(db, vocabulary);
+
+  console.log(
+    `  ↳ ${hymnRows.length} hymns, ${verseRows.length} verses indexed, ${vocabularySize} distinct words`
+  );
 
   console.log('  optimizing FTS + VACUUM ...');
   await runAsync(db, `INSERT INTO HymnsFts(HymnsFts) VALUES('optimize')`);
   await runAsync(db, `INSERT INTO HymnVersesFts(HymnVersesFts) VALUES('optimize')`);
-  await runAsync(db, `INSERT INTO HymnsTrigram(HymnsTrigram) VALUES('optimize')`);
-  await runAsync(db, `INSERT INTO HymnVersesTrigram(HymnVersesTrigram) VALUES('optimize')`);
+  await runAsync(db, `INSERT INTO VocabularyTrigram(VocabularyTrigram) VALUES('optimize')`);
   await runAsync(db, `ANALYZE`);
   await runAsync(db, `VACUUM`);
 

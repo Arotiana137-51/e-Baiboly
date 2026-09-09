@@ -5,6 +5,7 @@ import {
   makeTrigramMatchQuery,
   trigramOverlapScore,
   scoreInChunks,
+  correctQueryViaVocabulary,
 } from '../src/utils/searchNormalize';
 
 // `title_plain` is what the FTS5 index actually stores. It is produced by
@@ -178,5 +179,70 @@ describe('scoreInChunks', () => {
   it('handles an input smaller than the chunk size in one pass', async () => {
     const result = await scoreInChunks([1, 2, 3], n => n + 1, 100);
     expect(result).toEqual([2, 3, 4]);
+  });
+});
+
+// A stand-in for the DatabaseService: `words` is the corpus vocabulary, and
+// the three query shapes correctQueryViaVocabulary issues are answered from
+// it — the prefix range scan, the exact-match IN list used for elision
+// splits, and the trigram candidate join.
+const makeVocabularyService = (words: Record<string, number>) => ({
+  executeQuery: async () => ({rows: []}),
+  executeQuerySilent: async (sql: string, params: any[]) => {
+    if (sql.includes('word >= ?')) {
+      const [lower, upper] = params as [string, string];
+      const hit = Object.keys(words).some(w => w >= lower && w < upper);
+      return {rows: hit ? [{1: 1}] : []};
+    }
+    if (sql.includes('word IN')) {
+      return {rows: (params as string[]).filter(p => p in words).map(word => ({word}))};
+    }
+    // Trigram candidates: the real table filters by shared trigram, but
+    // handing back the whole vocabulary is a superset — the overlap filter
+    // in the function under test is what actually decides.
+    return {rows: Object.entries(words).map(([word, freq]) => ({word, freq}))};
+  },
+});
+
+describe('correctQueryViaVocabulary', () => {
+  const vocabulary = {andriamanitra: 500, amin: 900, ny: 9000, fitiavana: 120, vehivavy: 40};
+
+  it('leaves a query alone when every token already starts a real word', async () => {
+    const service = makeVocabularyService(vocabulary);
+    expect(await correctQueryViaVocabulary(service, 'andriamanitra vehivavy')).toBeNull();
+    // A partial word is fine too — the search matches on prefixes.
+    expect(await correctQueryViaVocabulary(service, 'andriaman')).toBeNull();
+  });
+
+  it('corrects a misspelled token to the closest real word', async () => {
+    const service = makeVocabularyService(vocabulary);
+    expect(await correctQueryViaVocabulary(service, 'adriamanitr')).toBe('andriamanitra');
+  });
+
+  it('splits a merged Malagasy elision into its two real words', async () => {
+    const service = makeVocabularyService(vocabulary);
+    expect(await correctQueryViaVocabulary(service, 'aminny')).toBe('amin ny');
+  });
+
+  it('corrects only the broken token, leaving the rest untouched', async () => {
+    const service = makeVocabularyService(vocabulary);
+    expect(await correctQueryViaVocabulary(service, 'vehivavy adriamanitr')).toBe(
+      'vehivavy andriamanitra',
+    );
+  });
+
+  it('gives up rather than forcing gibberish onto an unrelated word', async () => {
+    const service = makeVocabularyService(vocabulary);
+    expect(await correctQueryViaVocabulary(service, 'zzzqqqxx')).toBeNull();
+  });
+
+  it('returns null instead of throwing when the vocabulary table is missing', async () => {
+    const broken = {
+      executeQuery: async () => ({rows: []}),
+      executeQuerySilent: async () => {
+        throw new Error('no such table: Vocabulary');
+      },
+    };
+    expect(await correctQueryViaVocabulary(broken, 'adriamanitr')).toBeNull();
   });
 });

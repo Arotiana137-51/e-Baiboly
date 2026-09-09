@@ -5,11 +5,7 @@ import {
   normalizeForFtsQuery,
   makeFtsPrefixQuery,
   execWithLikeFallback,
-  generateTrigrams,
-  makeTrigramMatchQuery,
-  trigramOverlapScore,
-  TRIGRAM_MIN_OVERLAP,
-  scoreInChunks,
+  correctQueryViaVocabulary,
 } from '../utils/searchNormalize';
 import {
   expandJesusToken,
@@ -25,56 +21,6 @@ type BibleCandidateRow = {
   verse_number: number;
   text: string;
   score: number;
-};
-
-// Typo/merged-word fallback: only reached when the strict query above finds
-// NOTHING. Ranks candidates by actual trigram overlap with the query (not raw
-// bm25 — see trigramOverlapScore's doc comment) and discards weak matches.
-// `extraWhere`/`extraParams` let getVersesForBook scope this to one book.
-const fetchTrigramFallback = async (
-  normalizedQuery: string,
-  extraWhere = '',
-  extraParams: any[] = [],
-): Promise<BibleCandidateRow[]> => {
-  const trigrams = generateTrigrams(normalizedQuery);
-  if (trigrams.length === 0) return [];
-  const trigramExpr = makeTrigramMatchQuery(trigrams);
-
-  try {
-    const { rows } = await bibleDatabaseService.executeQuerySilent<{
-      book_id: number;
-      book_name: string;
-      testament: 'old' | 'new' | null;
-      chapter: number;
-      verse_number: number;
-      text: string;
-    }>(
-      `
-        SELECT v.book_id, b.name as book_name, b.testament as testament,
-               v.chapter, v.verse_number, v.text
-        FROM VersesTrigram t
-        JOIN Verses v ON v.id = t.rowid
-        JOIN Books b ON b.id = v.book_id
-        WHERE VersesTrigram MATCH ? ${extraWhere}
-        ORDER BY bm25(VersesTrigram) ASC
-      `,
-      [trigramExpr, ...extraParams],
-    );
-
-    // Uncapped candidate pools can run into the tens of thousands for a typo
-    // whose letters are common syllables — scoreInChunks yields to the event
-    // loop periodically so that doesn't block the JS thread (and the app's
-    // own input handling) for one unbroken stretch.
-    return scoreInChunks(rows, row => {
-      const overlap = trigramOverlapScore(trigrams, normalizeForFtsQuery(row.text));
-      return overlap >= TRIGRAM_MIN_OVERLAP ? {...row, score: -overlap} : null;
-    });
-  } catch (e) {
-    // No trigram table (DB not yet rebuilt, or fts5 unavailable) — the caller
-    // already has the strict tier's (empty) result; degrade quietly.
-    console.warn('Trigram fallback unavailable:', (e as any)?.message ?? e);
-    return [];
-  }
 };
 
 export type BibleSearchOptions = {
@@ -177,11 +123,21 @@ export const useBibleSearch = () => {
         )
       ).rows as BibleCandidateRow[];
 
-      // Strict search found nothing: fall back to trigram fuzzy matching so a
-      // typo or a merged Malagasy elision (e.g. "aminny" for "amin'ny") still
-      // surfaces the real verse instead of an empty result screen.
+      // Strict search found nothing: correct the query's spelling against the
+      // corpus vocabulary and run the SAME search again, so a typo or a merged
+      // Malagasy elision ("aminny" for "amin'ny") still finds the real verse —
+      // and finds it through normal bm25 ranking, not a fuzzy score.
       if (candidateRows.length === 0 && !matchWholeWord && normalizedQuery.length >= 3) {
-        candidateRows = await fetchTrigramFallback(normalizedQuery);
+        const corrected = await correctQueryViaVocabulary(bibleDatabaseService, normalizedQuery);
+        if (corrected) {
+          candidateRows = (
+            await execWithLikeFallback(
+              bibleDatabaseService,
+              {sql: ftsCandidatesQuery, params: [makeFtsPrefixQuery(corrected, expandJesusToken)]},
+              {sql: likeCandidatesQuery, params: likeParams},
+            )
+          ).rows as BibleCandidateRow[];
+        }
       }
 
       // Group by book, keeping the BEST-scoring verse per book (lower bm25 /
@@ -304,12 +260,20 @@ export const useBibleSearch = () => {
         )
       ).rows as any[];
 
-      // Same fuzzy fallback as searchBible, scoped to this book — otherwise a
-      // book that only appeared in the results because of the OUTER fuzzy
-      // match would look empty once the user drills into it.
+      // Same correction as searchBible — otherwise a book that only appeared
+      // in the results because the query was corrected would look empty once
+      // the user drills into it.
       if (rows.length === 0 && !matchWholeWord && normalizedQuery.length >= 3) {
-        const fuzzy = await fetchTrigramFallback(normalizedQuery, 'AND v.book_id = ?', [bookId]);
-        rows = [...fuzzy].sort((a, b) => a.chapter - b.chapter || a.verse_number - b.verse_number);
+        const corrected = await correctQueryViaVocabulary(bibleDatabaseService, normalizedQuery);
+        if (corrected) {
+          rows = (
+            await execWithLikeFallback(
+              bibleDatabaseService,
+              {sql: ftsQuery, params: [makeFtsPrefixQuery(corrected, expandJesusToken), bookId]},
+              {sql: likeQuery, params: [bookId, ...likeParams]},
+            )
+          ).rows as any[];
+        }
       }
 
       const verseResults: BibleVerseResult[] = [];

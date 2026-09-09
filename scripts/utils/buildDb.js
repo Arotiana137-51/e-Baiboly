@@ -57,6 +57,58 @@ function normalizeHymnAuthors(authors) {
 }
 
 // ---------------------------------------------------------------------------
+// Vocabulary (typo-correction index)
+// ---------------------------------------------------------------------------
+//
+// Search corrects a misspelled word against the corpus vocabulary rather than
+// trigram-matching whole verses: far smaller (distinct words are a few hundred
+// KB against megabytes of verse text) and more precise, since comparing a typo
+// to a real WORD beats comparing it to a 200-character verse.
+
+// Tallies word frequencies from already-normalized (*_plain) text. Skips
+// 1-char tokens because the query tokenizer drops them too, so they could
+// never be searched for anyway.
+function addToVocabulary(counts, plainText) {
+  if (!plainText) return;
+  for (const word of plainText.split(' ')) {
+    if (word.length < 2) continue;
+    counts.set(word, (counts.get(word) || 0) + 1);
+  }
+}
+
+// Writes the tally into Vocabulary + VocabularyTrigram (both must already
+// exist; each builder declares them so its own schema stays readable in one
+// place). Frequency is stored so a correction can prefer the commoner of two
+// equally-close words. Note 2-char words land in Vocabulary but produce no
+// trigrams — that's fine and intended: they're needed for exact lookups
+// (splitting "aminny" into "amin" + "ny"), not for fuzzy matching.
+async function writeVocabulary(db, counts) {
+  const insWord = db.prepare(
+    `INSERT INTO Vocabulary (id, word, freq) VALUES (?, ?, ?)`
+  );
+  const insTrigram = db.prepare(
+    `INSERT INTO VocabularyTrigram(rowid, word) VALUES (?, ?)`
+  );
+  const run = (stmt, params) =>
+    new Promise((res, rej) => stmt.run(params, (e) => (e ? rej(e) : res())));
+
+  const sorted = Array.from(counts.entries()).sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+  );
+
+  let id = 1;
+  for (const [word, freq] of sorted) {
+    await run(insWord, [id, word, freq]);
+    await run(insTrigram, [id, word]);
+    id += 1;
+  }
+
+  await finalizeAsync(insWord);
+  await finalizeAsync(insTrigram);
+  return sorted.length;
+}
+
+// ---------------------------------------------------------------------------
 // Promise wrappers around sqlite3
 // ---------------------------------------------------------------------------
 
@@ -168,6 +220,8 @@ module.exports = {
   cleanDisplayText,
   normalizeForFtsContent,
   normalizeHymnAuthors,
+  addToVocabulary,
+  writeVocabulary,
   runAsync,
   allAsync,
   finalizeAsync,
