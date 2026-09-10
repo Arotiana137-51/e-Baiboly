@@ -1,4 +1,4 @@
-name: iOS Build (Simulator)
+name: iOS Build (Device Archive)
 
 on:
   push:
@@ -47,30 +47,28 @@ jobs:
           cd ios
           pod install --repo-update
 
-      - name: Build iOS app for simulator
+      # Release archive for real device hardware rather than a simulator build:
+      # this is the configuration TestFlight ships, so it compiles for arm64 and
+      # runs the Hermes bundling phase a Debug simulator build skips. Signing
+      # stays off because verifying the compile needs no Apple account.
+      - name: Archive iOS app for device
         run: |
           cd ios
-          if [ -f "SmartBaibolyYarn.xcworkspace/contents.xcworkspacedata" ]; then
-            xcodebuild -workspace SmartBaibolyYarn.xcworkspace \
-              -scheme SmartBaibolyYarn \
-              -sdk iphonesimulator \
-              -configuration Debug \
-              -destination 'generic/platform=iOS Simulator' \
-              clean build \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO
-          else
-            xcodebuild -project SmartBaibolyYarn.xcodeproj \
-              -scheme SmartBaibolyYarn \
-              -sdk iphonesimulator \
-              -configuration Debug \
-              -destination 'generic/platform=iOS Simulator' \
-              clean build \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO
-          fi
+          xcodebuild -workspace SmartBaibolyYarn.xcworkspace \
+            -scheme SmartBaibolyYarn \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/SmartBaibolyYarn.xcarchive" \
+            clean archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
-      - name: Build succeeded
-        run: echo "✅ iOS build completed successfully!"
+      - name: Confirm the archive holds a real app binary
+        run: |
+          APP="$RUNNER_TEMP/SmartBaibolyYarn.xcarchive/Products/Applications/SmartBaibolyYarn.app"
+          test -d "$APP" || { echo "No .app produced in the archive"; exit 1; }
+          test -f "$APP/main.jsbundle" || { echo "No JS bundle in the archive"; exit 1; }
+          echo "Archive OK"
+          du -sh "$APP"
