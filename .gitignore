@@ -86,3 +86,6 @@ gradle_*.txt
 !.yarn/sdks
 !.yarn/versions
 ebaiboly_claude_code_instructions.md
+
+# App Store Connect API key - never commit
+*.p8

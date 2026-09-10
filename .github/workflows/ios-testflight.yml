@@ -1,0 +1,52 @@
+name: iOS TestFlight
+
+# Manual only. Release uploads should be deliberate, not a side effect of a push.
+on:
+  workflow_dispatch:
+
+jobs:
+  testflight:
+    # macos-latest is required, not macos-15: since 2026-04-28 App Store Connect
+    # rejects anything not built with Xcode 26 / the iOS 26 SDK, and the macos-15
+    # image still defaults to Xcode 16.4.
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build databases
+        run: yarn build:database
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install CocoaPods dependencies
+        run: cd ios && bundle exec pod install --repo-update
+
+      - name: Build and upload to TestFlight
+        run: cd ios && bundle exec fastlane beta
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}

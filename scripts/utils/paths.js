@@ -21,11 +21,9 @@ const getAssetsPaths = () => {
     root: path.join(projectRoot, 'assets', 'data'),
     dev: path.join(projectRoot, 'assets', 'data', 'dev'),
     prod: path.join(projectRoot, 'assets', 'data', 'prod'),
-    android: {
-      root: path.join(projectRoot, 'android', 'app', 'src', 'main', 'assets', 'data'),
-      dev: path.join(projectRoot, 'android', 'app', 'src', 'main', 'assets', 'data', 'dev'),
-      prod: path.join(projectRoot, 'android', 'app', 'src', 'main', 'assets', 'data', 'prod'),
-    },
+    // No android entry on purpose: gradle points each variant's assets.srcDirs
+    // straight at assets/data/{dev,prod} above, so copying the DBs under
+    // android/app/src/main/assets only shipped a second, dead copy to users.
     ios: {
       root: path.join(projectRoot, 'ios', 'SmartBaibolyYarn', 'Resources', 'data'),
       dev: path.join(projectRoot, 'ios', 'SmartBaibolyYarn', 'Resources', 'data', 'dev'),
@@ -54,22 +52,18 @@ const getDatabasePaths = () => {
       crossReferences: path.join(getSourceDataPaths().bible, 'cross_references.txt'),
       // Dev mode: uncompressed .db files
       dev: path.join(assets.dev, 'BibleMG65.db'),
-      androidDev: path.join(assets.android.dev, 'BibleMG65.db'),
       iosDev: path.join(assets.ios.dev, 'BibleMG65.db'),
       // Prod mode: compressed .zip files
       prod: path.join(assets.prod, 'BibleMG65.zip'),
-      androidProd: path.join(assets.android.prod, 'BibleMG65.zip'),
       iosProd: path.join(assets.ios.prod, 'BibleMG65.zip'),
     },
     hymns: {
       source: getSourceDataPaths().hymns,
       // Dev mode: uncompressed .db files
       dev: path.join(assets.dev, 'Hymns.db'),
-      androidDev: path.join(assets.android.dev, 'Hymns.db'),
       iosDev: path.join(assets.ios.dev, 'Hymns.db'),
       // Prod mode: compressed .zip files
       prod: path.join(assets.prod, 'Hymns.zip'),
-      androidProd: path.join(assets.android.prod, 'Hymns.zip'),
       iosProd: path.join(assets.ios.prod, 'Hymns.zip'),
     },
   };
@@ -77,7 +71,7 @@ const getDatabasePaths = () => {
 
 // Ensure directory exists (cross-platform).
 // Accepts a string path, or an object with string fields {root, dev, prod}
-// so callers can pass either getAssetsPaths().android or getAssetsPaths().android.dev.
+// so callers can pass either getAssetsPaths().ios or getAssetsPaths().ios.dev.
 const ensureDirectory = (dirPath) => {
   if (typeof dirPath === 'string') {
     if (!fs.existsSync(dirPath)) {

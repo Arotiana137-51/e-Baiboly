@@ -16,8 +16,8 @@ const checkDevDb = () => {
 
   // Check dev structure (.db files)
   const devFiles = [
-    { path: databasePaths.bible.androidDev, name: 'BibleMG65.db (dev)' },
-    { path: databasePaths.hymns.androidDev, name: 'Hymns.db (dev)' },
+    { path: databasePaths.bible.dev, name: 'BibleMG65.db (dev)' },
+    { path: databasePaths.hymns.dev, name: 'Hymns.db (dev)' },
   ];
 
   console.log('📂 Development files (.db):');
@@ -33,8 +33,8 @@ const checkDevDb = () => {
 
   // Check prod structure (.zip files)
   const prodFiles = [
-    { path: databasePaths.bible.androidProd, name: 'BibleMG65.zip (prod)' },
-    { path: databasePaths.hymns.androidProd, name: 'Hymns.zip (prod)' },
+    { path: databasePaths.bible.prod, name: 'BibleMG65.zip (prod)' },
+    { path: databasePaths.hymns.prod, name: 'Hymns.zip (prod)' },
   ];
 
   console.log('\n📦 Production files (.zip):');

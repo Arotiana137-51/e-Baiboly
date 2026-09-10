@@ -6,6 +6,11 @@ buildscript {
         targetSdkVersion = 36
         ndkVersion = "28.0.3"
         kotlinVersion = "2.1.20"
+        // react-native-in-app-review reads these with no fallback of its own
+        // (safeExtGet('playReviewVersion') with no second arg), so leaving them
+        // undefined resolves to "…:review:null" and fails the build.
+        playReviewVersion = "2.0.2"
+        playServicesVersion = "18.5.0"
     }
     repositories {
         google()

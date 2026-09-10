@@ -1,7 +1,9 @@
 // scripts/buildBibleDatabase.js
 //
-// Builds ONLY the Bible database (dev .db + prod .zip) and copies it into the
-// android and ios asset folders. Hymns artifacts are left untouched.
+// Builds ONLY the Bible database (dev .db + prod .zip) into assets/data/ and
+// copies it into the ios Resources folder. Android reads assets/data directly
+// (see the sourceSets block in android/app/build.gradle), so there is no
+// android copy. Hymns artifacts are left untouched.
 //
 // Run:  yarn build:bible
 
@@ -21,6 +23,8 @@ const {
 const {
   cleanDisplayText,
   normalizeForFtsContent,
+  addToVocabulary,
+  writeVocabulary,
   runAsync,
   finalizeAsync,
   closeAsync,
@@ -94,13 +98,24 @@ async function buildBible(dbPath, version) {
     content=''
   )`);
 
-  // Trigram-tokenized twin of VersesFts, over the SAME normalized text. Used
-  // only as a typo/merged-word fuzzy fallback when the strict prefix query
-  // above finds nothing — see src/utils/searchNormalize.ts. Costs extra disk
-  // space (every overlapping 3-char window gets indexed) but never changes
-  // primary search behavior.
-  await runAsync(db, `CREATE VIRTUAL TABLE VersesTrigram USING fts5(
-    text_plain,
+  // Typo correction works off the corpus VOCABULARY, not the verse text.
+  // Indexing every 3-char window of all 31k verses cost 10.4 MB — larger than
+  // the entire word index — and every user paid it in download size. The
+  // distinct words are ~225 KB of text instead, and correcting a misspelled
+  // WORD against real words is more precise than character-matching a whole
+  // verse anyway: find the closest real word, then re-run the normal ranked
+  // search with it.
+  //
+  // Two tables because the lookups differ: `Vocabulary` answers "is this an
+  // exact word?" (used to test elision splits like aminny -> amin + ny),
+  // `VocabularyTrigram` answers "what real words look like this typo?".
+  await runAsync(db, `CREATE TABLE Vocabulary (
+    id INTEGER PRIMARY KEY,
+    word TEXT NOT NULL UNIQUE,
+    freq INTEGER NOT NULL
+  )`);
+  await runAsync(db, `CREATE VIRTUAL TABLE VocabularyTrigram USING fts5(
+    word,
     tokenize='trigram',
     content=''
   )`);
@@ -185,15 +200,14 @@ async function buildBible(dbPath, version) {
     `INSERT OR REPLACE INTO Verses (id, book_id, chapter, verse_number, text, title) VALUES (?, ?, ?, ?, ?, ?)`
   );
   const insertFts = db.prepare(`INSERT INTO VersesFts(rowid, text_plain) VALUES (?, ?)`);
-  const insertTrigram = db.prepare(`INSERT INTO VersesTrigram(rowid, text_plain) VALUES (?, ?)`);
 
   const insVerseAsync = (p) =>
     new Promise((res, rej) => insertVerse.run(p, (e) => (e ? rej(e) : res())));
   const insFtsAsync = (p) =>
     new Promise((res, rej) => insertFts.run(p, (e) => (e ? rej(e) : res())));
-  const insTrigramAsync = (p) =>
-    new Promise((res, rej) => insertTrigram.run(p, (e) => (e ? rej(e) : res())));
 
+  // Tallied while walking the verses, written once at the end.
+  const vocabulary = new Map();
   let verseId = 1;
 
   if (usingYamlSource) {
@@ -223,7 +237,7 @@ async function buildBible(dbPath, version) {
         const plain = normalizeForFtsContent(display);
         await insVerseAsync([verseId, bookId, row.chapter, row.verseNumber, display, row.title]);
         await insFtsAsync([verseId, plain]);
-        await insTrigramAsync([verseId, plain]);
+        addToVocabulary(vocabulary, plain);
         verseId += 1;
       }
     }
@@ -250,20 +264,21 @@ async function buildBible(dbPath, version) {
       const plain = normalizeForFtsContent(display);
       await insVerseAsync([verseId, id, chapter, verseNumber, display, null]);
       await insFtsAsync([verseId, plain]);
-      await insTrigramAsync([verseId, plain]);
+      addToVocabulary(vocabulary, plain);
       verseId += 1;
     }
   }
 
   await finalizeAsync(insertVerse);
   await finalizeAsync(insertFts);
-  await finalizeAsync(insertTrigram);
 
-  console.log(`  ↳ ${verseId - 1} verses indexed`);
+  const vocabularySize = await writeVocabulary(db, vocabulary);
+
+  console.log(`  ↳ ${verseId - 1} verses indexed, ${vocabularySize} distinct words`);
 
   console.log('  optimizing FTS + VACUUM ...');
   await runAsync(db, `INSERT INTO VersesFts(VersesFts) VALUES('optimize')`);
-  await runAsync(db, `INSERT INTO VersesTrigram(VersesTrigram) VALUES('optimize')`);
+  await runAsync(db, `INSERT INTO VocabularyTrigram(VocabularyTrigram) VALUES('optimize')`);
   await runAsync(db, `ANALYZE`);
   await runAsync(db, `VACUUM`);
 
@@ -283,8 +298,6 @@ async function main() {
 
   ensureDirectory(assetsPaths.dev);
   ensureDirectory(assetsPaths.prod);
-  ensureDirectory(assetsPaths.android.dev);
-  ensureDirectory(assetsPaths.android.prod);
   ensureDirectory(assetsPaths.ios.dev);
   ensureDirectory(assetsPaths.ios.prod);
 
@@ -306,8 +319,6 @@ async function main() {
   for (const p of [
     bibleDev,
     bibleProd,
-    databasePaths.bible.androidDev,
-    databasePaths.bible.androidProd,
     databasePaths.bible.iosDev,
     databasePaths.bible.iosProd,
   ]) {
@@ -316,23 +327,19 @@ async function main() {
 
   await buildBible(bibleDev, version);
 
-  console.log('\n📦 Copying dev DB to platform asset folders...');
-  copyFileSafe(bibleDev, databasePaths.bible.androidDev);
+  console.log('\n📦 Copying dev DB to the iOS asset folder...');
   copyFileSafe(bibleDev, databasePaths.bible.iosDev);
 
   console.log('🗜️  Creating max-compression ZIP for prod...');
   await createZipFromDb(bibleDev, bibleProd);
 
-  console.log('📦 Copying prod ZIP to platform asset folders...');
-  copyFileSafe(bibleProd, databasePaths.bible.androidProd);
+  console.log('📦 Copying prod ZIP to the iOS asset folder...');
   copyFileSafe(bibleProd, databasePaths.bible.iosProd);
 
   console.log('\n📊 Bible size audit\n');
   reportSize('Bible.db (root)', bibleDev);
-  reportSize('Bible.db (android)', databasePaths.bible.androidDev);
   reportSize('Bible.db (ios)', databasePaths.bible.iosDev);
   reportSize('Bible.zip (root)', bibleProd);
-  reportSize('Bible.zip (android)', databasePaths.bible.androidProd);
   reportSize('Bible.zip (ios)', databasePaths.bible.iosProd);
 
   // Persist the bump ONLY after a fully successful build + copy, so the version

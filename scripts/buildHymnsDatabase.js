@@ -1,7 +1,9 @@
 // scripts/buildHymnsDatabase.js
 //
-// Builds ONLY the Hymns database (dev .db + prod .zip) and copies it into the
-// android and ios asset folders. Bible artifacts are left untouched.
+// Builds ONLY the Hymns database (dev .db + prod .zip) into assets/data/ and
+// copies it into the ios Resources folder. Android reads assets/data directly
+// (see the sourceSets block in android/app/build.gradle), so there is no
+// android copy. Bible artifacts are left untouched.
 //
 // Run:  yarn build:hymns
 
@@ -20,6 +22,8 @@ const {
 const {
   normalizeForFtsContent,
   normalizeHymnAuthors,
+  addToVocabulary,
+  writeVocabulary,
   runAsync,
   allAsync,
   finalizeAsync,
@@ -98,17 +102,17 @@ async function buildHymns(dbPath, version) {
     content=''
   )`);
 
-  // Trigram-tokenized twins of HymnsFts/HymnVersesFts, over the SAME
-  // normalized text. Typo/merged-word fuzzy fallback only, used when the
-  // strict prefix query finds nothing — see src/utils/searchNormalize.ts.
-  await runAsync(db, `CREATE VIRTUAL TABLE HymnsTrigram USING fts5(
-    title_plain,
-    authors_plain,
-    tokenize='trigram',
-    content=''
+  // Typo correction runs off the corpus vocabulary rather than trigram copies
+  // of every hymn/verse — see the same pair in buildBibleDatabase.js for why.
+  // `Vocabulary` answers "is this an exact word?", `VocabularyTrigram`
+  // answers "what real words look like this typo?".
+  await runAsync(db, `CREATE TABLE Vocabulary (
+    id INTEGER PRIMARY KEY,
+    word TEXT NOT NULL UNIQUE,
+    freq INTEGER NOT NULL
   )`);
-  await runAsync(db, `CREATE VIRTUAL TABLE HymnVersesTrigram USING fts5(
-    text_plain,
+  await runAsync(db, `CREATE VIRTUAL TABLE VocabularyTrigram USING fts5(
+    word,
     tokenize='trigram',
     content=''
   )`);
@@ -174,11 +178,9 @@ async function buildHymns(dbPath, version) {
   );
   const insHymnsFtsAsync = (p) =>
     new Promise((res, rej) => insHymnsFts.run(p, (e) => (e ? rej(e) : res())));
-  const insHymnsTrigram = db.prepare(
-    `INSERT INTO HymnsTrigram(rowid, title_plain, authors_plain) VALUES (?, ?, ?)`
-  );
-  const insHymnsTrigramAsync = (p) =>
-    new Promise((res, rej) => insHymnsTrigram.run(p, (e) => (e ? rej(e) : res())));
+
+  // Tallied across titles, authors and verses, written once at the end.
+  const vocabulary = new Map();
 
   for (const h of hymnRows) {
     const titlePlain = normalizeForFtsContent(String(h.title || ''));
@@ -193,33 +195,32 @@ async function buildHymns(dbPath, version) {
       Number(h.number) || 0,
       String(h.category || ''),
     ]);
-    await insHymnsTrigramAsync([h.rowid, titlePlain, authorsPlain]);
+    addToVocabulary(vocabulary, titlePlain);
+    addToVocabulary(vocabulary, authorsPlain);
   }
   await finalizeAsync(insHymnsFts);
-  await finalizeAsync(insHymnsTrigram);
 
   const verseRows = await allAsync(db, `SELECT id, text FROM HymnVerses`);
   const insVersesFts = db.prepare(`INSERT INTO HymnVersesFts(rowid, text_plain) VALUES (?, ?)`);
   const insVersesFtsAsync = (p) =>
     new Promise((res, rej) => insVersesFts.run(p, (e) => (e ? rej(e) : res())));
-  const insVersesTrigram = db.prepare(`INSERT INTO HymnVersesTrigram(rowid, text_plain) VALUES (?, ?)`);
-  const insVersesTrigramAsync = (p) =>
-    new Promise((res, rej) => insVersesTrigram.run(p, (e) => (e ? rej(e) : res())));
   for (const r of verseRows) {
     const plain = normalizeForFtsContent(String(r.text || ''));
     await insVersesFtsAsync([r.id, plain]);
-    await insVersesTrigramAsync([r.id, plain]);
+    addToVocabulary(vocabulary, plain);
   }
   await finalizeAsync(insVersesFts);
-  await finalizeAsync(insVersesTrigram);
 
-  console.log(`  ↳ ${hymnRows.length} hymns, ${verseRows.length} verses indexed`);
+  const vocabularySize = await writeVocabulary(db, vocabulary);
+
+  console.log(
+    `  ↳ ${hymnRows.length} hymns, ${verseRows.length} verses indexed, ${vocabularySize} distinct words`
+  );
 
   console.log('  optimizing FTS + VACUUM ...');
   await runAsync(db, `INSERT INTO HymnsFts(HymnsFts) VALUES('optimize')`);
   await runAsync(db, `INSERT INTO HymnVersesFts(HymnVersesFts) VALUES('optimize')`);
-  await runAsync(db, `INSERT INTO HymnsTrigram(HymnsTrigram) VALUES('optimize')`);
-  await runAsync(db, `INSERT INTO HymnVersesTrigram(HymnVersesTrigram) VALUES('optimize')`);
+  await runAsync(db, `INSERT INTO VocabularyTrigram(VocabularyTrigram) VALUES('optimize')`);
   await runAsync(db, `ANALYZE`);
   await runAsync(db, `VACUUM`);
 
@@ -239,8 +240,6 @@ async function main() {
 
   ensureDirectory(assetsPaths.dev);
   ensureDirectory(assetsPaths.prod);
-  ensureDirectory(assetsPaths.android.dev);
-  ensureDirectory(assetsPaths.android.prod);
   ensureDirectory(assetsPaths.ios.dev);
   ensureDirectory(assetsPaths.ios.prod);
 
@@ -262,8 +261,6 @@ async function main() {
   for (const p of [
     hymnsDev,
     hymnsProd,
-    databasePaths.hymns.androidDev,
-    databasePaths.hymns.androidProd,
     databasePaths.hymns.iosDev,
     databasePaths.hymns.iosProd,
   ]) {
@@ -272,23 +269,19 @@ async function main() {
 
   await buildHymns(hymnsDev, version);
 
-  console.log('\n📦 Copying dev DB to platform asset folders...');
-  copyFileSafe(hymnsDev, databasePaths.hymns.androidDev);
+  console.log('\n📦 Copying dev DB to the iOS asset folder...');
   copyFileSafe(hymnsDev, databasePaths.hymns.iosDev);
 
   console.log('🗜️  Creating max-compression ZIP for prod...');
   await createZipFromDb(hymnsDev, hymnsProd);
 
-  console.log('📦 Copying prod ZIP to platform asset folders...');
-  copyFileSafe(hymnsProd, databasePaths.hymns.androidProd);
+  console.log('📦 Copying prod ZIP to the iOS asset folder...');
   copyFileSafe(hymnsProd, databasePaths.hymns.iosProd);
 
   console.log('\n📊 Hymns size audit\n');
   reportSize('Hymns.db (root)', hymnsDev);
-  reportSize('Hymns.db (android)', databasePaths.hymns.androidDev);
   reportSize('Hymns.db (ios)', databasePaths.hymns.iosDev);
   reportSize('Hymns.zip (root)', hymnsProd);
-  reportSize('Hymns.zip (android)', databasePaths.hymns.androidProd);
   reportSize('Hymns.zip (ios)', databasePaths.hymns.iosProd);
 
   // Persist the bump ONLY after a fully successful build + copy, so the version

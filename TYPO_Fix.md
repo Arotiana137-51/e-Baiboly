@@ -13,7 +13,7 @@ yarn bump:db-version --target=bible --version=20260605
 yarn build:patch     --target=bible --since=<previous-version-tag-or-sha> --version=20260605
 yarn build:bible
 git add docs/patches/ src/services/database/dbVersions.ts scripts/utils/dbVersions.js \
-        assets/ android/app/src/main/assets/ ios/SmartBaibolyYarn/Resources/
+        assets/ ios/SmartBaibolyYarn/Resources/
 git commit -m "fix: <verse> typo (patch 20260605)"
 git push
 ```
@@ -99,8 +99,8 @@ yarn build:bible
 ```
 
 This regenerates `BibleMG65.db` and `BibleMG65.zip` in:
-- `assets/data/`
-- `android/app/src/main/assets/data/`
+- `assets/data/` (Android packages these directly — see the `sourceSets` block
+  in `android/app/build.gradle`)
 - `ios/SmartBaibolyYarn/Resources/data/`
 
 The bundled DB now contains the fix too, so fresh installs (users with no prior install) skip the patch chain entirely and get the corrected text from the APK directly. Connected upgrade users get it via the OTA patch.
@@ -113,8 +113,6 @@ git add docs/patches/bible/ \
         scripts/utils/dbVersions.js \
         scripts/source-data/bible/Yaml_Zo_Source/bible_verse_mg1865_mg_<n>.yaml \
         assets/data/dev/BibleMG65.db assets/data/prod/BibleMG65.zip \
-        android/app/src/main/assets/data/dev/BibleMG65.db \
-        android/app/src/main/assets/data/prod/BibleMG65.zip \
         ios/SmartBaibolyYarn/Resources/data/dev/BibleMG65.db \
         ios/SmartBaibolyYarn/Resources/data/prod/BibleMG65.zip
 

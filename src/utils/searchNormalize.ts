@@ -102,8 +102,8 @@ export const makeFtsPrefixQuery = (
 // fallback (slower, less precise, but correct), so degrading to it on any FTS
 // failure is strictly safer than re-throwing.
 type QueryRunner = {
-  executeQuerySilent: (sql: string, params: any[]) => Promise<{rows: any[]}>;
-  executeQuery: (sql: string, params: any[]) => Promise<{rows: any[]}>;
+  executeQuerySilent: <T = any>(sql: string, params: any[]) => Promise<{rows: T[]}>;
+  executeQuery: <T = any>(sql: string, params: any[]) => Promise<{rows: T[]}>;
 };
 export const execWithLikeFallback = async (
   service: QueryRunner,
@@ -119,22 +119,22 @@ export const execWithLikeFallback = async (
 };
 
 // ---------------------------------------------------------------------------
-// Trigram fuzzy fallback — typo/merged-word tolerance on top of the strict
-// prefix search above.
+// Typo tolerance — spelling correction against the corpus vocabulary.
 //
-// The strict AND-of-prefixes query above requires every token to appear as a
-// prefix of some indexed token; it has no tolerance for a misspelled letter,
-// a missing/extra letter, or a Malagasy elision typed as one merged word
-// (e.g. "aminny" for "amin'ny", which the index stores as two separate
-// tokens "amin" and "ny"). When the strict query finds NOTHING, a query
-// against a `tokenize='trigram'` FTS5 table over the same normalized content
-// can still recover the right rows: it indexes every overlapping 3-character
-// window of the text (spaces included), so a partial character-level overlap
-// is enough to find a candidate regardless of where word boundaries fall.
+// The strict AND-of-prefixes query above needs every token to be a prefix of
+// some indexed word; it has no tolerance for a misspelled letter, a
+// missing/extra one, or a Malagasy elision typed as one merged word (e.g.
+// "aminny" for "amin'ny", which the index stores as two tokens "amin" + "ny").
 //
-// This is a fallback tier only — triggered by the caller when the strict tier
-// returns zero rows — because trigram ranking is inherently noisier than
-// exact/prefix matching.
+// So when the strict query finds NOTHING, we correct the QUERY rather than
+// fuzzy-matching the content: look each unknown token up against the corpus
+// vocabulary (`Vocabulary` + its trigram index, built in scripts/utils/
+// buildDb.js), swap in the closest real word, then re-run the ordinary ranked
+// search. Correcting the word and reusing the real search beats scoring
+// content by character overlap on every axis — the comparison is word-to-word
+// instead of word-to-whole-verse so it is far more precise, results come back
+// through normal bm25 ranking, and indexing ~23k distinct words costs 0.5 MB
+// where trigram-indexing every verse cost 10.4 MB of the user's download.
 
 // Every overlapping 3-char window of an already-normalized string. Strings
 // shorter than 3 chars can't form a trigram; use the whole string as its own
@@ -157,14 +157,10 @@ export const generateTrigrams = (normalized: string): string[] => {
 export const makeTrigramMatchQuery = (trigrams: string[]): string =>
   trigrams.map(tg => `"${tg.replace(/"/g, '""')}"`).join(' OR ');
 
-// Post-query precision filter: bm25 over a trigram table favors short
-// documents that happen to share a few rare trigrams (classic bm25 length
-// normalization), which can rank a coincidental match above the real one.
-// Re-score each SQL-returned candidate by the actual fraction of the query's
-// trigrams it contains, and drop anything below `minOverlap`. The candidate
-// set is NOT capped (a typo whose letters are common Malagasy syllables can
-// pull tens of thousands of rows) — see `scoreInChunks` below for how that's
-// kept from blocking the JS thread for one unbroken multi-second stretch.
+// Precision filter over the words the trigram index hands back: bm25 there
+// rewards sharing rare trigrams, which is not the same as "looks like the
+// typo". Re-score each candidate by the fraction of the typo's trigrams it
+// actually contains, and drop anything below TRIGRAM_MIN_OVERLAP.
 export const trigramOverlapScore = (
   queryTrigrams: string[],
   candidateNormalizedText: string,
@@ -190,10 +186,10 @@ export const TRIGRAM_MIN_OVERLAP = 0.5;
 const yieldToEventLoop = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 // Scores every item in `items` via `score` (returning null to drop it),
-// yielding to the event loop every `chunkSize` items. Used by the trigram
-// fuzzy fallback, whose candidate pool is intentionally uncapped — for a
-// small pool this is just one pass with no yielding at all; it only matters
-// for the rare case for a query with tens of thousands of candidates.
+// yielding to the event loop every `chunkSize` items. The correction lookup
+// is uncapped, and a typo made of common Malagasy syllables can match a large
+// slice of the vocabulary — for a small pool this is one pass with no
+// yielding at all.
 export const scoreInChunks = async <T, R>(
   items: T[],
   score: (item: T) => R | null,
@@ -211,4 +207,118 @@ export const scoreInChunks = async <T, R>(
     }
   }
   return out;
+};
+
+// The search itself matches on prefixes, so a token is "known" when it starts
+// ANY real word — "andriaman" needs no correcting even though it isn't a word
+// on its own. Expressed as a range scan rather than LIKE/GLOB so it always
+// rides Vocabulary.word's UNIQUE index.
+const isKnownPrefix = async (service: QueryRunner, token: string): Promise<boolean> => {
+  const upper = token.slice(0, -1) + String.fromCodePoint(token.codePointAt(token.length - 1)! + 1);
+  const {rows} = await service.executeQuerySilent(
+    'SELECT 1 FROM Vocabulary WHERE word >= ? AND word < ? LIMIT 1',
+    [token, upper],
+  );
+  return rows.length > 0;
+};
+
+// Malagasy elisions get typed as one word ("aminny" for "amin'ny", stored as
+// "amin" + "ny"). Try every split point in a single query and keep the most
+// balanced pair of real words — "amin"+"ny" rather than "a"+"minny".
+const splitIntoKnownWords = async (
+  service: QueryRunner,
+  token: string,
+): Promise<string[] | null> => {
+  if (token.length < 4) return null;
+
+  const parts: string[] = [];
+  for (let i = 2; i <= token.length - 2; i++) {
+    parts.push(token.slice(0, i), token.slice(i));
+  }
+  const {rows} = await service.executeQuerySilent<{word: string}>(
+    `SELECT word FROM Vocabulary WHERE word IN (${parts.map(() => '?').join(',')})`,
+    parts,
+  );
+  const known = new Set(rows.map(r => r.word));
+
+  let best: string[] | null = null;
+  for (let i = 2; i <= token.length - 2; i++) {
+    const head = token.slice(0, i);
+    const tail = token.slice(i);
+    if (!known.has(head) || !known.has(tail)) continue;
+    if (!best || Math.min(head.length, tail.length) > Math.min(best[0].length, best[1].length)) {
+      best = [head, tail];
+    }
+  }
+  return best;
+};
+
+// Closest real word to a typo, by trigram overlap. Ties break on corpus
+// frequency, so a typo equally close to a common and an obscure word picks
+// the one the user more likely meant.
+const closestKnownWord = async (
+  service: QueryRunner,
+  token: string,
+): Promise<string | null> => {
+  const trigrams = generateTrigrams(token);
+  if (trigrams.length === 0) return null;
+
+  const {rows} = await service.executeQuerySilent<{word: string; freq: number}>(
+    `SELECT v.word AS word, v.freq AS freq
+     FROM VocabularyTrigram t
+     JOIN Vocabulary v ON v.id = t.rowid
+     WHERE VocabularyTrigram MATCH ?`,
+    [makeTrigramMatchQuery(trigrams)],
+  );
+
+  const scored = await scoreInChunks(rows, row => {
+    const overlap = trigramOverlapScore(trigrams, row.word);
+    return overlap >= TRIGRAM_MIN_OVERLAP ? {word: row.word, overlap, freq: row.freq} : null;
+  });
+  if (scored.length === 0) return null;
+
+  scored.sort((a, b) => b.overlap - a.overlap || b.freq - a.freq);
+  return scored[0].word;
+};
+
+// Rewrites a query whose strict search found nothing, correcting only the
+// tokens that match no real word. Returns null when nothing was changed —
+// then there is no point re-running the search. Never throws: a missing
+// Vocabulary table (older DB not yet re-extracted) just means no correction.
+export const correctQueryViaVocabulary = async (
+  service: QueryRunner,
+  normalizedQuery: string,
+): Promise<string | null> => {
+  const tokens = normalizedQuery.split(' ').filter(t => t.length > 1);
+  if (tokens.length === 0) return null;
+
+  try {
+    const out: string[] = [];
+    let changed = false;
+
+    for (const token of tokens) {
+      if (await isKnownPrefix(service, token)) {
+        out.push(token);
+        continue;
+      }
+      const split = await splitIntoKnownWords(service, token);
+      if (split) {
+        out.push(...split);
+        changed = true;
+        continue;
+      }
+      const closest = await closestKnownWord(service, token);
+      if (closest && closest !== token) {
+        out.push(closest);
+        changed = true;
+        continue;
+      }
+      out.push(token);
+    }
+
+    return changed ? out.join(' ') : null;
+  } catch (e: any) {
+    console.warn('Vocabulary correction unavailable:', e?.message ?? e);
+    return null;
+  }
 };
