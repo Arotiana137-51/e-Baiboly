@@ -45,7 +45,8 @@
       "Read(//c/Users/Arotiana/.android/cmdline-tools/latest/bin/**)",
       "WebFetch(domain:tononkira.serasera.org)",
       "Bash(python scripts/utils/scrapFifohazana.py)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "WebSearch"
     ]
   }
 }
