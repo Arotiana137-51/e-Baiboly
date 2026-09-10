@@ -18,13 +18,16 @@ export const getDatabaseAssetPath = (dbName: string): string => {
   // Android: gradle sourceSets in android/app/build.gradle map the variant's
   // data/<mode> directory onto the asset root, so the packaged assets are
   // flat (BibleMG65.db at the top of the assets folder).
-  // iOS: the whole Resources tree is bundled, so the data/<mode>/ prefix is
-  // preserved in the main bundle path.
+  // iOS: only Resources/data/prod is added to the target as a folder
+  // reference, so the bundle keeps the prod/ prefix and nothing else from the
+  // data tree ships. Dev DBs are not bundled on iOS — a Debug build there
+  // would find no asset, which is moot while the app can only be built for
+  // iOS in CI.
   if (Platform.OS === 'android') {
     return fileName;
   }
   const subdir = __DEV__ ? 'dev' : 'prod';
-  return `data/${subdir}/${fileName}`;
+  return `${subdir}/${fileName}`;
 };
 
 // Base paths for different platforms
@@ -178,8 +181,36 @@ export const ensureDirectoryExists = async (path: string): Promise<void> => {
 /**
  * Copies database from assets to device storage
  */
+/**
+ * Copy a bundled asset onto a writable path.
+ *
+ * react-native-fs implements copyFileAssets/readFileAssets on Android only —
+ * on iOS the native module has no such method and the JS layer throws
+ * "readFileAssets is not available on this platform". iOS therefore reads the
+ * file out of the main bundle by absolute path instead.
+ */
+const copyBundledAsset = async (
+  assetPath: string,
+  targetPath: string
+): Promise<void> => {
+  if (isAndroid) {
+    await FileSystem.copyFileAssets(assetPath, targetPath);
+    return;
+  }
+
+  // copyFile rejects if the destination already exists, unlike the
+  // writeFile call this replaced.
+  if (await fileExistsSafe(targetPath)) {
+    await FileSystem.unlink(targetPath);
+  }
+  await FileSystem.copyFile(
+    `${FileSystem.MainBundlePath}/${assetPath}`,
+    targetPath
+  );
+};
+
 export const copyDatabaseFromAssets = async (
-  assetPath: string, 
+  assetPath: string,
   targetPath: string
 ): Promise<void> => {
   const dbDirectory = getDatabaseDirectory();
@@ -188,24 +219,14 @@ export const copyDatabaseFromAssets = async (
   if (assetPath.toLowerCase().endsWith('.zip')) {
     const zipTargetPath = `${targetPath}.zip`;
     try {
-      if (isAndroid) {
-        await FileSystem.copyFileAssets(assetPath, zipTargetPath);
-      } else {
-        const assetData = await FileSystem.readFileAssets(assetPath, 'base64');
-        await FileSystem.writeFile(zipTargetPath, assetData, 'base64');
-      }
+      await copyBundledAsset(assetPath, zipTargetPath);
     } catch (error) {
       const fallbackAssetPath = assetPath.replace(/\.zip$/i, '.db');
       console.warn(
         `Failed to copy ZIP database asset (${assetPath}). Falling back to DB asset (${fallbackAssetPath}).`,
         error
       );
-      if (isAndroid) {
-        await FileSystem.copyFileAssets(fallbackAssetPath, targetPath);
-      } else {
-        const assetData = await FileSystem.readFileAssets(fallbackAssetPath, 'base64');
-        await FileSystem.writeFile(targetPath, assetData, 'base64');
-      }
+      await copyBundledAsset(fallbackAssetPath, targetPath);
       return;
     }
 
@@ -252,13 +273,7 @@ export const copyDatabaseFromAssets = async (
     return;
   }
   
-  if (isAndroid) {
-    await FileSystem.copyFileAssets(assetPath, targetPath);
-  } else {
-    // iOS: Read from bundle and write to Documents as binary
-    const assetData = await FileSystem.readFileAssets(assetPath, 'base64');
-    await FileSystem.writeFile(targetPath, assetData, 'base64');
-  }
+  await copyBundledAsset(assetPath, targetPath);
 };
 
 // Export commonly used paths for convenience

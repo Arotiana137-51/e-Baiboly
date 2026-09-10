@@ -65,10 +65,18 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Confirm the archive holds a real app binary
+      # The databases reach the bundle through a folder reference, which is easy
+      # to lose in an Xcode project edit and impossible to notice from a green
+      # build: the app compiles fine and only fails at runtime, with no Bible
+      # and no hymns. Assert they are actually in the .app.
+      - name: Confirm the archive holds the app and its databases
         run: |
           APP="$RUNNER_TEMP/SmartBaibolyYarn.xcarchive/Products/Applications/SmartBaibolyYarn.app"
           test -d "$APP" || { echo "No .app produced in the archive"; exit 1; }
           test -f "$APP/main.jsbundle" || { echo "No JS bundle in the archive"; exit 1; }
+          for db in prod/BibleMG65.zip prod/Hymns.zip; do
+            test -f "$APP/$db" || { echo "MISSING from bundle: $db"; ls -R "$APP" | head -40; exit 1; }
+            echo "bundled: $db ($(du -h "$APP/$db" | cut -f1))"
+          done
           echo "Archive OK"
           du -sh "$APP"
