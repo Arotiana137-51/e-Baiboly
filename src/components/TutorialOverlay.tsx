@@ -25,6 +25,9 @@ const HOLE_PAD = 8;
 const CARD_MAX_WIDTH = 320;
 const CARD_GAP = 14;
 const SCRIM = 'rgba(0,0,0,0.72)';
+// Below this window height (320x568, 360x640, 375x667 class phones) the card
+// gets tighter padding + smaller body text so it stops eating half the screen.
+const COMPACT_HEIGHT = 700;
 const GESTURE_HINT_SIZE = 96;
 
 type Rect = {x: number; y: number; width: number; height: number};
@@ -68,6 +71,7 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   const stepScope: TargetScope = step?.scope ?? 'screen';
   const isMine = !!step && stepScope === scope;
   const accent = primaryColor ?? theme.colors.navBackground;
+  const compact = screen.height < COMPACT_HEIGHT;
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
@@ -238,6 +242,7 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
           style={[
             styles.card,
             styles.modalCard,
+            compact && styles.cardCompact,
             // Bottom-left so it clears the menu's controls above it. Tinted
             // and translucent, same as the peek cards, so the real modal
             // behind it (e.g. the highlight editor) stays partly visible.
@@ -246,7 +251,7 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
           <Text style={styles.counterOnAccent}>
             {stepIndex + 1} / {stepCount}
           </Text>
-          <Text style={styles.bodyOnAccent}>{step?.text}</Text>
+          <Text style={[styles.bodyOnAccent, compact && styles.bodyCompact]}>{step?.text}</Text>
           <View style={styles.buttonRow}>
             <Pressable
               onPress={skip}
@@ -461,6 +466,7 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
         style={[
           styles.card,
           isPeek && styles.peekCard,
+          compact && styles.cardCompact,
           {
             backgroundColor: isPeek ? hexToRgba(accent, 0.55) : theme.colors.backgroundSecondary,
             top: isPeek ? peekCardTop : cardTop,
@@ -469,7 +475,11 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
         <Text style={isPeek ? styles.counterOnAccent : [styles.counter, {color: theme.colors.textSecondary}]}>
           {stepIndex + 1} / {stepCount}
         </Text>
-        <Text style={isPeek ? styles.bodyOnAccent : [styles.body, {color: theme.colors.textPrimary}]}>
+        <Text
+          style={[
+            isPeek ? styles.bodyOnAccent : [styles.body, {color: theme.colors.textPrimary}],
+            compact && styles.bodyCompact,
+          ]}>
           {step?.text}
         </Text>
         <View style={styles.buttonRow}>
@@ -524,10 +534,13 @@ const styles = StyleSheet.create({
   fingerGlyph: {
     fontSize: 44,
   },
+  // Wraps so a narrow card (the 62% peek card on a 360dp phone) stacks the
+  // two pills instead of pushing Manaraka past the card edge.
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     alignItems: 'center',
+    gap: 8,
   },
   skipInlineBtn: {
     flexDirection: 'row',
@@ -567,9 +580,13 @@ const styles = StyleSheet.create({
     marginRight: 16,
     elevation: 0,
   },
+  cardCompact: {padding: 14},
   counter: {fontSize: 12, fontWeight: '700', marginBottom: 6},
   body: {fontSize: 16, lineHeight: 22, marginBottom: 14},
+  bodyCompact: {fontSize: 14, lineHeight: 19, marginBottom: 10},
   nextBtn: {
+    // Right-aligns on the shared row and on its own row once wrapped.
+    marginLeft: 'auto',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 999,
