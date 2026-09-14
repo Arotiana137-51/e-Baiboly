@@ -4,7 +4,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
 import {DatabaseProvider, useDatabase} from './src/contexts/DatabaseContext';
 import {ActivityIndicator, View, Text, StyleSheet} from 'react-native';
-import RootNavigator from './src/navigation/RootNavigator';
+import RootNavigator, {navigationRef} from './src/navigation/RootNavigator';
 import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
 import {JesusNameProvider, useJesusName} from './src/contexts/JesusNameContext';
 import {CultModeProvider} from './src/contexts/CultModeContext';
@@ -18,6 +18,7 @@ import {
   drainFatalErrorToQueue,
 } from './src/services/reporting/crashReporter';
 import {ensureRemindersScheduled} from './src/services/reminders/readingReminder';
+import notifee, {EventType, type Notification} from '@notifee/react-native';
 
 // Capture uncaught JS errors (async, timers, event handlers) before RN's
 // default handler runs, so production crashes carry a real message/stack.
@@ -27,6 +28,20 @@ installGlobalErrorHandler();
 // tutorial → Fotoam-pivavahana tutorial) on every launch. Dev-only; must stay
 // false in release so returning users land on Home, not the color picker.
 const FORCE_ONBOARDING_FLOW = false;
+
+// A daily-verse notification carries its verse in `data`; tapping it opens
+// that verse in the reader. Plain reminders have no data, so this is a no-op
+// for them.
+const openVerseFromNotification = (notification?: Notification) => {
+  const data = notification?.data;
+  if (!data?.bookId || !navigationRef.isReady()) return;
+  navigationRef.navigate('Home', {
+    mode: 'bible',
+    selectedBook: {id: Number(data.bookId), name: String(data.bookName)},
+    selectedChapter: Number(data.chapter),
+    selectedVerse: Number(data.verse),
+  });
+};
 
 // Splash screen component
 const SplashScreen = () => (
@@ -58,6 +73,14 @@ const AppContent = () => {
     // trigger. Fire-and-forget; never throws.
     ensureRemindersScheduled();
   }, []);
+
+  useEffect(
+    () =>
+      notifee.onForegroundEvent(({type, detail}) => {
+        if (type === EventType.PRESS) openVerseFromNotification(detail.notification);
+      }),
+    [],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -128,7 +151,15 @@ const App = () => {
               <DatabaseProvider>
                 <CultModeProvider>
                   <TutorialProvider>
-                    <NavigationContainer>
+                    <NavigationContainer
+                      ref={navigationRef}
+                      onReady={() => {
+                        // Cold start from a notification tap.
+                        notifee
+                          .getInitialNotification()
+                          .then(initial => openVerseFromNotification(initial?.notification))
+                          .catch(() => {});
+                      }}>
                       <AppContent />
                     </NavigationContainer>
                   </TutorialProvider>

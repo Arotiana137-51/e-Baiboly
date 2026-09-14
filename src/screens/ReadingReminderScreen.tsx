@@ -31,10 +31,14 @@ const timeToDate = (time: string): Date => {
 };
 const dateToTime = (date: Date): string => `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 
-const slotSummary = (slot: ReminderSlot) =>
-  slot.frequency === 'weekly'
-    ? `${DAY_LABELS[slot.dayOfWeek ?? 0]} • ${slot.time}`
-    : `Isan'andro • ${slot.time}`;
+const slotSummary = (slot: ReminderSlot) => {
+  const when =
+    slot.frequency === 'weekly'
+      ? `${DAY_LABELS[slot.dayOfWeek ?? 0]} • ${slot.time}`
+      : `Isan'andro • ${slot.time}`;
+  // Placeholder MG copy — user-owned.
+  return slot.kind === 'verse' ? `Andinin-teny • ${when}` : when;
+};
 
 const ReadingReminderScreen = () => {
   const {theme} = useTheme();
@@ -44,6 +48,7 @@ const ReadingReminderScreen = () => {
 
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
+  const [draftKind, setDraftKind] = useState<ReminderSlot['kind']>(undefined);
   const [draftFrequency, setDraftFrequency] = useState<ReminderFrequency>('daily');
   const [draftDayOfWeek, setDraftDayOfWeek] = useState(0);
   const [draftTime, setDraftTime] = useState('07:00');
@@ -103,6 +108,7 @@ const ReadingReminderScreen = () => {
   const openAddEditor = useCallback(() => {
     if (slots.length >= MAX_REMINDER_SLOTS) return;
     setEditingSlotId(null);
+    setDraftKind(undefined);
     setDraftFrequency('daily');
     setDraftDayOfWeek(new Date().getDay());
     setDraftTime('07:00');
@@ -112,6 +118,7 @@ const ReadingReminderScreen = () => {
 
   const openEditEditor = useCallback((slot: ReminderSlot) => {
     setEditingSlotId(slot.id);
+    setDraftKind(slot.kind);
     setDraftFrequency(slot.frequency);
     setDraftDayOfWeek(slot.dayOfWeek ?? new Date().getDay());
     setDraftTime(slot.time);
@@ -127,6 +134,7 @@ const ReadingReminderScreen = () => {
     const slot: ReminderSlot = {
       id: editingSlotId ?? createSlotId(),
       enabled: true,
+      kind: draftKind,
       time: draftTime,
       frequency: draftFrequency,
       dayOfWeek: draftFrequency === 'weekly' ? draftDayOfWeek : undefined,
@@ -136,7 +144,7 @@ const ReadingReminderScreen = () => {
       await refreshSlots();
       setEditorVisible(false);
     });
-  }, [editingSlotId, draftTime, draftFrequency, draftDayOfWeek, requestPermissionOrRun, refreshSlots]);
+  }, [editingSlotId, draftKind, draftTime, draftFrequency, draftDayOfWeek, requestPermissionOrRun, refreshSlots]);
 
   const toggleSlot = useCallback(
     (slot: ReminderSlot, next: boolean) => {
@@ -253,6 +261,34 @@ const ReadingReminderScreen = () => {
             <Text style={[styles.modalTitle, {color: theme.colors.textPrimary}]}>
               {editingSlotId ? 'Ovay ny fampahatsiarovana' : 'Fampahatsiarovana vaovao'}
             </Text>
+
+            <View style={styles.frequencyRow}>
+              {([undefined, 'verse'] as const).map(kind => {
+                const active = draftKind === kind;
+                return (
+                  <Pressable
+                    key={kind ?? 'reminder'}
+                    onPress={() => setDraftKind(kind)}
+                    style={[
+                      styles.frequencyPill,
+                      {
+                        borderColor: theme.colors.accentBlue,
+                        backgroundColor: active ? theme.colors.accentBlue : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.frequencyPillText,
+                        {color: active ? '#FFFFFF' : theme.colors.accentBlue},
+                      ]}
+                    >
+                      {kind === 'verse' ? 'Andinin-teny' : 'Fampahatsiarovana'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
             <View style={styles.frequencyRow}>
               {(['daily', 'weekly'] as const).map(freq => {

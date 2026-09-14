@@ -1,4 +1,5 @@
 import React from 'react';
+import {createNavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
@@ -47,6 +48,10 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Lets code outside the navigator tree (the notification press handler in
+// App.tsx) navigate.
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 type RootNavigatorProps = {
   initialRouteName?: keyof RootStackParamList;

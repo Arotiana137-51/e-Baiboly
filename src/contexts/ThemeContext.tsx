@@ -1,5 +1,6 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {ensureRemindersScheduled} from '../services/reminders/readingReminder';
 import {StyleSheet, View} from 'react-native';
 import {
   getStoredPrimaryColor,
@@ -124,7 +125,7 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
   const setPrimaryColor = useCallback((hex: string | null) => {
     if (hex !== null && !isValidHexColor(hex)) return;
     setPrimaryColorState(hex);
-    setStoredPrimaryColor(hex);
+    setStoredPrimaryColor(hex).then(ensureRemindersScheduled); // re-tint pending notifications
   }, []);
 
   const persist = useCallback(async (enabled: boolean) => {
