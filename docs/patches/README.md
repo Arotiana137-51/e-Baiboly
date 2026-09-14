@@ -5,12 +5,13 @@ These files are served via GitHub Pages from this repo's `main` branch (`Setting
 **Do not edit by hand.** Use the patch builder:
 
 ```
-yarn bump:db-version -- --target=bible --version=<YYYYMMDD>
-yarn build:patch     -- --target=bible --since=<previous-git-ref> --version=<YYYYMMDD>
-yarn build:bible     # fold the same change into the bundled DB
-git add docs/patches/ src/services/database/dbVersions.ts scripts/utils/dbVersions.js android/ ios/
+yarn build:bible     # auto-bumps the version from the content hash; note the version it prints
+yarn build:patch     -- --target=bible --since=<previous-git-ref> --version=<version-printed-above>
+git add docs/patches/ src/services/database/dbVersions.ts scripts/utils/ assets/ ios/
 git commit && git push
 ```
+
+Do not run `yarn bump:db-version` before `build:bible` — the builder already bumps when content changed, and a manual bump first makes it land on `version + 1`.
 
 ## Layout
 

@@ -1,0 +1,23 @@
+{
+  "version": 20260914,
+  "appliesTo": "bible",
+  "verses": [
+    {
+      "book_id": 19,
+      "chapter": 10,
+      "verse_number": 2,
+      "text": "Noho ny fireharehan'ny ratsy fanahy dia enjehina mafy ny malahelo*; azon'ny fihendrena nataony izy ireny. [*Na: miolomay manenjika ny malahelo izy]",
+      "text_plain": "noho ny fireharehan ny ratsy fanahy dia enjehina mafy ny malahelo azon ny fihendrena nataony izy ireny na miolomay manenjika ny malahelo izy",
+      "title": null
+    },
+    {
+      "book_id": 19,
+      "chapter": 10,
+      "verse_number": 15,
+      "text": "Torotoroy ny sandrin'ny ratsy fanahy; ary adinoy ny heloky ny mpanao ratsy mandra-paha-tsy hisy hitanao intsony.",
+      "text_plain": "torotoroy ny sandrin ny ratsy fanahy ary adinoy ny heloky ny mpanao ratsy mandra paha tsy hisy hitanao intsony",
+      "title": null
+    }
+  ],
+  "books": []
+}
