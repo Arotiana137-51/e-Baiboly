@@ -8,6 +8,7 @@ import {useTheme} from '../contexts/ThemeContext';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import {TEXT_STYLES} from '../constants/Typography';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
+import {HYMN_CHORUS_LABEL} from '../utils/chapterMarks';
 import {t} from '../i18n/strings';
 
 type NotesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -38,6 +39,10 @@ const NotesScreen = () => {
   };
 
   const handlePress = (entry: NoteEntry) => {
+    if (entry.hymnId) {
+      navigation.navigate('Home', {mode: 'hymnal', selectedHymnId: entry.hymnId});
+      return;
+    }
     navigation.navigate('Home', {
       mode: 'bible',
       selectedBook: {id: entry.bookId, name: entry.bookName},
@@ -45,6 +50,13 @@ const NotesScreen = () => {
       selectedVerse: entry.verseNumber,
     });
   };
+
+  // "FFPM 312 · 2" for a hymn stanza (chorus shows its label), else the usual
+  // "Book chapter:verse".
+  const noteTitle = (item: NoteEntry) =>
+    item.hymnId
+      ? `${item.hymnLabel} · ${item.verseNumber === 0 ? HYMN_CHORUS_LABEL : item.verseNumber}`
+      : `${getBibleBookShortName(item.bookName, item.bookId)} ${item.chapter}:${item.verseNumber}`;
 
   const renderNoteItem = ({item}: {item: NoteEntry}) => (
     <View
@@ -55,8 +67,7 @@ const NotesScreen = () => {
       <Pressable style={styles.pressableContent} onPress={() => handlePress(item)}>
         <View style={styles.itemContent}>
           <Text style={[styles.itemTitle, {color: theme.colors.textPrimary}]}>
-            {getBibleBookShortName(item.bookName, item.bookId)} {item.chapter}:
-            {item.verseNumber}
+            {noteTitle(item)}
           </Text>
           <Text style={[styles.itemText, {color: theme.colors.textSecondary}]}>
             {item.noteText.length > 100

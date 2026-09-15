@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {chapterMarksKey, type ChapterMark} from '../utils/chapterMarks';
+import {chapterMarksKey, hymnMarksKey, type ChapterMark} from '../utils/chapterMarks';
 
 const isMark = (m: any): m is ChapterMark =>
   m &&
@@ -11,19 +11,20 @@ const isMark = (m: any): m is ChapterMark =>
   m.end > m.start &&
   (m.note === undefined || typeof m.note === 'string');
 
-export const useChapterMarks = (bookId: number | null, chapter: number | null) => {
+// Marks for one Bible chapter or one hymn, keyed by storage key. The two
+// exported hooks below only differ in how they derive that key.
+const useMarksForKey = (key: string | null) => {
   const [marks, setMarks] = useState<ChapterMark[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const reload = useCallback(async () => {
-    if (bookId == null || chapter == null) {
+    if (key == null) {
       setMarks([]);
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     try {
-      const key = chapterMarksKey(bookId, chapter);
       const raw = await AsyncStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw);
@@ -38,7 +39,7 @@ export const useChapterMarks = (bookId: number | null, chapter: number | null) =
     } finally {
       setIsLoading(false);
     }
-  }, [bookId, chapter]);
+  }, [key]);
 
   useEffect(() => {
     reload();
@@ -46,9 +47,8 @@ export const useChapterMarks = (bookId: number | null, chapter: number | null) =
 
   const persist = useCallback(
     async (next: ChapterMark[]) => {
-      if (bookId == null || chapter == null) return;
+      if (key == null) return;
       try {
-        const key = chapterMarksKey(bookId, chapter);
         if (next.length === 0) {
           await AsyncStorage.removeItem(key);
         } else {
@@ -58,7 +58,7 @@ export const useChapterMarks = (bookId: number | null, chapter: number | null) =
         console.error('Error saving chapter marks:', error);
       }
     },
-    [bookId, chapter],
+    [key],
   );
 
   const setAllMarks = useCallback(
@@ -102,3 +102,9 @@ export const useChapterMarks = (bookId: number | null, chapter: number | null) =
     reload,
   };
 };
+
+export const useChapterMarks = (bookId: number | null, chapter: number | null) =>
+  useMarksForKey(bookId == null || chapter == null ? null : chapterMarksKey(bookId, chapter));
+
+export const useHymnMarks = (hymnId: string | null) =>
+  useMarksForKey(hymnId ? hymnMarksKey(hymnId) : null);

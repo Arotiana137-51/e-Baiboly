@@ -1,4 +1,5 @@
 import type {BibleVerse} from '../hooks/useBibleData';
+import type {HymnVerse} from '../hooks/useHymnsData';
 import {
   extractBracketFootnotes,
   flattenBibleTextForReader,
@@ -267,5 +268,54 @@ export const buildVerseLineOffsets = (lines: string[]): number[] => {
 
 export const chapterMarksKey = (bookId: number, chapter: number): string =>
   `chapterMarks:${bookId}:${chapter}`;
+
+export const hymnMarksKey = (hymnId: string): string => `hymnMarks:${hymnId}`;
+
+// Title of stanza 0 (the chorus) wherever a hymn is laid out like a chapter:
+// the reader, the highlight editor and the notes list.
+export const HYMN_CHORUS_LABEL = 'Refrain';
+
+/**
+ * Hymn counterpart of buildChapterDisplay so the same editor and mark
+ * rendering work on a hymn. One "verse" per stanza (verse_number 0 is the
+ * chorus, titled so it reads as such in the editor). Hymn text is plain
+ * lines separated by '\n' — none of the Bible markup passes apply.
+ */
+export const buildHymnDisplay = (
+  hymnVerses: HymnVerse[],
+  chorusLabel: string,
+): ChapterDisplay => {
+  const verses: VerseDisplay[] = [];
+  const verseSpans: VerseSpan[] = [];
+  const parts: string[] = [];
+  let cursor = 0;
+
+  const ordered = [...hymnVerses].sort((a, b) => a.verse_number - b.verse_number);
+  for (let i = 0; i < ordered.length; i += 1) {
+    const v = ordered[i];
+    const displayText = v.text.trim();
+    verses.push({
+      verseId: v.id,
+      verseNumber: v.verse_number,
+      displayText,
+      lines: displayText.split('\n'),
+      italicLines: new Set(),
+      title: v.is_chorus ? chorusLabel : null,
+      footnotes: [],
+    });
+    const end = cursor + displayText.length;
+    verseSpans.push({verseId: v.id, verseNumber: v.verse_number, start: cursor, end});
+    parts.push(displayText);
+    cursor = end + (i < ordered.length - 1 ? VERSE_SEPARATOR.length : 0);
+  }
+
+  return {
+    chapterText: parts.join(VERSE_SEPARATOR),
+    verseSpans,
+    verses,
+    separator: VERSE_SEPARATOR,
+    metaVersion: META_VERSION,
+  };
+};
 
 export {stripItalicMarkers, META_VERSION, VERSE_SEPARATOR};

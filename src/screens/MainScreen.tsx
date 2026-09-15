@@ -26,9 +26,14 @@ import SelectionTopBar from '../components/SelectionTopBar';
 import VerseActionPopover from '../components/VerseActionPopover';
 import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
-import {useChapterMarks} from '../hooks/useChapterMarks';
+import {useChapterMarks, useHymnMarks} from '../hooks/useChapterMarks';
 import {useJesusName} from '../contexts/JesusNameContext';
-import {buildChapterDisplay, type ChapterMark} from '../utils/chapterMarks';
+import {
+  buildChapterDisplay,
+  buildHymnDisplay,
+  HYMN_CHORUS_LABEL,
+  type ChapterMark,
+} from '../utils/chapterMarks';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
 import { useHymnsData, Hymn } from '../hooks/useHymnsData';
 import { useFavorites } from '../hooks/useFavorites';
@@ -224,6 +229,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     currentBook?.id ?? null,
     currentChapter ?? null,
   );
+  // Same editor and mark model as the Bible, stored per hymn.
+  const {
+    marks: hymnMarks,
+    setAllMarks: setAllHymnMarks,
+    clearChapter: clearHymnMarks,
+  } = useHymnMarks(mode === 'hymnal' ? currentHymnId : null);
 
   // Hymn action popover state
   const [hymnActionVisible, setHymnActionVisible] = useState(false);
@@ -690,10 +701,17 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   };
 
-  const handleHymnStanzaLongPress = (stanzaNumber: number, stanzaText: string) => {
+  const handleHymnStanzaDoubleTap = (stanzaNumber: number, stanzaText: string) => {
     setSelectedHymnStanzaNumber(stanzaNumber);
     setSelectedHymnStanzaText(stanzaText);
     setHymnActionVisible(true);
+  };
+
+  // Long-press opens the highlight editor on that stanza, mirroring the Bible
+  // reader (long-press = editor, double-tap = action popover).
+  const handleHymnStanzaLongPress = (stanzaNumber: number) => {
+    setChapterEditorScrollVerseNumber(stanzaNumber);
+    setChapterEditorVisible(true);
   };
 
   const handleAddHymnToFavorites = () => {
@@ -779,23 +797,37 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   const chapterDisplay = useMemo(() => {
-    if (!chapterEditorVisible || verses.length === 0) return null;
-    return buildChapterDisplay(verses, transformText);
-  }, [chapterEditorVisible, verses, transformText]);
+    if (!chapterEditorVisible) return null;
+    if (mode === 'hymnal') {
+      return hymnVerses.length > 0 ? buildHymnDisplay(hymnVerses, HYMN_CHORUS_LABEL) : null;
+    }
+    return verses.length > 0 ? buildChapterDisplay(verses, transformText) : null;
+  }, [chapterEditorVisible, mode, hymnVerses, verses, transformText]);
 
-  const chapterEditorReference = currentBook
+  const editorHymn = mode === 'hymnal' ? getCurrentHymn() : null;
+  const chapterEditorReference = editorHymn
+    ? `${editorHymn.category ? `${editorHymn.category.toUpperCase()} ` : ''}${editorHymn.number}`
+    : currentBook
     ? `${currentBook.name} ${currentChapter}`
     : `${currentChapter}`;
 
   const handleChapterMarksSave = (next: ChapterMark[]) => {
-    setAllMarks(next);
+    if (mode === 'hymnal') {
+      setAllHymnMarks(next);
+    } else {
+      setAllMarks(next);
+    }
     setChapterEditorVisible(false);
     // Advance the highlight tutorial's "Tahirizo" step off the real save.
     tutorial.notifyProgress('editorSaved');
   };
 
   const handleChapterMarksClear = () => {
-    clearChapter();
+    if (mode === 'hymnal') {
+      clearHymnMarks();
+    } else {
+      clearChapter();
+    }
   };
 
   const handleViewCorrespondence = (verse: BibleVerse) => {
@@ -1201,7 +1233,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               isLoading={isHymnsLoading}
               hymnTitle={getCurrentHymn()?.title ?? null}
               fontScale={fontScale}
+              marks={hymnMarks}
               onHymnLongPress={handleHymnStanzaLongPress}
+              onHymnDoubleTap={handleHymnStanzaDoubleTap}
+              onNotePress={handleHymnStanzaLongPress}
             />
           )
         )}
@@ -1406,7 +1441,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         visible={chapterEditorVisible}
         reference={chapterEditorReference}
         chapter={chapterDisplay}
-        initialMarks={chapterMarks}
+        initialMarks={mode === 'hymnal' ? hymnMarks : chapterMarks}
         initialScrollVerseNumber={chapterEditorScrollVerseNumber}
         fontScale={fontScale}
         highlightColor={theme.colors.markerHighlight}

@@ -1,13 +1,17 @@
 import {useCallback, useEffect, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {bibleDatabaseService} from '../services/database/DatabaseService';
+import {bibleDatabaseService, hymnsDatabaseService} from '../services/database/DatabaseService';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {
   buildChapterDisplay,
+  buildHymnDisplay,
   chapterMarksKey,
+  hymnMarksKey,
+  HYMN_CHORUS_LABEL,
   type ChapterMark,
 } from '../utils/chapterMarks';
 import type {BibleVerse} from './useBibleData';
+import type {HymnVerse} from './useHymnsData';
 
 /**
  * Lists every verse note the user has authored, across the whole Bible.
@@ -29,9 +33,16 @@ export interface NoteEntry {
   noteText: string;
   verseText: string;
   createdAt: string;
+  // Hymn notes (stored under hymnMarks:<hymnId>): bookId is 0, chapter is the
+  // hymn number and verseNumber the stanza (0 = chorus).
+  hymnId?: string;
+  hymnLabel?: string;
 }
 
 const CHAPTER_MARKS_KEY_RE = /^chapterMarks:(\d+):(\d+)$/;
+const HYMN_MARKS_KEY_RE = /^hymnMarks:(.+)$/;
+
+type HymnRow = {id: string; number: number; category: string | null};
 
 const isNoteMark = (m: unknown): m is ChapterMark => {
   if (typeof m !== 'object' || m === null) return false;
@@ -59,7 +70,9 @@ export const useAllNotes = () => {
       await bibleDatabaseService.initDatabase();
 
       const keys: readonly string[] = await AsyncStorage.getAllKeys();
-      const noteKeys = keys.filter(k => k.startsWith('chapterMarks:'));
+      const noteKeys = keys.filter(
+        k => k.startsWith('chapterMarks:') || k.startsWith('hymnMarks:'),
+      );
       if (noteKeys.length === 0) {
         setEntries([]);
         return;
@@ -72,11 +85,9 @@ export const useAllNotes = () => {
         string,
         {bookId: number; chapter: number; marks: ChapterMark[]}
       >();
+      const byHymn = new Map<string, ChapterMark[]>();
       for (const [key, value] of pairs) {
-        const match = CHAPTER_MARKS_KEY_RE.exec(key);
-        if (!match || !value) continue;
-        const bookId = Number(match[1]);
-        const chapter = Number(match[2]);
+        if (!value) continue;
         let parsed: unknown;
         try {
           parsed = JSON.parse(value);
@@ -86,10 +97,18 @@ export const useAllNotes = () => {
         if (!Array.isArray(parsed)) continue;
         const notes = parsed.filter(isNoteMark);
         if (notes.length === 0) continue;
-        byChapter.set(key, {bookId, chapter, marks: notes});
+
+        const hymnMatch = HYMN_MARKS_KEY_RE.exec(key);
+        if (hymnMatch) {
+          byHymn.set(hymnMatch[1], notes);
+          continue;
+        }
+        const match = CHAPTER_MARKS_KEY_RE.exec(key);
+        if (!match) continue;
+        byChapter.set(key, {bookId: Number(match[1]), chapter: Number(match[2]), marks: notes});
       }
 
-      if (byChapter.size === 0) {
+      if (byChapter.size === 0 && byHymn.size === 0) {
         setEntries([]);
         return;
       }
@@ -137,9 +156,46 @@ export const useAllNotes = () => {
         }
       }
 
-      // Bible order: book, then chapter, then verse.
+      for (const [hymnId, marks] of byHymn) {
+        const hymnRows = await hymnsDatabaseService.executeQuery<HymnRow>(
+          'SELECT id, number, category FROM Hymns WHERE id = ?',
+          [hymnId],
+        );
+        const hymn = hymnRows.rows[0];
+        if (!hymn) continue;
+        const verseRows = await hymnsDatabaseService.executeQuery<HymnVerse>(
+          'SELECT id, hymn_id, verse_number, text, is_chorus FROM HymnVerses WHERE hymn_id = ? ORDER BY verse_number',
+          [hymnId],
+        );
+        if (verseRows.rows.length === 0) continue;
+
+        const {verseSpans} = buildHymnDisplay(verseRows.rows, HYMN_CHORUS_LABEL);
+        const hymnLabel = `${hymn.category ? `${hymn.category.toUpperCase()} ` : ''}${hymn.number}`;
+        for (const mark of marks) {
+          const span =
+            verseSpans.find(s => mark.start >= s.start && mark.start < s.end) ??
+            verseSpans[verseSpans.length - 1];
+          if (!span) continue;
+          const stanza = verseRows.rows.find(v => v.verse_number === span.verseNumber);
+          result.push({
+            id: mark.id,
+            bookId: 0,
+            bookName: '',
+            chapter: hymn.number,
+            verseNumber: span.verseNumber,
+            noteText: mark.note ?? '',
+            verseText: stanza?.text ?? '',
+            createdAt: mark.createdAt,
+            hymnId,
+            hymnLabel,
+          });
+        }
+      }
+
+      // Bible order (book, chapter, verse), then hymns by number and stanza.
       result.sort(
         (a, b) =>
+          Number(!!a.hymnId) - Number(!!b.hymnId) ||
           a.bookId - b.bookId ||
           a.chapter - b.chapter ||
           a.verseNumber - b.verseNumber,
@@ -156,7 +212,9 @@ export const useAllNotes = () => {
 
   const removeNote = useCallback(async (entry: NoteEntry) => {
     try {
-      const key = chapterMarksKey(entry.bookId, entry.chapter);
+      const key = entry.hymnId
+        ? hymnMarksKey(entry.hymnId)
+        : chapterMarksKey(entry.bookId, entry.chapter);
       const raw = await AsyncStorage.getItem(key);
       const arr: ChapterMark[] = raw ? (JSON.parse(raw) as ChapterMark[]) : [];
       const next = arr.filter(m => m.id !== entry.id);

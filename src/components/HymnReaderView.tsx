@@ -1,8 +1,20 @@
-import React, {useCallback, useMemo} from 'react';
+import React, {useCallback, useMemo, useRef} from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { HymnVerse } from '../hooks/useHymnsData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
+import {
+  buildHymnDisplay,
+  buildLineSegments,
+  buildVerseLineOffsets,
+  HYMN_CHORUS_LABEL,
+  intersectMarksWithSpan,
+  type ChapterMark,
+} from '../utils/chapterMarks';
+import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
+
+const DOUBLE_TAP_DELAY_MS = 300;
+const EMPTY_MARKS: ChapterMark[] = [];
 
 // Hymn-specific spacing configuration
 const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
@@ -39,7 +51,12 @@ interface HymnReaderViewProps {
   isLoading: boolean;
   hymnTitle?: string | null;
   fontScale?: number;
+  // Highlights / notes saved from the chapter editor, offsets into the text
+  // built by buildHymnDisplay (same contract as BibleReaderView.chapterMarks).
+  marks?: ChapterMark[];
   onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
+  onHymnDoubleTap?: (stanzaNumber: number, stanzaText: string) => void;
+  onNotePress?: (stanzaNumber: number) => void;
 }
 
 interface HymnStanza {
@@ -55,8 +72,71 @@ interface HymnStanzaItemProps {
   stanzaCardBackground: string;
   chorusBackground: string;
   chorusLines: HymnVerse[];
+  stanzaMarks: ChapterMark[];
+  chorusMarks: ChapterMark[];
+  isDark: boolean;
   onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
+  onHymnDoubleTap?: (stanzaNumber: number, stanzaText: string) => void;
+  onNotePress?: (stanzaNumber: number) => void;
 }
+
+// A stanza's lines with its marks applied — the hymn counterpart of the
+// segment rendering in BibleReaderView (hymns have no italic markers).
+const MarkedLines = ({
+  text,
+  marks,
+  isDark,
+  style,
+  keyPrefix,
+}: {
+  text: string;
+  marks: ChapterMark[];
+  isDark: boolean;
+  style: any;
+  keyPrefix: string;
+}) => {
+  const lines = useMemo(() => text.split('\n'), [text]);
+  const offsets = useMemo(() => buildVerseLineOffsets(lines), [lines]);
+  return (
+    <>
+      {lines.map((line, idx) => {
+        if (marks.length === 0) {
+          return (
+            <Text key={`${keyPrefix}-${idx}`} maxFontSizeMultiplier={1.3} style={style}>
+              {line}
+            </Text>
+          );
+        }
+        return (
+          <Text key={`${keyPrefix}-${idx}`} maxFontSizeMultiplier={1.3} style={style}>
+            {buildLineSegments(line, offsets[idx], marks).map((seg, segIdx) => {
+              const hasHighlight = seg.marks.includes('highlight');
+              return (
+                <Text
+                  key={`seg-${segIdx}`}
+                  style={[
+                    seg.marks.includes('bold') ? styles.markBold : null,
+                    seg.marks.includes('italic') ? styles.markItalic : null,
+                    seg.marks.includes('underline') ? styles.markUnderline : null,
+                    hasHighlight && seg.highlightColor
+                      ? {
+                          backgroundColor: isDark
+                            ? dimHighlightForDarkMode(seg.highlightColor)
+                            : dimHighlightForLightMode(seg.highlightColor),
+                        }
+                      : null,
+                  ]}
+                >
+                  {seg.text}
+                </Text>
+              );
+            })}
+          </Text>
+        );
+      })}
+    </>
+  );
+};
 
 const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   item,
@@ -66,23 +146,48 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   stanzaCardBackground,
   chorusBackground,
   chorusLines,
+  stanzaMarks,
+  chorusMarks,
+  isDark,
   onHymnLongPress,
+  onHymnDoubleTap,
+  onNotePress,
 }) => {
   const stanzaText = useMemo(
-    () => item.lines.map(line => line.text).join('\n'),
+    () => item.lines.map(line => line.text).join('\n').trim(),
     [item.lines],
+  );
+  const chorusText = useMemo(
+    () => chorusLines.map(line => line.text).join('\n').trim(),
+    [chorusLines],
   );
   const lineHeight = Math.round(
     styles.hymnText.fontSize * fontScale * HYMN_LINE_HEIGHT_MULTIPLIER,
   );
   const lineFontSize = styles.hymnText.fontSize * fontScale;
+  const lineStyle = [styles.hymnText, {fontSize: lineFontSize, lineHeight, color: readerText}];
+  const hasNote = stanzaMarks.some(m => m.style === 'note');
+
+  // Same double-tap detection as the Bible reader's verses.
+  const lastTapRef = useRef(0);
+  const handlePress = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY_MS) {
+      lastTapRef.current = 0;
+      onHymnDoubleTap?.(item.verseNumber, stanzaText);
+      return;
+    }
+    lastTapRef.current = now;
+  };
 
   return (
     <View style={styles.stanzaBlock}>
       <Pressable
         style={[styles.hymnStanza, {backgroundColor: stanzaCardBackground}]}
+        onPress={handlePress}
         onLongPress={() => onHymnLongPress?.(item.verseNumber, stanzaText)}
-        disabled={!onHymnLongPress}
+        delayLongPress={400}
+        disabled={!onHymnLongPress && !onHymnDoubleTap}
       >
         <Text
           maxFontSizeMultiplier={1.3}
@@ -94,23 +199,26 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
             },
           ]}>
           {item.verseNumber}
+          {hasNote ? (
+            <Text
+              onPress={e => {
+                e.stopPropagation?.();
+                onNotePress?.(item.verseNumber);
+              }}
+              suppressHighlighting
+            >
+              {' ✎'}
+            </Text>
+          ) : null}
         </Text>
         <View style={styles.hymnTextContainer}>
-          {item.lines.map((line) => (
-            <Text
-              key={line.id}
-              maxFontSizeMultiplier={1.3}
-              style={[
-                styles.hymnText,
-                {
-                  fontSize: lineFontSize,
-                  lineHeight,
-                  color: readerText,
-                },
-              ]}>
-              {line.text}
-            </Text>
-          ))}
+          <MarkedLines
+            text={stanzaText}
+            marks={stanzaMarks}
+            isDark={isDark}
+            style={lineStyle}
+            keyPrefix={`stanza-${item.verseNumber}`}
+          />
         </View>
       </Pressable>
 
@@ -126,26 +234,16 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
               },
             ]}
           >
-            Refrain
+            {HYMN_CHORUS_LABEL}
           </Text>
           <View style={styles.chorusTextContainer}>
-            {chorusLines.map((line) => (
-              <Text
-                key={`chorus-${line.id}`}
-                maxFontSizeMultiplier={1.3}
-                style={[
-                  styles.hymnText,
-                  styles.chorusLine,
-                  {
-                    fontSize: lineFontSize,
-                    lineHeight,
-                    color: readerText,
-                  },
-                ]}
-              >
-                {line.text}
-              </Text>
-            ))}
+            <MarkedLines
+              text={chorusText}
+              marks={chorusMarks}
+              isDark={isDark}
+              style={[...lineStyle, styles.chorusLine]}
+              keyPrefix={`chorus-${item.verseNumber}`}
+            />
           </View>
         </View>
       ) : null}
@@ -158,7 +256,13 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   prev.verseNumberColor === next.verseNumberColor &&
   prev.stanzaCardBackground === next.stanzaCardBackground &&
   prev.chorusBackground === next.chorusBackground &&
-  prev.chorusLines === next.chorusLines
+  prev.chorusLines === next.chorusLines &&
+  prev.stanzaMarks === next.stanzaMarks &&
+  prev.chorusMarks === next.chorusMarks &&
+  prev.isDark === next.isDark &&
+  prev.onHymnLongPress === next.onHymnLongPress &&
+  prev.onHymnDoubleTap === next.onHymnDoubleTap &&
+  prev.onNotePress === next.onNotePress
 );
 
 const HymnReaderView: React.FC<HymnReaderViewProps> = ({
@@ -166,7 +270,10 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   isLoading,
   hymnTitle,
   fontScale = 1,
+  marks,
   onHymnLongPress,
+  onHymnDoubleTap,
+  onNotePress,
 }) => {
   const { theme } = useTheme();
   const { isLowEndMode } = useLowEndMode();
@@ -216,6 +323,18 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     ? hexToRgba('#FFFFFF', 0.02)
     : hexToRgba('#000000', 0.015);
 
+  // Marks are stored as offsets into the whole hymn text; slice them per stanza
+  // (verse_number 0 = chorus) so each item only gets its own.
+  const marksByVerseNumber = useMemo(() => {
+    const map: Record<number, ChapterMark[]> = {};
+    if (!marks?.length || hymnVerses.length === 0) return map;
+    for (const span of buildHymnDisplay(hymnVerses, HYMN_CHORUS_LABEL).verseSpans) {
+      const local = intersectMarksWithSpan(marks, span);
+      if (local.length > 0) map[span.verseNumber] = local;
+    }
+    return map;
+  }, [marks, hymnVerses]);
+
   const keyExtractor = useCallback((item: HymnStanza) => item.verseNumber.toString(), []);
 
   const renderItem = useCallback(
@@ -228,17 +347,26 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
         stanzaCardBackground={stanzaCardBackground}
         chorusBackground={chorusBackground}
         chorusLines={chorusLines}
+        stanzaMarks={marksByVerseNumber[item.verseNumber] ?? EMPTY_MARKS}
+        chorusMarks={marksByVerseNumber[0] ?? EMPTY_MARKS}
+        isDark={theme.isDark}
         onHymnLongPress={onHymnLongPress}
+        onHymnDoubleTap={onHymnDoubleTap}
+        onNotePress={onNotePress}
       />
     ),
     [
       fontScale,
       theme.colors.readerText,
       theme.colors.verseNumber,
+      theme.isDark,
       stanzaCardBackground,
       chorusBackground,
       chorusLines,
+      marksByVerseNumber,
       onHymnLongPress,
+      onHymnDoubleTap,
+      onNotePress,
     ],
   );
 
@@ -361,6 +489,9 @@ const styles = StyleSheet.create({
   chorusTextContainer: {
     paddingLeft: 8,
   },
+  markBold: {fontWeight: 'bold'},
+  markItalic: {fontStyle: 'italic'},
+  markUnderline: {textDecorationLine: 'underline'},
   chorusLine: {
     // The refrain is set in italics so it reads as a sung aside, visually
     // distinct from the numbered stanzas around it.
