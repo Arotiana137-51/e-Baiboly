@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static default-accent gradient behind the runtime bitmap, so the widget
+     picker preview and the first frame before the feed loads look right. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:endColor="#FF00434F"
+        android:startColor="#FF007991"
+        android:type="linear" />
+    <corners android:radius="24dp" />
+</shape>
