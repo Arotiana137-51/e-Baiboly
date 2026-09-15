@@ -19,6 +19,92 @@ import {applyPickerAccentForCurrentColor} from '../services/reminders/pickerThem
 const DAY_LABELS = ['Alahady', 'Alatsinainy', 'Talata', 'Alarobia', 'Alakamisy', 'Zoma', 'Sabotsy'];
 const DAY_SHORT = ['Alh', 'Alt', 'Tal', 'Alr', 'Alk', 'Zom', 'Sab'];
 
+// Editor choices. Each hint explains, in plain words, what the selected pill
+// will do — placeholder MG copy, user-owned.
+type Choice<T> = {value: T; label: string; hint: string};
+
+const KIND_CHOICES: Choice<ReminderSlot['kind']>[] = [
+  {
+    value: undefined,
+    label: 'Fampahatsiarovana',
+    hint: "Hafatra fohy: \"Tonga ny fotoana hamakiana ny Baiboly.\" Tsy misy andininy ao.",
+  },
+  {
+    value: 'verse',
+    label: 'Andinin-teny',
+    hint: "Andinin-teny iray avy ao amin'ny Baiboly, hafa isan'andro. Tsindrio dia misokatra eo ny Baiboly.",
+  },
+];
+
+const PROMINENCE_CHOICES: Choice<boolean>[] = [
+  {
+    value: true,
+    label: 'Mipoitra sy misy feo',
+    hint: "Mipoitra eo amin'ny efijery sady maneno ny finday. Hita eo amin'ny efijery mihidy koa ny andininy.",
+  },
+  {
+    value: false,
+    label: 'Mangina',
+    hint: "Tsy maneno, tsy mipoitra. Hita ao amin'ny lisitry ny notifications ihany rehefa sokafanao.",
+  },
+];
+
+const FREQUENCY_CHOICES: Choice<ReminderFrequency>[] = [
+  {value: 'daily', label: "Isan'andro", hint: "Isan'andro, amin'ny ora fidinao eto ambany."},
+  {
+    value: 'weekly',
+    label: 'Isan-kerinandro',
+    hint: "Indray mandeha isan-kerinandro, amin'ny andro sy ny ora fidinao eto ambany.",
+  },
+];
+
+// One question of the editor: a small label, the pills, and a line under
+// them explaining what the selected pill will do.
+const ChoiceRow = <T extends string | boolean | undefined>({
+  label,
+  choices,
+  value,
+  onChange,
+}: {
+  label: string;
+  choices: Choice<T>[];
+  value: T;
+  onChange: (value: T) => void;
+}) => {
+  const {theme} = useTheme();
+  const selected = choices.find(c => c.value === value) ?? choices[0];
+  return (
+    <View style={styles.choiceBlock}>
+      <Text style={[styles.sectionLabel, {color: theme.colors.textPrimary}]}>{label}</Text>
+      <View style={styles.pillRow}>
+        {choices.map(choice => {
+          const active = choice.value === value;
+          return (
+            <Pressable
+              key={String(choice.value)}
+              onPress={() => onChange(choice.value)}
+              style={[
+                styles.frequencyPill,
+                {
+                  borderColor: theme.colors.accentBlue,
+                  backgroundColor: active ? theme.colors.accentBlue : 'transparent',
+                },
+              ]}
+            >
+              <Text
+                style={[styles.frequencyPillText, {color: active ? '#FFFFFF' : theme.colors.accentBlue}]}
+              >
+                {choice.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={[styles.rowHint, {color: theme.colors.textSecondary}]}>{selected.hint}</Text>
+    </View>
+  );
+};
+
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 // "HH:mm" <-> Date, since the native picker works in Date but slots persist
@@ -37,7 +123,8 @@ const slotSummary = (slot: ReminderSlot) => {
       ? `${DAY_LABELS[slot.dayOfWeek ?? 0]} • ${slot.time}`
       : `Isan'andro • ${slot.time}`;
   // Placeholder MG copy — user-owned.
-  return slot.kind === 'verse' ? `Andinin-teny • ${when}` : when;
+  if (slot.kind !== 'verse') return when;
+  return `Andinin-teny • ${when}${slot.prominent ? ' • mipoitra' : ''}`;
 };
 
 const ReadingReminderScreen = () => {
@@ -49,6 +136,7 @@ const ReadingReminderScreen = () => {
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [draftKind, setDraftKind] = useState<ReminderSlot['kind']>(undefined);
+  const [draftProminent, setDraftProminent] = useState(false);
   const [draftFrequency, setDraftFrequency] = useState<ReminderFrequency>('daily');
   const [draftDayOfWeek, setDraftDayOfWeek] = useState(0);
   const [draftTime, setDraftTime] = useState('07:00');
@@ -109,6 +197,7 @@ const ReadingReminderScreen = () => {
     if (slots.length >= MAX_REMINDER_SLOTS) return;
     setEditingSlotId(null);
     setDraftKind(undefined);
+    setDraftProminent(false);
     setDraftFrequency('daily');
     setDraftDayOfWeek(new Date().getDay());
     setDraftTime('07:00');
@@ -119,6 +208,7 @@ const ReadingReminderScreen = () => {
   const openEditEditor = useCallback((slot: ReminderSlot) => {
     setEditingSlotId(slot.id);
     setDraftKind(slot.kind);
+    setDraftProminent(slot.prominent === true);
     setDraftFrequency(slot.frequency);
     setDraftDayOfWeek(slot.dayOfWeek ?? new Date().getDay());
     setDraftTime(slot.time);
@@ -135,6 +225,7 @@ const ReadingReminderScreen = () => {
       id: editingSlotId ?? createSlotId(),
       enabled: true,
       kind: draftKind,
+      prominent: draftKind === 'verse' ? draftProminent : undefined,
       time: draftTime,
       frequency: draftFrequency,
       dayOfWeek: draftFrequency === 'weekly' ? draftDayOfWeek : undefined,
@@ -144,7 +235,7 @@ const ReadingReminderScreen = () => {
       await refreshSlots();
       setEditorVisible(false);
     });
-  }, [editingSlotId, draftKind, draftTime, draftFrequency, draftDayOfWeek, requestPermissionOrRun, refreshSlots]);
+  }, [editingSlotId, draftKind, draftProminent, draftTime, draftFrequency, draftDayOfWeek, requestPermissionOrRun, refreshSlots]);
 
   const toggleSlot = useCallback(
     (slot: ReminderSlot, next: boolean) => {
@@ -255,157 +346,130 @@ const ReadingReminderScreen = () => {
       <Modal visible={editorVisible} transparent animationType="fade" onRequestClose={closeEditor}>
         <Pressable style={styles.modalBackdrop} onPress={closeEditor}>
           <Pressable
-            style={[styles.modalCard, {backgroundColor: theme.colors.backgroundSecondary}]}
+            style={[styles.modalCard, styles.editorCard, {backgroundColor: theme.colors.backgroundSecondary}]}
             onPress={() => {}}
           >
-            <Text style={[styles.modalTitle, {color: theme.colors.textPrimary}]}>
-              {editingSlotId ? 'Ovay ny fampahatsiarovana' : 'Fampahatsiarovana vaovao'}
-            </Text>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={[styles.modalTitle, {color: theme.colors.textPrimary}]}>
+                {editingSlotId ? 'Ovay ny fampahatsiarovana' : 'Fampahatsiarovana vaovao'}
+              </Text>
 
-            <View style={styles.frequencyRow}>
-              {([undefined, 'verse'] as const).map(kind => {
-                const active = draftKind === kind;
-                return (
-                  <Pressable
-                    key={kind ?? 'reminder'}
-                    onPress={() => setDraftKind(kind)}
-                    style={[
-                      styles.frequencyPill,
-                      {
-                        borderColor: theme.colors.accentBlue,
-                        backgroundColor: active ? theme.colors.accentBlue : 'transparent',
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.frequencyPillText,
-                        {color: active ? '#FFFFFF' : theme.colors.accentBlue},
-                      ]}
-                    >
-                      {kind === 'verse' ? 'Andinin-teny' : 'Fampahatsiarovana'}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+              <ChoiceRow
+                label="Inona no alefa?"
+                choices={KIND_CHOICES}
+                value={draftKind}
+                onChange={setDraftKind}
+              />
 
-            <View style={styles.frequencyRow}>
-              {(['daily', 'weekly'] as const).map(freq => {
-                const active = draftFrequency === freq;
-                return (
-                  <Pressable
-                    key={freq}
-                    onPress={() => setDraftFrequency(freq)}
-                    style={[
-                      styles.frequencyPill,
-                      {
-                        borderColor: theme.colors.accentBlue,
-                        backgroundColor: active ? theme.colors.accentBlue : 'transparent',
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.frequencyPillText,
-                        {color: active ? '#FFFFFF' : theme.colors.accentBlue},
-                      ]}
-                    >
-                      {freq === 'daily' ? "Isan'andro" : 'Isan-kerinandro'}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+              {draftKind === 'verse' ? (
+                <ChoiceRow
+                  label="Ahoana no fisehony?"
+                  choices={PROMINENCE_CHOICES}
+                  value={draftProminent}
+                  onChange={setDraftProminent}
+                />
+              ) : null}
 
-            {draftFrequency === 'weekly' ? (
-              <View style={styles.dayRow}>
-                {DAY_SHORT.map((label, day) => {
-                  const active = draftDayOfWeek === day;
-                  return (
-                    <Pressable
-                      key={day}
-                      onPress={() => setDraftDayOfWeek(day)}
-                      style={[
-                        styles.dayPill,
-                        {
-                          borderColor: theme.colors.accentBlue,
-                          backgroundColor: active ? theme.colors.accentBlue : 'transparent',
-                        },
-                      ]}
-                    >
-                      <Text
+              <ChoiceRow
+                label="Impiry?"
+                choices={FREQUENCY_CHOICES}
+                value={draftFrequency}
+                onChange={setDraftFrequency}
+              />
+
+              {draftFrequency === 'weekly' ? (
+                <View style={styles.dayRow}>
+                  <Text style={[styles.sectionLabel, styles.dayRowLabel, {color: theme.colors.textPrimary}]}>
+                    Andro inona?
+                  </Text>
+                  {DAY_SHORT.map((label, day) => {
+                    const active = draftDayOfWeek === day;
+                    return (
+                      <Pressable
+                        key={day}
+                        onPress={() => setDraftDayOfWeek(day)}
                         style={[
-                          styles.dayPillText,
-                          {color: active ? '#FFFFFF' : theme.colors.accentBlue},
+                          styles.dayPill,
+                          {
+                            borderColor: theme.colors.accentBlue,
+                            backgroundColor: active ? theme.colors.accentBlue : 'transparent',
+                          },
                         ]}
                       >
-                        {label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : null}
+                        <Text
+                          style={[
+                            styles.dayPillText,
+                            {color: active ? '#FFFFFF' : theme.colors.accentBlue},
+                          ]}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
 
-            {Platform.OS === 'android' ? (
-              <>
+              <Text style={[styles.sectionLabel, {color: theme.colors.textPrimary}]}>Amin'ny firy?</Text>
+              {Platform.OS === 'android' ? (
+                <>
+                  <Pressable
+                    onPress={() => {
+                      applyPickerAccentForCurrentColor().then(() => setShowAndroidPicker(true));
+                    }}
+                    style={[styles.timeDisplayButton, {borderColor: theme.colors.accentBlue}]}
+                  >
+                    <Text style={[styles.timeDisplayText, {color: theme.colors.accentBlue}]}>
+                      {draftTime}
+                    </Text>
+                  </Pressable>
+                  {showAndroidPicker ? (
+                    <DateTimePicker
+                      value={timeToDate(draftTime)}
+                      mode="time"
+                      is24Hour
+                      onChange={handleTimeChange}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <DateTimePicker
+                  value={timeToDate(draftTime)}
+                  mode="time"
+                  is24Hour
+                  display="spinner"
+                  onChange={handleTimeChange}
+                />
+              )}
+
+              {permissionDenied ? (
+                <>
+                  <Text style={[styles.rowHint, {color: theme.colors.textSecondary, marginTop: 10}]}>
+                    Tsy nomena alalana ny fampahatsiarovana. Afaka ovaina ao amin'ny
+                    paramaetatry ny finday.
+                  </Text>
+                  <Pressable onPress={() => Linking.openSettings()}>
+                    <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
+                      Sokafy ny paramaetatra
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
+
+              <View style={styles.modalActions}>
+                <Pressable style={styles.modalSecondaryButton} onPress={closeEditor}>
+                  <Text style={[styles.modalSecondaryText, {color: theme.colors.textPrimary}]}>
+                    Aoka izay
+                  </Text>
+                </Pressable>
                 <Pressable
-                  onPress={() => {
-                    applyPickerAccentForCurrentColor().then(() => setShowAndroidPicker(true));
-                  }}
-                  style={[styles.timeDisplayButton, {borderColor: theme.colors.accentBlue}]}
+                  style={[styles.modalPrimaryButton, {backgroundColor: theme.colors.accentBlue}]}
+                  onPress={saveDraft}
                 >
-                  <Text style={[styles.timeDisplayText, {color: theme.colors.accentBlue}]}>
-                    {draftTime}
-                  </Text>
+                  <Text style={styles.modalPrimaryText}>Tahirizo</Text>
                 </Pressable>
-                {showAndroidPicker ? (
-                  <DateTimePicker
-                    value={timeToDate(draftTime)}
-                    mode="time"
-                    is24Hour
-                    onChange={handleTimeChange}
-                  />
-                ) : null}
-              </>
-            ) : (
-              <DateTimePicker
-                value={timeToDate(draftTime)}
-                mode="time"
-                is24Hour
-                display="spinner"
-                onChange={handleTimeChange}
-              />
-            )}
-
-            {permissionDenied ? (
-              <>
-                <Text style={[styles.rowHint, {color: theme.colors.textSecondary, marginTop: 10}]}>
-                  Tsy nomena alalana ny fampahatsiarovana. Afaka ovaina ao amin'ny
-                  paramaetatry ny finday.
-                </Text>
-                <Pressable onPress={() => Linking.openSettings()}>
-                  <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
-                    Sokafy ny paramaetatra
-                  </Text>
-                </Pressable>
-              </>
-            ) : null}
-
-            <View style={styles.modalActions}>
-              <Pressable style={styles.modalSecondaryButton} onPress={closeEditor}>
-                <Text style={[styles.modalSecondaryText, {color: theme.colors.textPrimary}]}>
-                  Aoka izay
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalPrimaryButton, {backgroundColor: theme.colors.accentBlue}]}
-                onPress={saveDraft}
-              >
-                <Text style={styles.modalPrimaryText}>Tahirizo</Text>
-              </Pressable>
-            </View>
+              </View>
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -466,7 +530,10 @@ const styles = StyleSheet.create({
   addButtonText: {fontSize: 14, fontWeight: '700'},
   capHint: {marginTop: 8, fontSize: 12, textAlign: 'center'},
   linkText: {marginTop: 6, fontSize: 14, fontWeight: '700'},
-  frequencyRow: {flexDirection: 'row', gap: 10, marginBottom: 12},
+  choiceBlock: {marginBottom: 14},
+  sectionLabel: {fontSize: 12, fontWeight: '700', marginBottom: 6},
+  pillRow: {flexDirection: 'row', gap: 10, marginBottom: 6},
+  dayRowLabel: {width: '100%', marginBottom: 0},
   frequencyPill: {
     flex: 1,
     borderWidth: 1,
@@ -498,6 +565,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {borderRadius: 14, padding: 18},
+  editorCard: {maxHeight: '90%'},
   modalTitle: {fontSize: 17, fontWeight: '700', marginBottom: 12},
   modalBody: {fontSize: 14, lineHeight: 20},
   modalActions: {flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, gap: 12},

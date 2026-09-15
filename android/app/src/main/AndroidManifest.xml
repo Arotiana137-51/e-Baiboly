@@ -39,6 +39,14 @@
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
+      <!-- The notification small icon is referenced only by name from JS
+           (notifee smallIcon in src/services/reminders/readingReminder.ts),
+           which the release resource shrinker cannot see, so it stripped the
+           drawable and Android silently dropped every notification. A
+           manifest reference is always reachable. Nothing reads this key. -->
+      <meta-data
+        android:name="com.ebaiboly.app.notification_icon"
+        android:resource="@drawable/ic_notification" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

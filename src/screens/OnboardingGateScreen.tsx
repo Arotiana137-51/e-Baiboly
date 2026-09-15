@@ -8,7 +8,11 @@ import notifee, {AuthorizationStatus} from '@notifee/react-native';
 import {useTheme} from '../contexts/ThemeContext';
 import {markTutorialDone} from '../contexts/TutorialContext';
 import {ONBOARDING_ID, CULT_TUTORIAL_ID} from '../tutorials/registry';
-import {DAILY_VERSE_SLOT_ID, saveReminderSlot} from '../services/reminders/readingReminder';
+import {
+  DAILY_VERSE_SLOT_ID,
+  reportSchedulingFailure,
+  saveReminderSlot,
+} from '../services/reminders/readingReminder';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -22,6 +26,8 @@ const STORAGE_KEY_DAILY_VERSE_PROMPTED = 'settings.dailyVerse.prompted';
 //    up front, so the daily verse is on by default for users who say yes.
 //    ReadingReminderScreen keeps its own soft-ask as the fallback for anyone
 //    who declined here and enables a slot later.
+//    The verse defaults to prominent (popup + sound); the opt-in text says so
+//    and the choice can be changed on the slot in ReadingReminderScreen.
 // 2. Whether the user already knows the app, before running the tutorial
 //    succession (onboarding → Fotoam-pivavahana, chained in MainScreen).
 const OnboardingGateScreen = () => {
@@ -41,6 +47,9 @@ const OnboardingGateScreen = () => {
       .catch(() => setStep('verse'));
   }, []);
 
+  const markPrompted = () =>
+    AsyncStorage.setItem(STORAGE_KEY_DAILY_VERSE_PROMPTED, 'true').catch(() => {});
+
   const finishVerseStep = async (optIn: boolean) => {
     try {
       if (optIn) {
@@ -52,13 +61,14 @@ const OnboardingGateScreen = () => {
             enabled: true,
             time: '07:00',
             frequency: 'daily',
+            prominent: true,
           });
         }
       }
-      await AsyncStorage.setItem(STORAGE_KEY_DAILY_VERSE_PROMPTED, 'true');
     } catch (error) {
-      if (__DEV__) console.warn('[OnboardingGate] daily verse opt-in failed:', error);
+      reportSchedulingFailure('onboarding.optIn', error);
     }
+    await markPrompted();
     setStep('tutorial');
   };
 
@@ -82,29 +92,29 @@ const OnboardingGateScreen = () => {
     );
   }
 
-  // Placeholder MG copy on both steps — user-owned.
-  const copy =
-    step === 'verse'
-      ? {
-          title: "Sakafom-panahy isan'andro",
-          subtitle:
-            "« Tsy mofo ihany no hiveloman'ny olona, fa ny teny rehetra izay aloaky ny vavan'Andriamanitra. » (Matio 4:4)\n\n" +
-            "Misakafo in-2 na in-3 isan'andro ny vatanao, ary ny Fanahy? " +
-            "Andinin'tsoratra masina iray isa-maraina amin'ny 7 ora, mba hampahery anao. " +
-            "Azonao ovaina ao amin'ny \"Ora famakiana tiana\" ny ora.",
-          primary: 'Eny, tiako',
-          secondary: 'Tsia, misaotra',
-          onPrimary: () => finishVerseStep(true),
-          onSecondary: () => finishVerseStep(false),
-        }
-      : {
-          title: 'Efa mahay mampiasa ny appli ve ianao?',
-          subtitle: 'Azonao ialana ny fampianarana.',
-          primary: 'Ampiasa avy hatrany',
-          secondary: 'Tsia, asehoy ahy',
-          onPrimary: skipTutorial,
-          onSecondary: goHome,
-        };
+  // Placeholder MG copy on every step — user-owned.
+  const copy = {
+    verse: {
+      title: "Sakafom-panahy isan'andro",
+      subtitle:
+        "« Tsy mofo ihany no hiveloman'ny olona, fa ny teny rehetra izay aloaky ny vavan'Andriamanitra. » (Matio 4:4)\n\n" +
+        "Misakafo in-2 na in-3 isan'andro ny vatanao, ary ny Fanahy? " +
+        "Andinin'tsoratra masina iray isa-maraina amin'ny 7 ora, mba hampahery anao. " +
+        "Azonao ovaina ao amin'ny \"Ora famakiana tiana\" ny ora sy ny feo.",
+      primary: 'Eny, tiako',
+      secondary: 'Tsia, misaotra',
+      onPrimary: () => finishVerseStep(true),
+      onSecondary: () => finishVerseStep(false),
+    },
+    tutorial: {
+      title: 'Efa mahay mampiasa ny appli ve ianao?',
+      subtitle: 'Azonao ialana ny fampianarana.',
+      primary: 'Ampiasa avy hatrany',
+      secondary: 'Tsia, asehoy ahy',
+      onPrimary: skipTutorial,
+      onSecondary: goHome,
+    },
+  }[step];
 
   return (
     <SafeAreaView
