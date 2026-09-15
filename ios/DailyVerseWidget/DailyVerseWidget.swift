@@ -13,6 +13,8 @@ import WidgetKit
 // families.
 
 private let appGroup = "group.com.ebaiboly.app"
+// One-tap shortcut to the look picker (App.tsx routes it to Safidio ny loko).
+private let settingsURL = URL(string: "ebaiboly://widget-look")!
 private let fileName = "dailyVerse.json"
 // Same as DEFAULT_PRIMARY_COLOR_ID's hex in src/theme/personalizationPalette.ts.
 private let defaultAccent = "#007991"
@@ -235,6 +237,16 @@ struct DailyVerseView: View {
               .background(RoundedRectangle(cornerRadius: 4).fill(ink.opacity(0.1)))
           }
           Spacer(minLength: 0)
+          // Small widgets only take one URL (widgetURL), so the shortcut is
+          // medium/large only.
+          if !isSmall {
+            Link(destination: settingsURL) {
+              Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(ink.opacity(0.7))
+                .frame(width: 26, height: 26)
+            }
+          }
         }
         .padding(.top, 6)
       }

@@ -51,6 +51,11 @@ const openVerseFromNotification = (notification?: Notification) => {
 // ebaiboly://verse?book=19&chapter=23&verse=1&name=Salamo (see
 // services/widget/dailyVerseWidget.ts). Hand-parsed: RN's URL lacks searchParams.
 const openVerseFromUrl = (url: string | null) => {
+  // The widget's settings glyph: straight to the look picker.
+  if (url?.startsWith('ebaiboly://widget-look')) {
+    if (navigationRef.isReady()) navigationRef.navigate('Personalization', {focus: 'widget'});
+    return;
+  }
   if (!url?.startsWith('ebaiboly://verse')) return;
   const params: Record<string, string> = {};
   for (const pair of (url.split('?')[1] ?? '').split('&')) {

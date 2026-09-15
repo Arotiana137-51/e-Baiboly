@@ -116,6 +116,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         views.setInt(R.id.widget_divider, "setBackgroundColor", ColorUtils.setAlphaComponent(ink, 51))
         views.setInt(R.id.widget_date, "setBackgroundResource", if (lightInk) R.drawable.widget_badge else R.drawable.widget_badge_dark)
         views.setInt(R.id.widget_translation, "setBackgroundResource", if (lightInk) R.drawable.widget_tag else R.drawable.widget_tag_dark)
+        views.setInt(R.id.widget_settings, "setColorFilter", ColorUtils.setAlphaComponent(ink, 179))
 
         if (feed == null) {
             // No feed yet (fresh install, or the app hasn't been opened in two
@@ -148,6 +149,15 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         views.setOnClickPendingIntent(R.id.widget_root, pending)
+
+        // The glyph on the footer line is a one-tap shortcut to the look
+        // picker (App.tsx routes ebaiboly://widget-look to Safidio ny loko).
+        val settings = Intent(Intent.ACTION_VIEW, Uri.parse(SETTINGS_URL), context, MainActivity::class.java)
+        settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        views.setOnClickPendingIntent(
+            R.id.widget_settings,
+            PendingIntent.getActivity(context, 1, settings, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE),
+        )
         return views
     }
 
@@ -202,6 +212,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val FILE_NAME = "dailyVerse.json"
+        private const val SETTINGS_URL = "ebaiboly://widget-look"
         // Same as DEFAULT_PRIMARY_COLOR_ID's hex in src/theme/personalizationPalette.ts.
         private const val DEFAULT_ACCENT = 0xFF007991.toInt()
         // rgba(0, 0, 0, 0.45), as on the share card.

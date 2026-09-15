@@ -73,6 +73,9 @@ const PersonalizationScreen = () => {
     applyWidgetLook(lookForImage(uri));
   };
   const isFirstRun = route.params?.firstRun === true;
+  // Opened from the widget's settings glyph: land on the widget row.
+  const focusWidget = route.params?.focus === 'widget';
+  const scrollRef = useRef<ScrollView>(null);
   const accent = primaryColor ?? theme.colors.navBackground;
   const applyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -125,7 +128,12 @@ const PersonalizationScreen = () => {
     <SafeAreaView
       edges={['bottom']}
       style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scroll}
+        onContentSizeChange={() => {
+          if (focusWidget && widgetLook) scrollRef.current?.scrollToEnd({animated: false});
+        }}>
         {/* Brand column — first launch only. The hamburger "Loko manokana" route
             reuses this screen and shows just the color selection, no logo. */}
         {isFirstRun ? (

@@ -39,7 +39,7 @@ export type RootStackParamList = {
   FanekemDetails: {title: string; content: string};
   About: undefined;
   PrivacyPolicy: {mandatory?: boolean} | undefined;
-  Personalization: {firstRun?: boolean} | undefined;
+  Personalization: {firstRun?: boolean; focus?: 'widget'} | undefined;
   OnboardingGate: undefined;
   CultIntro: undefined;
   CultMode: undefined;

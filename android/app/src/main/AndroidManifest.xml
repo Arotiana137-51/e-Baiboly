@@ -66,6 +66,7 @@
             <category android:name="android.intent.category.DEFAULT" />
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="ebaiboly" android:host="verse" />
+            <data android:scheme="ebaiboly" android:host="widget-look" />
         </intent-filter>
       </activity>
 
