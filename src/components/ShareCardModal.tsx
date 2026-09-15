@@ -1,9 +1,7 @@
 import React, {useRef, useState} from 'react';
 import {
-  Image,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -11,11 +9,9 @@ import {
 } from 'react-native';
 import {useTheme} from '../contexts/ThemeContext';
 import {t} from '../i18n/strings';
-import {PRIMARY_COLOR_OPTIONS} from '../theme/personalizationPalette';
 import {
   buildShareReference,
   buildShareText,
-  lookForColor,
   lookForImage,
   MAX_SHARE_ITEMS,
   pickBackgroundImage,
@@ -26,6 +22,7 @@ import {
   type ShareCardLook,
 } from '../utils/shareCard';
 import {ShareCard, SHARE_CARD_HEIGHT, SHARE_CARD_WIDTH} from './ShareCard';
+import {LookPicker} from './LookPicker';
 
 // Mount only while open (`{data ? <ShareCardModal .../> : null}`) so the
 // count/look state starts fresh on every open.
@@ -33,12 +30,6 @@ type ShareCardModalProps = {
   data: ShareCardData;
   onClose: () => void;
 };
-
-// The two designed looks first, then the app's own colour palette.
-const SWATCH_LOOKS: ShareCardLook[] = [
-  ...PRESET_LOOKS,
-  ...PRIMARY_COLOR_OPTIONS.map(option => lookForColor(option.hex)),
-];
 
 export const ShareCardModal = ({data, onClose}: ShareCardModalProps) => {
   const {theme} = useTheme();
@@ -142,43 +133,7 @@ export const ShareCardModal = ({data, onClose}: ShareCardModalProps) => {
             </View>
           ) : null}
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.swatches}
-          >
-            <Pressable
-              onPress={handlePickPhoto}
-              style={[
-                styles.swatch,
-                styles.photoSwatch,
-                {
-                  backgroundColor: theme.colors.backgroundTertiary,
-                  borderColor: look.imageUri ? theme.colors.accentBlue : theme.colors.divider,
-                },
-              ]}
-            >
-              {photoUri ? (
-                <Image source={{uri: photoUri}} style={styles.photoThumb} />
-              ) : (
-                <Text style={[styles.photoPlus, {color: theme.colors.textPrimary}]}>+</Text>
-              )}
-            </Pressable>
-            {SWATCH_LOOKS.map(swatch => (
-              <Pressable
-                key={swatch.background}
-                onPress={() => setLook(swatch)}
-                style={[
-                  styles.swatch,
-                  {
-                    backgroundColor: swatch.background,
-                    borderColor:
-                      look === swatch ? theme.colors.accentBlue : theme.colors.divider,
-                  },
-                ]}
-              />
-            ))}
-          </ScrollView>
+          <LookPicker look={look} photoUri={photoUri} onSelect={setLook} onPickPhoto={handlePickPhoto} />
 
           <View style={styles.actions}>
             <Pressable
@@ -272,35 +227,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     minWidth: 18,
     textAlign: 'center',
-  },
-  swatches: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 2,
-  },
-  swatch: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 2,
-  },
-  photoSwatch: {
-    borderRadius: 8,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 6,
-  },
-  photoThumb: {
-    width: '100%',
-    height: '100%',
-  },
-  photoPlus: {
-    fontSize: 20,
-    fontWeight: '600',
-    lineHeight: 22,
   },
   actions: {
     flexDirection: 'row',
