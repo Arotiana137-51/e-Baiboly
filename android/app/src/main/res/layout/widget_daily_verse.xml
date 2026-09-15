@@ -114,18 +114,38 @@
                 android:textColor="#99FFFFFF"
                 android:textSize="9sp" />
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <ImageView
+            <!-- Settings shortcut: everything right of the tag, full row
+                 height, so it is an easy target next to the verse tap. -->
+            <LinearLayout
                 android:id="@+id/widget_settings"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:contentDescription="@string/widget_settings"
-                android:padding="4dp"
-                android:src="@drawable/ic_widget_tune" />
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="end|center_vertical"
+                android:minHeight="36dp"
+                android:orientation="horizontal"
+                android:paddingStart="12dp">
+
+                <ImageView
+                    android:id="@+id/widget_settings_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_widget_tune" />
+
+                <TextView
+                    android:id="@+id/widget_settings_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:letterSpacing="0.08"
+                    android:maxLines="1"
+                    android:text="@string/widget_settings"
+                    android:textAllCaps="true"
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

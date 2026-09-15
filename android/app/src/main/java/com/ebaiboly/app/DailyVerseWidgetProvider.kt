@@ -116,7 +116,8 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         views.setInt(R.id.widget_divider, "setBackgroundColor", ColorUtils.setAlphaComponent(ink, 51))
         views.setInt(R.id.widget_date, "setBackgroundResource", if (lightInk) R.drawable.widget_badge else R.drawable.widget_badge_dark)
         views.setInt(R.id.widget_translation, "setBackgroundResource", if (lightInk) R.drawable.widget_tag else R.drawable.widget_tag_dark)
-        views.setInt(R.id.widget_settings, "setColorFilter", ColorUtils.setAlphaComponent(ink, 179))
+        views.setInt(R.id.widget_settings_icon, "setColorFilter", ColorUtils.setAlphaComponent(ink, 179))
+        views.setTextColor(R.id.widget_settings_label, ColorUtils.setAlphaComponent(ink, 179))
 
         if (feed == null) {
             // No feed yet (fresh install, or the app hasn't been opened in two

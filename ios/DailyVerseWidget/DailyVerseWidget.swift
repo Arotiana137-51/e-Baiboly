@@ -236,16 +236,25 @@ struct DailyVerseView: View {
               .padding(.vertical, 1)
               .background(RoundedRectangle(cornerRadius: 4).fill(ink.opacity(0.1)))
           }
-          Spacer(minLength: 0)
           // Small widgets only take one URL (widgetURL), so the shortcut is
-          // medium/large only.
+          // medium/large only. The Link takes the whole trailing remainder
+          // of the line so it is an easy target next to the verse tap.
           if !isSmall {
             Link(destination: settingsURL) {
-              Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(ink.opacity(0.7))
-                .frame(width: 26, height: 26)
+              HStack(spacing: 5) {
+                Spacer(minLength: 12)
+                Image(systemName: "slider.horizontal.3")
+                  .font(.system(size: 12, weight: .semibold))
+                Text("Loko".uppercased()) // placeholder MG copy — user-owned
+                  .font(.system(size: 10, weight: .bold))
+                  .kerning(1)
+              }
+              .foregroundColor(ink.opacity(0.7))
+              .frame(maxWidth: .infinity, minHeight: 36, alignment: .trailing)
+              .contentShape(Rectangle())
             }
+          } else {
+            Spacer(minLength: 0)
           }
         }
         .padding(.top, 6)
