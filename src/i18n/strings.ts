@@ -68,7 +68,11 @@ type TranslationKey =
   | 'errors.fatalRetry'
   | 'actions.addToFavorites'
   | 'actions.report'
+  | 'actions.share'
   | 'actions.viewConcordance'
+  | 'share.title'
+  | 'share.image'
+  | 'share.text'
   | 'report.title'
   | 'report.reference'
   | 'report.text'
@@ -197,7 +201,13 @@ const translations: Translations = {
     'errors.fatalRetry': 'Avereno',
     'actions.addToFavorites': "Ampidiro ao amin'ny ankafizina",
     'actions.report': 'Tatero',
+    // PLACEHOLDER MG copy — needs the app's own wording, not mine.
+    'actions.share': 'Zarao',
     'actions.viewConcordance': 'Jereo ny concordance',
+    // PLACEHOLDER MG copy — needs the app's own wording, not mine.
+    'share.title': 'Zarao',
+    'share.image': 'Sary',
+    'share.text': 'Lahatsoratra',
     'report.title': 'Tatero',
     'report.reference': 'Tondro',
     'report.text': 'Lahatsoratra',

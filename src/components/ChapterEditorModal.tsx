@@ -20,6 +20,13 @@ import type {
   ChapterMark,
   MarkStyle,
 } from '../utils/chapterMarks';
+import {
+  buildSelectionShareItems,
+  type ShareCardData,
+  type ShareReference,
+} from '../utils/shareCard';
+import {ShareCardModal} from './ShareCardModal';
+import {ShareIcon} from './ShareIcon';
 
 interface ChapterEditorModalProps {
   visible: boolean;
@@ -29,6 +36,9 @@ interface ChapterEditorModalProps {
   initialScrollVerseNumber?: number | null;
   fontScale: number;
   highlightColor: string;
+  // Reference shape for sharing the current selection; the toolbar share
+  // button is disabled when absent.
+  shareReference?: ShareReference;
   onSave: (marks: ChapterMark[]) => void;
   onClear: () => void;
   onClose: () => void;
@@ -550,6 +560,7 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
   initialScrollVerseNumber,
   fontScale,
   highlightColor,
+  shareReference,
   onSave,
   onClear,
   onClose,
@@ -573,7 +584,8 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
   const [noteComposer, setNoteComposer] = useState<
     {start: number; end: number; text: string; editingId: string | null} | null
   >(null);
-  
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
+
   const highlightColors = [
     '#FFEB3B', // Yellow
     '#FF9800', // Orange  
@@ -791,6 +803,15 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
     setNoteComposer(null);
   }, []);
 
+  const canShareSelection = !!selectionOffsets && !!shareReference && !!chapter;
+
+  const openShareSelection = useCallback(() => {
+    if (!selectionOffsets || !shareReference || !chapter) return;
+    const items = buildSelectionShareItems(chapter, selectionOffsets.start, selectionOffsets.end);
+    if (items.length === 0) return;
+    setShareData({...shareReference, rangeStepper: false, items});
+  }, [chapter, selectionOffsets, shareReference]);
+
   const saveNoteComposer = useCallback(() => {
     if (!noteComposer) return;
     const trimmed = noteComposer.text.trim();
@@ -898,6 +919,12 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
               label="✎"
               onPress={openNoteComposer}
               disabled={!selectionOffsets}
+              theme={theme}
+            />
+            <ToolbarButton
+              icon={<ShareIcon color={theme.colors.textPrimary} />}
+              onPress={openShareSelection}
+              disabled={!canShareSelection}
               theme={theme}
             />
           </View>
@@ -1106,12 +1133,17 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {shareData ? (
+        <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
+      ) : null}
     </Modal>
   );
 };
 
 const ToolbarButton = ({
   label,
+  icon,
   onPress,
   disabled,
   bold,
@@ -1120,7 +1152,9 @@ const ToolbarButton = ({
   accent,
   theme,
 }: {
-  label: string;
+  label?: string;
+  // Drawn icon shown instead of the text label.
+  icon?: React.ReactNode;
   onPress: () => void;
   disabled?: boolean;
   bold?: boolean;
@@ -1137,18 +1171,20 @@ const ToolbarButton = ({
       {backgroundColor: accent ?? theme.colors.backgroundTertiary},
       disabled ? {opacity: 0.5} : null,
     ]}>
-    <Text
-      style={[
-        styles.toolbarButtonText,
-        {
-          color: accent ? '#1B1B1B' : theme.colors.textPrimary,
-          fontWeight: bold ? '900' : '700',
-          fontStyle: italic ? 'italic' : 'normal',
-          textDecorationLine: underline ? 'underline' : 'none',
-        },
-      ]}>
-      {label}
-    </Text>
+    {icon ?? (
+      <Text
+        style={[
+          styles.toolbarButtonText,
+          {
+            color: accent ? '#1B1B1B' : theme.colors.textPrimary,
+            fontWeight: bold ? '900' : '700',
+            fontStyle: italic ? 'italic' : 'normal',
+            textDecorationLine: underline ? 'underline' : 'none',
+          },
+        ]}>
+        {label}
+      </Text>
+    )}
   </Pressable>
 );
 

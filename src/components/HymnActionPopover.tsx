@@ -11,6 +11,7 @@ interface HymnActionPopoverProps {
   stanzaText?: string | null;
   onClose: () => void;
   onAddToFavorites: (hymn: Hymn) => void;
+  onShare: (stanzaNumber: number) => void;
   onReportIssue: (payload: { stanzaNumber: number; stanzaText: string }) => void;
 }
 
@@ -21,14 +22,24 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
   stanzaText,
   onClose,
   onAddToFavorites,
+  onShare,
   onReportIssue,
 }) => {
   const { theme } = useTheme();
 
   if (!hymn) return null;
 
+  const hasStanza = typeof stanzaNumber === 'number' && !!stanzaText;
+
   const handleAddToFavorites = () => {
     onAddToFavorites(hymn);
+    onClose();
+  };
+
+  const handleShare = () => {
+    if (typeof stanzaNumber === 'number') {
+      onShare(stanzaNumber);
+    }
     onClose();
   };
 
@@ -74,9 +85,19 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
             </Pressable>
 
             <Pressable
+              style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
+              onPress={handleShare}
+              disabled={!hasStanza}
+            >
+              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
+                {t('actions.share')}
+              </Text>
+            </Pressable>
+
+            <Pressable
               style={[styles.menuItem, { borderBottomWidth: 0 }]}
               onPress={handleReportIssue}
-              disabled={typeof stanzaNumber !== 'number' || !stanzaText}
+              disabled={!hasStanza}
             >
               <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>{t('actions.report')}</Text>
             </Pressable>

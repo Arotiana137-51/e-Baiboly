@@ -26,6 +26,13 @@ import SelectionTopBar from '../components/SelectionTopBar';
 import VerseActionPopover from '../components/VerseActionPopover';
 import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
+import {ShareCardModal} from '../components/ShareCardModal';
+import {
+  buildBibleShareItems,
+  buildHymnShareItems,
+  type ShareCardData,
+  type ShareReference,
+} from '../utils/shareCard';
 import {useChapterMarks, useHymnMarks} from '../hooks/useChapterMarks';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {
@@ -219,6 +226,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
   const [selectedVerseForAction, setSelectedVerseForAction] = useState<BibleVerse | null>(null);
+
+  // Share card modal — non-null while open
+  const [shareCard, setShareCard] = useState<ShareCardData | null>(null);
 
   // Chapter editor modal state
   const [chapterEditorVisible, setChapterEditorVisible] = useState(false);
@@ -757,6 +767,35 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     setReportModalVisible(true);
   };
 
+  // "Book ch:" — the verse range is appended by the share card.
+  const bibleShareReference = (chapter: number): ShareReference => ({
+    reference: `${currentBook?.name ?? ''} ${chapter}:`.trimStart(),
+    appendRange: true,
+  });
+
+  const hymnShareReference = (hymn: Hymn): ShareReference => {
+    const category = hymn.category ? ` (${hymn.category.toUpperCase()})` : '';
+    const title = hymn.title.trim() ? ` · ${hymn.title.trim()}` : '';
+    return {reference: `Fihirana ${hymn.number}${category}${title}`, appendRange: false};
+  };
+
+  const openBibleShare = (verse: BibleVerse) => {
+    const startIndex = verses.findIndex(v => v.id === verse.id);
+    if (startIndex < 0) return;
+    setShareCard({
+      ...bibleShareReference(verse.chapter),
+      rangeStepper: true,
+      items: buildBibleShareItems(verses, startIndex, transformText),
+    });
+  };
+
+  const openHymnShare = (stanzaNumber: number) => {
+    const hymn = getCurrentHymn();
+    const items = buildHymnShareItems(hymnVerses, stanzaNumber, HYMN_CHORUS_LABEL);
+    if (!hymn || items.length === 0) return;
+    setShareCard({...hymnShareReference(hymn), rangeStepper: true, items});
+  };
+
   const maybeFlushReports = async () => {
     if (!ISSUE_REPORT_ENDPOINT_URL || ISSUE_REPORT_ENDPOINT_URL.includes('PUT_YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
       return;
@@ -810,6 +849,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     : currentBook
     ? `${currentBook.name} ${currentChapter}`
     : `${currentChapter}`;
+  const editorShareReference =
+    mode === 'hymnal'
+      ? editorHymn
+        ? hymnShareReference(editorHymn)
+        : undefined
+      : currentBook
+      ? bibleShareReference(currentChapter)
+      : undefined;
 
   const handleChapterMarksSave = (next: ChapterMark[]) => {
     if (mode === 'hymnal') {
@@ -1434,6 +1481,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         onClose={closeVerseAction}
         onViewCorrespondence={handleViewCorrespondence}
         onAddToFavorites={handleAddToFavorites}
+        onShare={openBibleShare}
         onReportIssue={openBibleReportModal}
       />
 
@@ -1445,6 +1493,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         initialScrollVerseNumber={chapterEditorScrollVerseNumber}
         fontScale={fontScale}
         highlightColor={theme.colors.markerHighlight}
+        shareReference={editorShareReference}
         onSave={handleChapterMarksSave}
         onClear={handleChapterMarksClear}
         onClose={() => {
@@ -1460,8 +1509,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         stanzaText={selectedHymnStanzaText}
         onClose={closeHymnAction}
         onAddToFavorites={handleAddHymnToFavorites}
+        onShare={openHymnShare}
         onReportIssue={openHymnReportModal}
       />
+
+      {shareCard ? (
+        <ShareCardModal data={shareCard} onClose={() => setShareCard(null)} />
+      ) : null}
 
       <TutorialOverlay scope="screen" />
     </SafeAreaView>
