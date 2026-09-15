@@ -280,6 +280,10 @@ const scheduleSlot = async (slot: ReminderSlot): Promise<void> => {
       ? nextWeeklyOccurrence(slot.time, slot.dayOfWeek ?? 0)
       : nextDailyOccurrence(slot.time);
 
+  // No `data` on purpose: the tap just launches the app, and MainScreen
+  // restores the last-read chapter (last_read_bible), so a plain reminder
+  // means "continue where you stopped" — the verse kind, by contrast, jumps
+  // to its own verse.
   await notifee.createTriggerNotification(
     {
       id: notificationIdFor(slot.id),
