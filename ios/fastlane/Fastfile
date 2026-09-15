@@ -1,6 +1,11 @@
 require "json"
 
 APP_IDENTIFIER = "com.ebaiboly.app"
+# The home-screen widget extension is signed separately: its own App ID (with
+# the group.com.ebaiboly.app App Group enabled in the developer portal, same
+# as the app's) and its own match profile.
+WIDGET_IDENTIFIER = "com.ebaiboly.app.DailyVerseWidget"
+WIDGET_TARGET = "DailyVerseWidget"
 XCODEPROJ = "SmartBaibolyYarn.xcodeproj"
 WORKSPACE = "SmartBaibolyYarn.xcworkspace"
 SCHEME = "SmartBaibolyYarn"
@@ -20,13 +25,27 @@ platform :ios do
     # so the first CI run has to create the distribution cert and profile.
     # match reads MATCH_GIT_URL / MATCH_GIT_BASIC_AUTHORIZATION / MATCH_PASSWORD
     # straight from the environment.
-    match(type: "appstore", api_key: api_key, readonly: false)
+    match(
+      type: "appstore",
+      app_identifier: [APP_IDENTIFIER, WIDGET_IDENTIFIER],
+      api_key: api_key,
+      readonly: false
+    )
 
     update_code_signing_settings(
       path: XCODEPROJ,
+      targets: [SCHEME],
       use_automatic_signing: false,
       team_id: ENV["APPLE_TEAM_ID"],
       profile_name: "match AppStore #{APP_IDENTIFIER}",
+      code_sign_identity: "Apple Distribution"
+    )
+    update_code_signing_settings(
+      path: XCODEPROJ,
+      targets: [WIDGET_TARGET],
+      use_automatic_signing: false,
+      team_id: ENV["APPLE_TEAM_ID"],
+      profile_name: "match AppStore #{WIDGET_IDENTIFIER}",
       code_sign_identity: "Apple Distribution"
     )
 

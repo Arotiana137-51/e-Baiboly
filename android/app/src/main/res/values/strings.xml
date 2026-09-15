@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">e-Baiboly</string>
+    <!-- Placeholder MG copy — user-owned. -->
+    <string name="widget_daily_verse_description">Sakafom-panahy isan\'andro: andinin-teny iray isan\'andro eo amin\'ny efijery.</string>
 </resources>

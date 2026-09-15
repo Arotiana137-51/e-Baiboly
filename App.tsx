@@ -3,7 +3,7 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
 import {DatabaseProvider, useDatabase} from './src/contexts/DatabaseContext';
-import {ActivityIndicator, View, Text, StyleSheet} from 'react-native';
+import {ActivityIndicator, View, Text, StyleSheet, Linking} from 'react-native';
 import RootNavigator, {navigationRef} from './src/navigation/RootNavigator';
 import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
 import {JesusNameProvider, useJesusName} from './src/contexts/JesusNameContext';
@@ -18,6 +18,7 @@ import {
   drainFatalErrorToQueue,
 } from './src/services/reporting/crashReporter';
 import {ensureRemindersScheduled} from './src/services/reminders/readingReminder';
+import {syncDailyVerseWidget} from './src/services/widget/dailyVerseWidget';
 import notifee, {EventType, type Notification} from '@notifee/react-native';
 
 // Capture uncaught JS errors (async, timers, event handlers) before RN's
@@ -29,18 +30,34 @@ installGlobalErrorHandler();
 // false in release so returning users land on Home, not the color picker.
 const FORCE_ONBOARDING_FLOW = false;
 
-// A daily-verse notification carries its verse in `data`; tapping it opens
-// that verse in the reader. Plain reminders have no data, so this is a no-op
-// for them.
-const openVerseFromNotification = (notification?: Notification) => {
-  const data = notification?.data;
-  if (!data?.bookId || !navigationRef.isReady()) return;
+// Opens the reader on a verse. Reached from a daily-verse notification tap
+// (verse in `data`) and from the home-screen widget (ebaiboly://verse deep
+// link); plain reminders carry no verse, so they just open the app.
+const openVerse = (target: {bookId: unknown; bookName: unknown; chapter: unknown; verse: unknown}) => {
+  if (!target.bookId || !navigationRef.isReady()) return;
   navigationRef.navigate('Home', {
     mode: 'bible',
-    selectedBook: {id: Number(data.bookId), name: String(data.bookName)},
-    selectedChapter: Number(data.chapter),
-    selectedVerse: Number(data.verse),
+    selectedBook: {id: Number(target.bookId), name: String(target.bookName)},
+    selectedChapter: Number(target.chapter),
+    selectedVerse: Number(target.verse),
   });
+};
+
+const openVerseFromNotification = (notification?: Notification) => {
+  const data = notification?.data;
+  if (data) openVerse({bookId: data.bookId, bookName: data.bookName, chapter: data.chapter, verse: data.verse});
+};
+
+// ebaiboly://verse?book=19&chapter=23&verse=1&name=Salamo (see
+// services/widget/dailyVerseWidget.ts). Hand-parsed: RN's URL lacks searchParams.
+const openVerseFromUrl = (url: string | null) => {
+  if (!url?.startsWith('ebaiboly://verse')) return;
+  const params: Record<string, string> = {};
+  for (const pair of (url.split('?')[1] ?? '').split('&')) {
+    const [key, value = ''] = pair.split('=');
+    if (key) params[key] = decodeURIComponent(value);
+  }
+  openVerse({bookId: params.book, bookName: params.name, chapter: params.chapter, verse: params.verse});
 };
 
 // Splash screen component
@@ -72,15 +89,20 @@ const AppContent = () => {
     // force-stop or OEM battery manager silently drops a pending native
     // trigger. Fire-and-forget; never throws.
     ensureRemindersScheduled();
+    // Refresh the home-screen widget's verse feed. Fire-and-forget; never throws.
+    syncDailyVerseWidget();
   }, []);
 
-  useEffect(
-    () =>
-      notifee.onForegroundEvent(({type, detail}) => {
-        if (type === EventType.PRESS) openVerseFromNotification(detail.notification);
-      }),
-    [],
-  );
+  useEffect(() => {
+    const unsubscribeNotifee = notifee.onForegroundEvent(({type, detail}) => {
+      if (type === EventType.PRESS) openVerseFromNotification(detail.notification);
+    });
+    const urlSubscription = Linking.addEventListener('url', ({url}) => openVerseFromUrl(url));
+    return () => {
+      unsubscribeNotifee();
+      urlSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -154,11 +176,12 @@ const App = () => {
                     <NavigationContainer
                       ref={navigationRef}
                       onReady={() => {
-                        // Cold start from a notification tap.
+                        // Cold start from a notification or widget tap.
                         notifee
                           .getInitialNotification()
                           .then(initial => openVerseFromNotification(initial?.notification))
                           .catch(() => {});
+                        Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
                       }}>
                       <AppContent />
                     </NavigationContainer>

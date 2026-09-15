@@ -18,6 +18,7 @@ jest.mock('react-native-fs', () => {
     readFileAssets: jest.fn(async () => ''),
     readFile: jest.fn(async () => ''),
     writeFile: jest.fn(async () => undefined),
+    pathForGroup: jest.fn(async () => '/mock/group'),
     readDirAssets: jest.fn(async () => []),
     readDir: jest.fn(async () => []),
     exists: jest.fn(async () => false),
@@ -69,6 +70,22 @@ jest.mock('react-native-in-app-review', () => ({
 }));
 
 jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
+
+jest.mock('react-native-view-shot', () => ({
+  captureRef: jest.fn(async () => 'file:///mock/card.png'),
+  releaseCapture: jest.fn(),
+}));
+
+jest.mock('react-native-image-picker', () => ({
+  launchImageLibrary: jest.fn(async () => ({didCancel: true})),
+}));
+
+jest.mock('react-native-share', () => ({
+  __esModule: true,
+  default: {
+    open: jest.fn(async () => ({success: true, message: ''})),
+  },
+}));
 
 jest.mock('react-native-zip-archive', () => {
   return {

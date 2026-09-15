@@ -174,6 +174,38 @@ const plainVerseText = (text: string): string =>
 const yyyymmdd = (date: Date): string =>
   `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
 
+export type DailyVerse = {
+  ref: string; // "Salamo 23:1"
+  body: string;
+  bookId: number;
+  bookName: string;
+  chapter: number;
+  verse: number;
+};
+
+/**
+ * The day's verse resolved against the bundled Bible DB — shared by the
+ * notification scheduler and the home-screen widget file. Caller ensures
+ * bibleDatabaseService.initDatabase() has run.
+ */
+export const verseForDate = async (date: Date): Promise<DailyVerse | null> => {
+  const ref: VerseRef = dailyVerseFor(date);
+  const {rows} = await bibleDatabaseService.executeQuery<{text: string; name: string}>(
+    'SELECT v.text, b.name FROM Verses v JOIN Books b ON b.id = v.book_id WHERE v.book_id = ? AND v.chapter = ? AND v.verse_number BETWEEN ? AND ? ORDER BY v.verse_number',
+    [ref.b, ref.c, ref.v, ref.to ?? ref.v],
+  );
+  if (rows.length === 0) return null;
+  const bookName = rows[0].name;
+  return {
+    ref: `${getBibleBookShortName(bookName, ref.b)} ${ref.c}:${ref.v}${ref.to ? `-${ref.to}` : ''}`,
+    body: rows.map(r => plainVerseText(r.text)).join(' '),
+    bookId: ref.b,
+    bookName,
+    chapter: ref.c,
+    verse: ref.v,
+  };
+};
+
 const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<void> => {
   await bibleDatabaseService.initDatabase(); // idempotent — safe before the provider mounts
   const step = slot.frequency === 'weekly' ? 7 : 1;
@@ -187,17 +219,9 @@ const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<voi
     // setDate rather than adding ms so a DST change doesn't shift the hour.
     const when = new Date(first);
     when.setDate(first.getDate() + i);
-    const ref: VerseRef = dailyVerseFor(when);
-
-    const {rows} = await bibleDatabaseService.executeQuery<{text: string; name: string}>(
-      'SELECT v.text, b.name FROM Verses v JOIN Books b ON b.id = v.book_id WHERE v.book_id = ? AND v.chapter = ? AND v.verse_number BETWEEN ? AND ? ORDER BY v.verse_number',
-      [ref.b, ref.c, ref.v, ref.to ?? ref.v],
-    );
-    if (rows.length === 0) continue;
-
-    const body = rows.map(r => plainVerseText(r.text)).join(' ');
-    const bookName = rows[0].name;
-    const title = `${getBibleBookShortName(bookName, ref.b)} ${ref.c}:${ref.v}${ref.to ? `-${ref.to}` : ''}`;
+    const verse = await verseForDate(when);
+    if (!verse) continue;
+    const {ref: title, body, bookId, bookName, chapter, verse: verseNumber} = verse;
 
     const prominent = slot.prominent === true;
     await notifee.createTriggerNotification(
@@ -205,7 +229,7 @@ const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<voi
         id: `${notificationIdFor(slot.id)}-${yyyymmdd(when)}`,
         title,
         body,
-        data: {bookId: ref.b, bookName, chapter: ref.c, verse: ref.v},
+        data: {bookId, bookName, chapter, verse: verseNumber},
         android: {
           ...androidBase(prominent ? VERSE_CHANNEL_PROMINENT_ID : VERSE_CHANNEL_QUIET_ID, color),
           visibility: prominent ? AndroidVisibility.PUBLIC : AndroidVisibility.PRIVATE,

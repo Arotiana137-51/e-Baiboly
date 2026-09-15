@@ -59,6 +59,26 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        <!-- ebaiboly://verse?book=..&chapter=..&verse=..&name=.. — the
+             home-screen widget's tap target, handled by RN Linking in App.tsx. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="ebaiboly" android:host="verse" />
+        </intent-filter>
       </activity>
+
+      <!-- Home-screen daily verse widget (see DailyVerseWidgetProvider.kt). -->
+      <receiver
+        android:name=".DailyVerseWidgetProvider"
+        android:exported="true">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/widget_daily_verse_info" />
+      </receiver>
     </application>
 </manifest>
