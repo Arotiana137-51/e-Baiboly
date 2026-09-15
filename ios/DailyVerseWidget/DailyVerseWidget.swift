@@ -7,20 +7,37 @@ import WidgetKit
 // this only renders it (see src/services/widget/dailyVerseWidget.ts for the
 // contract). The verse calendar itself lives in JS and is never duplicated.
 //
-// Look: a gradient of the accent colour behind white serif text, a date badge
-// on top, reference + translation tag on the bottom line; small, medium and
-// large families.
+// Look: the share card's — a flat colour with matching ink, or a photo (copied
+// next to the feed) under a dark scrim — behind a serif verse, a date badge on
+// top, reference + translation tag on the bottom line; small, medium and large
+// families.
 
 private let appGroup = "group.com.ebaiboly.app"
 private let fileName = "dailyVerse.json"
 // Same as DEFAULT_PRIMARY_COLOR_ID's hex in src/theme/personalizationPalette.ts.
 private let defaultAccent = "#007991"
 
-private struct Feed: Decodable {
+private struct FeedLook: Decodable {
+  let background: String
+  let text: String
   let accent: String
+  let image: String?
+}
+
+private struct Feed: Decodable {
+  let look: FeedLook?
   let label: String
   let translation: String?
   let days: [String: Day]
+}
+
+struct Look {
+  let background: Color
+  let text: Color
+  let accent: Color
+  let photo: UIImage?
+
+  static let fallback = Look(background: Color(hex: defaultAccent), text: .white, accent: .white, photo: nil)
 }
 
 private struct Day: Decodable {
@@ -38,7 +55,7 @@ struct VerseEntry: TimelineEntry {
   let ref: String?
   let text: String
   let url: URL?
-  let accent: Color
+  let look: Look
 }
 
 private let dayKey: DateFormatter = {
@@ -48,12 +65,39 @@ private let dayKey: DateFormatter = {
   return f
 }()
 
+private func groupDir() -> URL? {
+  FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+}
+
 private func readFeed() -> Feed? {
   guard
-    let dir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup),
+    let dir = groupDir(),
     let data = try? Data(contentsOf: dir.appendingPathComponent(fileName))
   else { return nil }
   return try? JSONDecoder().decode(Feed.self, from: data)
+}
+
+// Widgets get ~30 MB; a gallery photo decoded at full size would blow that,
+// so it is scaled down to a card-sized bitmap once per timeline.
+private func loadPhoto(named name: String?) -> UIImage? {
+  guard let name = name, !name.isEmpty, let dir = groupDir(),
+        let image = UIImage(contentsOfFile: dir.appendingPathComponent(name).path)
+  else { return nil }
+  let maxEdge: CGFloat = 800
+  let scale = min(1, maxEdge / max(image.size.width, image.size.height))
+  if scale >= 1 { return image }
+  let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+  return UIGraphicsImageRenderer(size: size).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+}
+
+private func makeLook(_ feed: FeedLook?) -> Look {
+  guard let feed = feed else { return .fallback }
+  return Look(
+    background: Color(hex: feed.background),
+    text: Color(hex: feed.text),
+    accent: Color(hex: feed.accent),
+    photo: loadPhoto(named: feed.image)
+  )
 }
 
 // No feed yet (fresh install, or the app hasn't been opened in two months).
@@ -67,7 +111,7 @@ private func fallbackEntry(_ date: Date) -> VerseEntry {
     ref: nil,
     text: "Sokafy ny e-Baiboly hahitana ny andinin-teny androany.",
     url: nil,
-    accent: Color(hex: defaultAccent)
+    look: .fallback
   )
 }
 
@@ -79,14 +123,14 @@ private let sampleEntry = VerseEntry(
   ref: "Salamo 23:1",
   text: "Jehovah no Mpiandry ahy, tsy hanan-java-mahory aho.",
   url: nil,
-  accent: Color(hex: defaultAccent)
+  look: .fallback
 )
 
 /// One entry per day in the feed from today on, each dated at local midnight,
 /// so WidgetKit swaps the verse exactly at the day change without polling.
 private func entries(from now: Date) -> [VerseEntry] {
   guard let feed = readFeed() else { return [] }
-  let accent = Color(hex: feed.accent)
+  let look = makeLook(feed.look)
   let calendar = Calendar.current
   let today = calendar.startOfDay(for: now)
   return feed.days.keys.sorted().compactMap { key -> VerseEntry? in
@@ -101,7 +145,7 @@ private func entries(from now: Date) -> [VerseEntry] {
       ref: day.ref,
       text: day.text,
       url: URL(string: day.url),
-      accent: accent
+      look: look
     )
   }
 }
@@ -140,24 +184,26 @@ struct DailyVerseView: View {
     }
   }
 
+  private var ink: Color { entry.look.text }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       HStack(alignment: .center) {
         Text(entry.dateLabel.uppercased())
           .font(.system(size: 10, weight: .semibold))
           .kerning(1)
-          .foregroundColor(.white.opacity(0.9))
+          .foregroundColor(ink.opacity(0.9))
           .padding(.horizontal, 9)
           .padding(.vertical, 2)
-          .background(Capsule().fill(Color.white.opacity(0.15)))
-          .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1))
+          .background(Capsule().fill(ink.opacity(0.15)))
+          .overlay(Capsule().stroke(ink.opacity(0.1), lineWidth: 1))
           .lineLimit(1)
         Spacer(minLength: 4)
         if !isSmall, !entry.label.isEmpty {
           Text(entry.label.uppercased())
             .font(.system(size: 10))
             .kerning(1)
-            .foregroundColor(.white.opacity(0.7))
+            .foregroundColor(ink.opacity(0.7))
             .lineLimit(1)
         }
       }
@@ -165,30 +211,28 @@ struct DailyVerseView: View {
       Spacer(minLength: 4)
       Text(entry.ref == nil ? entry.text : "\u{201C}\(entry.text)\u{201D}")
         .font(.system(size: verseSize, weight: .medium, design: .serif))
-        .foregroundColor(.white)
+        .foregroundColor(ink)
         .lineSpacing(3)
         .lineLimit(verseLines)
-        .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 1)
       Spacer(minLength: 4)
 
       if let ref = entry.ref {
         Rectangle()
-          .fill(Color.white.opacity(0.2))
+          .fill(ink.opacity(0.2))
           .frame(height: 1)
         HStack(spacing: 6) {
           Text(ref)
             .font(.system(size: isSmall ? 11 : 12, weight: .semibold))
-            .foregroundColor(.white)
-            .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
+            .foregroundColor(entry.look.accent)
             .lineLimit(1)
           if !entry.translation.isEmpty {
             Text(entry.translation.uppercased())
               .font(.system(size: 9, weight: .medium))
               .kerning(1)
-              .foregroundColor(.white.opacity(0.6))
+              .foregroundColor(ink.opacity(0.6))
               .padding(.horizontal, 4)
               .padding(.vertical, 1)
-              .background(RoundedRectangle(cornerRadius: 4).fill(Color.white.opacity(0.1)))
+              .background(RoundedRectangle(cornerRadius: 4).fill(ink.opacity(0.1)))
           }
           Spacer(minLength: 0)
         }
@@ -196,14 +240,26 @@ struct DailyVerseView: View {
       }
     }
     .padding(isSmall ? 12 : 14)
-    .widgetBackground(
-      LinearGradient(
-        colors: [entry.accent, entry.accent.darkened(0.45)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-    )
+    .widgetBackground(CardBackground(look: entry.look))
     .widgetURL(entry.url)
+  }
+}
+
+// Flat colour, or the photo centre-cropped under the share card's 45% scrim.
+struct CardBackground: View {
+  let look: Look
+
+  var body: some View {
+    if let photo = look.photo {
+      ZStack {
+        Image(uiImage: photo)
+          .resizable()
+          .scaledToFill()
+        Color.black.opacity(0.45)
+      }
+    } else {
+      look.background
+    }
   }
 }
 
@@ -224,11 +280,11 @@ private extension View {
   // iOS 17 requires containerBackground for widgets; earlier versions take a
   // plain background.
   @ViewBuilder
-  func widgetBackground<S: ShapeStyle>(_ style: S) -> some View {
+  func widgetBackground<B: View>(_ background: B) -> some View {
     if #available(iOS 17.0, *) {
-      containerBackground(style, for: .widget)
+      containerBackground(for: .widget) { background }
     } else {
-      background(style)
+      self.background(background)
     }
   }
 }
@@ -246,14 +302,5 @@ private extension Color {
       green: Double((value >> 8) & 0xFF) / 255.0,
       blue: Double(value & 0xFF) / 255.0
     )
-  }
-
-  /// Blends towards black by `amount` (0...1), mirroring ColorUtils.blendARGB on Android.
-  func darkened(_ amount: Double) -> Color {
-    let ui = UIColor(self)
-    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-    ui.getRed(&r, green: &g, blue: &b, alpha: &a)
-    let k = 1 - amount
-    return Color(red: Double(r * k), green: Double(g * k), blue: Double(b * k))
   }
 }

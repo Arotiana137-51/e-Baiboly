@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- "Sakafom-panahy" widget, 4x2 by default. A gradient of the app's accent
-     colour painted at runtime into widget_bg (DailyVerseWidgetProvider —
-     RemoteViews can only set solid colours, so the gradient is a bitmap),
-     white serif verse over it, a date badge on top and reference +
-     translation tag on the bottom line. Only RemoteViews-compatible views. -->
+<!-- "Sakafom-panahy" widget, 4x2 by default. The chosen look (a flat colour
+     with matching ink, or a photo under a dark scrim — same vocabulary as the
+     share card) is painted at runtime into widget_bg by
+     DailyVerseWidgetProvider, which also sets every text colour and swaps the
+     pill drawables for the light/dark ink. Only RemoteViews-compatible views. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -72,13 +72,11 @@
             android:gravity="center_vertical"
             android:lineSpacingMultiplier="1.2"
             android:maxLines="4"
-            android:shadowColor="#99000000"
-            android:shadowDy="1"
-            android:shadowRadius="3"
             android:textColor="#FFFFFFFF"
             android:textSize="15sp" />
 
         <FrameLayout
+            android:id="@+id/widget_divider"
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="#33FFFFFF" />
@@ -96,9 +94,6 @@
                 android:layout_height="wrap_content"
                 android:letterSpacing="0.03"
                 android:maxLines="1"
-                android:shadowColor="#99000000"
-                android:shadowDy="1"
-                android:shadowRadius="2"
                 android:textColor="#FFFFFFFF"
                 android:textSize="12sp"
                 android:textStyle="bold" />

@@ -7,12 +7,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
-import android.graphics.Shader
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -27,14 +28,15 @@ import java.util.Locale
 /**
  * Home-screen "Sakafom-panahy" widget. Pure display: the app (JS) writes
  * dailyVerse.json into filesDir on every launch — one entry per local day for
- * the next two months, the accent colour and a deep link — and this only
+ * the next two months, the chosen look and a deep link — and this only
  * renders today's entry (see src/services/widget/dailyVerseWidget.ts for the
  * contract). The verse calendar itself lives in JS and is never duplicated
  * here.
  *
- * Look: a gradient of the accent colour behind white serif text. RemoteViews
- * can only set solid colours at runtime, so the gradient is painted into a
- * bitmap sized to the placed widget.
+ * The look is the share card's: a flat colour with matching ink, or a photo
+ * (copied next to the feed) under a dark scrim with light ink. RemoteViews
+ * can only set solid colours, so the card is painted into a bitmap sized to
+ * the placed widget.
  *
  * Refreshed by the launcher every updatePeriodMillis (widget_daily_verse_info)
  * and explicitly by DailyVerseWidgetModule.refresh() after the file changes.
@@ -48,7 +50,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    // Resizing changes the bitmap size the gradient is painted at.
+    // Resizing changes the bitmap size the card is painted at.
     override fun onAppWidgetOptionsChanged(
         context: Context,
         manager: AppWidgetManager,
@@ -58,10 +60,12 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         manager.updateAppWidget(id, build(context, readFeed(context), options))
     }
 
+    private data class Look(val background: Int, val text: Int, val accent: Int, val image: String?)
+
     private data class Feed(
+        val look: Look,
         val label: String,
         val translation: String,
-        val accent: Int,
         val dateLabel: String,
         val ref: String,
         val text: String,
@@ -75,10 +79,16 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             val root = JSONObject(file.readText())
             val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
             val entry = root.getJSONObject("days").optJSONObject(key) ?: return null
+            val look = root.optJSONObject("look")
             Feed(
+                look = Look(
+                    background = parseColor(look?.optString("background", ""), DEFAULT_ACCENT),
+                    text = parseColor(look?.optString("text", ""), Color.WHITE),
+                    accent = parseColor(look?.optString("accent", ""), Color.WHITE),
+                    image = look?.optString("image", null)?.takeIf { it.isNotEmpty() && it != "null" },
+                ),
                 label = root.optString("label", ""),
                 translation = root.optString("translation", ""),
-                accent = parseColor(root.optString("accent", "")),
                 dateLabel = entry.optString("dateLabel", ""),
                 ref = entry.optString("ref", ""),
                 text = entry.optString("text", ""),
@@ -91,8 +101,21 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
 
     private fun build(context: Context, feed: Feed?, options: Bundle?): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_daily_verse)
-        val accent = feed?.accent ?: DEFAULT_ACCENT
-        views.setImageViewBitmap(R.id.widget_bg, gradientCard(context, accent, options))
+        val look = feed?.look ?: Look(DEFAULT_ACCENT, Color.WHITE, Color.WHITE, null)
+        views.setImageViewBitmap(R.id.widget_bg, paintCard(context, look, options))
+
+        // Ink: the look's text colour at full strength for the verse and badge,
+        // dimmed for the secondary lines; the reference takes the accent.
+        val ink = look.text
+        val lightInk = ColorUtils.calculateLuminance(ink) > 0.5
+        views.setTextColor(R.id.widget_date, ColorUtils.setAlphaComponent(ink, 230))
+        views.setTextColor(R.id.widget_label, ColorUtils.setAlphaComponent(ink, 179))
+        views.setTextColor(R.id.widget_text, ink)
+        views.setTextColor(R.id.widget_ref, look.accent)
+        views.setTextColor(R.id.widget_translation, ColorUtils.setAlphaComponent(ink, 153))
+        views.setInt(R.id.widget_divider, "setBackgroundColor", ColorUtils.setAlphaComponent(ink, 51))
+        views.setInt(R.id.widget_date, "setBackgroundResource", if (lightInk) R.drawable.widget_badge else R.drawable.widget_badge_dark)
+        views.setInt(R.id.widget_translation, "setBackgroundResource", if (lightInk) R.drawable.widget_tag else R.drawable.widget_tag_dark)
 
         if (feed == null) {
             // No feed yet (fresh install, or the app hasn't been opened in two
@@ -128,8 +151,8 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         return views
     }
 
-    /** Rounded card filled with a diagonal accent -> darker-accent gradient. */
-    private fun gradientCard(context: Context, accent: Int, options: Bundle?): Bitmap {
+    /** Rounded card: the look's photo (centre-cropped, scrimmed) or its flat colour. */
+    private fun paintCard(context: Context, look: Look, options: Bundle?): Bitmap {
         val density = context.resources.displayMetrics.density
         // Portrait size of the placed widget in dp; fall back to 4x2 cells.
         val widthDp = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0)?.takeIf { it > 0 } ?: 320
@@ -138,26 +161,51 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         val height = (heightDp * density).toInt().coerceIn(1, MAX_BITMAP_EDGE)
 
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val dark = ColorUtils.blendARGB(accent, Color.BLACK, 0.45f)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = LinearGradient(0f, 0f, width.toFloat(), height.toFloat(), accent, dark, Shader.TileMode.CLAMP)
-        }
+        val canvas = Canvas(bitmap)
         val radius = CORNER_RADIUS_DP * density
-        Canvas(bitmap).drawRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), radius, radius, paint)
+        val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
+        canvas.clipPath(Path().apply { addRoundRect(bounds, radius, radius, Path.Direction.CW) })
+
+        val photo = look.image?.let { decodePhoto(File(context.filesDir, it), width, height) }
+        if (photo != null) {
+            // Centre-crop the photo, then the share card's 45% scrim.
+            val scale = maxOf(width.toFloat() / photo.width, height.toFloat() / photo.height)
+            val matrix = Matrix().apply {
+                setScale(scale, scale)
+                postTranslate((width - photo.width * scale) / 2f, (height - photo.height * scale) / 2f)
+            }
+            canvas.drawBitmap(photo, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+            canvas.drawColor(SCRIM)
+        } else {
+            canvas.drawColor(look.background)
+        }
         return bitmap
     }
 
-    private fun parseColor(hex: String): Int =
+    // Decodes at the smallest power-of-two sample that still covers the card.
+    private fun decodePhoto(file: File, width: Int, height: Int): Bitmap? {
+        if (!file.exists()) return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= width && bounds.outHeight / (sample * 2) >= height) sample *= 2
+        return BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+    }
+
+    private fun parseColor(hex: String?, fallback: Int): Int =
         try {
-            Color.parseColor(hex)
+            if (hex.isNullOrEmpty()) fallback else Color.parseColor(hex)
         } catch (e: IllegalArgumentException) {
-            DEFAULT_ACCENT
+            fallback
         }
 
     companion object {
         const val FILE_NAME = "dailyVerse.json"
         // Same as DEFAULT_PRIMARY_COLOR_ID's hex in src/theme/personalizationPalette.ts.
         private const val DEFAULT_ACCENT = 0xFF007991.toInt()
+        // rgba(0, 0, 0, 0.45), as on the share card.
+        private const val SCRIM = 0x73000000
         private const val CORNER_RADIUS_DP = 24f
         // Keeps the RemoteViews bitmap well under Android's transaction limit.
         private const val MAX_BITMAP_EDGE = 1400

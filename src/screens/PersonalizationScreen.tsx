@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   BackHandler,
   Image,
@@ -19,6 +19,9 @@ import {
   type PrimaryColorOption,
 } from '../theme/personalizationPalette';
 import type {RootStackParamList} from '../navigation/RootNavigator';
+import {LookPicker} from '../components/LookPicker';
+import {getWidgetLook, setWidgetLook} from '../services/widget/dailyVerseWidget';
+import {lookForImage, pickBackgroundImage, type ShareCardLook} from '../utils/shareCard';
 
 const SWATCH_SIZE = 44;
 const LOGO_SIZE = 64;
@@ -32,6 +35,43 @@ const PersonalizationScreen = () => {
   const {theme, primaryColor, setPrimaryColor} = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<PersonalizationRouteProp>();
+
+  // Home-screen widget look, same vocabulary as the share card. Loaded on
+  // mount; each pick is persisted and the widget re-synced right away.
+  const [widgetLook, setWidgetLookState] = useState<ShareCardLook | null>(null);
+  const [widgetPhotoUri, setWidgetPhotoUri] = useState<string | null>(null);
+  const [pickingPhoto, setPickingPhoto] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getWidgetLook().then(look => {
+      if (cancelled) return;
+      setWidgetLookState(look);
+      setWidgetPhotoUri(look.imageUri ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const applyWidgetLook = (look: ShareCardLook) => {
+    setWidgetLookState(look);
+    setWidgetLook(look);
+  };
+
+  const pickWidgetPhoto = async () => {
+    if (pickingPhoto) return;
+    if (widgetPhotoUri && !widgetLook?.imageUri) {
+      applyWidgetLook(lookForImage(widgetPhotoUri));
+      return;
+    }
+    setPickingPhoto(true);
+    const uri = await pickBackgroundImage();
+    setPickingPhoto(false);
+    if (!uri) return;
+    setWidgetPhotoUri(uri);
+    applyWidgetLook(lookForImage(uri));
+  };
   const isFirstRun = route.params?.firstRun === true;
   const accent = primaryColor ?? theme.colors.navBackground;
   const applyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,6 +190,24 @@ const PersonalizationScreen = () => {
           })}
         </View>
 
+        {/* Home-screen widget look — not part of the first-run flow. */}
+        {!isFirstRun && widgetLook ? (
+          <View style={styles.widgetSection}>
+            <Text style={[styles.widgetTitle, {color: theme.colors.textPrimary}]}>
+              Sakafom-panahy (widget)
+            </Text>
+            <Text style={[styles.widgetHint, {color: theme.colors.textSecondary}]}>
+              Ny lokon'ny andinin-teny eo amin'ny efijery fandraisana.
+            </Text>
+            <LookPicker
+              look={widgetLook}
+              photoUri={widgetPhotoUri}
+              onSelect={applyWidgetLook}
+              onPickPhoto={pickWidgetPhoto}
+            />
+          </View>
+        ) : null}
+
         {/* Footer hint pill. */}
         <View style={styles.footer}>
           <View style={[styles.hintPill, {backgroundColor: theme.colors.backgroundSecondary}]}>
@@ -198,6 +256,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   cell: {padding: 6},
+  widgetSection: {marginTop: 28},
+  widgetTitle: {fontSize: 15, fontWeight: '700'},
+  widgetHint: {fontSize: 13, marginTop: 4},
   swatch: {
     width: SWATCH_SIZE,
     height: SWATCH_SIZE,
