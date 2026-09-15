@@ -1,0 +1,14 @@
+{
+  "version": 20260915,
+  "appliesTo": "hymns",
+  "hymns": [],
+  "hymnVerses": [
+    {
+      "hymn_id": "ffpm_312",
+      "verse_number": 2,
+      "text": "Mba onenonao ny lasy\nItoeranao izao,\nKa ovay ny Malagasy\nMba ho tena zanakao,\nO ! monena ;\nHazavao ny nosinay.",
+      "text_plain": "mba onenonao ny lasy itoeranao izao ka ovay ny malagasy mba ho tena zanakao o monena hazavao ny nosinay",
+      "is_chorus": 0
+    }
+  ]
+}
