@@ -51,9 +51,10 @@ const openVerseFromNotification = (notification?: Notification) => {
 // ebaiboly://verse?book=19&chapter=23&verse=1&name=Salamo (see
 // services/widget/dailyVerseWidget.ts). Hand-parsed: RN's URL lacks searchParams.
 const openVerseFromUrl = (url: string | null) => {
-  // The widget's settings glyph: straight to the look picker.
+  // The widget's Loko shortcut: straight to the look screen, which closes
+  // the app again on "Vita" so the user lands back on the widget.
   if (url?.startsWith('ebaiboly://widget-look')) {
-    if (navigationRef.isReady()) navigationRef.navigate('Personalization', {focus: 'widget'});
+    if (navigationRef.isReady()) navigationRef.navigate('WidgetLook', {fromWidget: true});
     return;
   }
   if (!url?.startsWith('ebaiboly://verse')) return;

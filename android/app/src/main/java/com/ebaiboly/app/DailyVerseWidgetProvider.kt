@@ -15,7 +15,10 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.graphics.ColorUtils
@@ -38,6 +41,11 @@ import java.util.Locale
  * can only set solid colours, so the card is painted into a bitmap sized to
  * the placed widget.
  *
+ * One layout, three size classes (see Size): the verse grows with the card and
+ * the small class drops the secondary lines. On Android 12+ the launcher gets
+ * all three at once and picks the best match itself on every resize or
+ * rotation; older versions get the one matching the placed size.
+ *
  * Refreshed by the launcher every updatePeriodMillis (widget_daily_verse_info)
  * and explicitly by DailyVerseWidgetModule.refresh() after the file changes.
  */
@@ -46,18 +54,47 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         val feed = readFeed(context)
         for (id in ids) {
-            manager.updateAppWidget(id, build(context, feed, manager.getAppWidgetOptions(id)))
+            manager.updateAppWidget(id, responsive(context, feed, manager.getAppWidgetOptions(id)))
         }
     }
 
-    // Resizing changes the bitmap size the card is painted at.
+    // Pre-12 only: the launcher does not swap size classes itself, so re-bind
+    // for the new size. On 12+ this is redundant but harmless.
     override fun onAppWidgetOptionsChanged(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
         options: Bundle,
     ) {
-        manager.updateAppWidget(id, build(context, readFeed(context), options))
+        manager.updateAppWidget(id, responsive(context, readFeed(context), options))
+    }
+
+    // Widget cells are ~70dp each; thresholds in dp of the placed size.
+    private enum class Size(val verseSp: Float, val verseLines: Int, val minimal: Boolean) {
+        SMALL(13f, 5, true),
+        MEDIUM(15f, 4, false),
+        LARGE(18f, 9, false);
+
+        companion object {
+            fun of(widthDp: Float, heightDp: Float): Size = when {
+                widthDp < 200f -> SMALL
+                heightDp >= 250f -> LARGE
+                else -> MEDIUM
+            }
+        }
+    }
+
+    private fun responsive(context: Context, feed: Feed?, options: Bundle?): RemoteViews {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Smallest size each class is designed for; the launcher picks the
+            // largest one that fits the current cell size.
+            val sizes = listOf(SizeF(110f, 110f), SizeF(250f, 110f), SizeF(250f, 250f))
+            return RemoteViews(sizes.associateWith { build(context, feed, it.width, it.height) })
+        }
+        // Portrait size of the placed widget in dp; fall back to 4x2 cells.
+        val widthDp = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)?.takeIf { it > 0 } ?: 250
+        val heightDp = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)?.takeIf { it > 0 } ?: 110
+        return build(context, feed, widthDp.toFloat(), heightDp.toFloat())
     }
 
     private data class Look(val background: Int, val text: Int, val accent: Int, val image: String?)
@@ -99,10 +136,17 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    private fun build(context: Context, feed: Feed?, options: Bundle?): RemoteViews {
+    private fun build(context: Context, feed: Feed?, widthDp: Float, heightDp: Float): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_daily_verse)
         val look = feed?.look ?: Look(DEFAULT_ACCENT, Color.WHITE, Color.WHITE, null)
-        views.setImageViewBitmap(R.id.widget_bg, paintCard(context, look, options))
+        views.setImageViewBitmap(R.id.widget_bg, paintCard(context, look, widthDp, heightDp))
+
+        val size = Size.of(widthDp, heightDp)
+        views.setTextViewTextSize(R.id.widget_text, TypedValue.COMPLEX_UNIT_SP, size.verseSp)
+        views.setInt(R.id.widget_text, "setMaxLines", size.verseLines)
+        val secondary = if (size.minimal) View.GONE else View.VISIBLE
+        views.setViewVisibility(R.id.widget_label, secondary)
+        views.setViewVisibility(R.id.widget_settings_label, secondary)
 
         // Ink: the look's text colour at full strength for the verse and badge,
         // dimmed for the secondary lines; the reference takes the accent.
@@ -133,7 +177,10 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_text, "“${feed.text}”")
             views.setViewVisibility(R.id.widget_ref, View.VISIBLE)
             views.setTextViewText(R.id.widget_ref, feed.ref)
-            views.setViewVisibility(R.id.widget_translation, if (feed.translation.isEmpty()) View.GONE else View.VISIBLE)
+            views.setViewVisibility(
+                R.id.widget_translation,
+                if (feed.translation.isEmpty() || size.minimal) View.GONE else View.VISIBLE,
+            )
             views.setTextViewText(R.id.widget_translation, feed.translation)
         }
 
@@ -163,11 +210,8 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
     }
 
     /** Rounded card: the look's photo (centre-cropped, scrimmed) or its flat colour. */
-    private fun paintCard(context: Context, look: Look, options: Bundle?): Bitmap {
+    private fun paintCard(context: Context, look: Look, widthDp: Float, heightDp: Float): Bitmap {
         val density = context.resources.displayMetrics.density
-        // Portrait size of the placed widget in dp; fall back to 4x2 cells.
-        val widthDp = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0)?.takeIf { it > 0 } ?: 320
-        val heightDp = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)?.takeIf { it > 0 } ?: 160
         val width = (widthDp * density).toInt().coerceIn(1, MAX_BITMAP_EDGE)
         val height = (heightDp * density).toInt().coerceIn(1, MAX_BITMAP_EDGE)
 

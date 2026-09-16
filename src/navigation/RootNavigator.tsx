@@ -19,6 +19,7 @@ import CultModeScreen from '../screens/CultModeScreen';
 import NotesScreen from '../screens/NotesScreen';
 import HelpScreen from '../screens/HelpScreen';
 import ReadingReminderScreen from '../screens/ReadingReminderScreen';
+import WidgetLookScreen from '../screens/WidgetLookScreen';
 
 export type RootStackParamList = {
   Home:
@@ -39,12 +40,14 @@ export type RootStackParamList = {
   FanekemDetails: {title: string; content: string};
   About: undefined;
   PrivacyPolicy: {mandatory?: boolean} | undefined;
-  Personalization: {firstRun?: boolean; focus?: 'widget'} | undefined;
+  Personalization: {firstRun?: boolean} | undefined;
   OnboardingGate: undefined;
   CultIntro: undefined;
   CultMode: undefined;
   Help: undefined;
   ReadingReminder: undefined;
+  // fromWidget: opened from the widget's own shortcut — "done" leaves the app.
+  WidgetLook: {fromWidget?: boolean} | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -163,6 +166,11 @@ const RootNavigator = ({
         name="ReadingReminder"
         component={ReadingReminderScreen}
         options={{title: 'Ora famakiana tiana', ...headerOptions}}
+      />
+      <Stack.Screen
+        name="WidgetLook"
+        component={WidgetLookScreen}
+        options={{title: 'Sakafom-panahy', ...headerOptions}}
       />
       <Stack.Screen
         name="PrivacyPolicy"
