@@ -27,6 +27,7 @@ function* parseJsonHymns(text, fallbackCategory) {
     const authors = Array.isArray(hymn.mpanoratra) ? hymn.mpanoratra : [];
     const verses = (hymn.hira || []).map((v) => ({
       number: Number(v.andininy) || 0,
+      heading: String(v.lohateny || ''),
       text: String(v.tononkira || ''),
       isChorus: !!v.fiverenany,
     }));
@@ -35,6 +36,7 @@ function* parseJsonHymns(text, fallbackCategory) {
       number: parseInt(hymn.laharana, 10) || 0,
       category: hymn.sokajy || fallbackCategory,
       title: hymn.lohateny || '',
+      note: String(hymn.fanamarihana || ''),
       authors,
       verses,
     };

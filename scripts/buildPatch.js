@@ -198,11 +198,13 @@ function indexHymnRecords(records) {
       category: r.category,
       title: r.title,
       authors,
+      note: r.note || null,
     });
     for (const v of r.verses) {
       verses.set(`${r.id}|${v.number}`, {
         hymn_id: r.id,
         verse_number: v.number,
+        heading: v.heading || null,
         text: v.text,
         is_chorus: v.isChorus ? 1 : 0,
       });
@@ -233,7 +235,8 @@ function diffHymns(sinceRef) {
         prev.number !== hymn.number ||
         prev.category !== hymn.category ||
         prev.title !== hymn.title ||
-        prev.authors !== hymn.authors
+        prev.authors !== hymn.authors ||
+        prev.note !== hymn.note
       ) {
         changedHymns.push(hymn);
       }
@@ -243,7 +246,8 @@ function diffHymns(sinceRef) {
       if (
         !prev ||
         prev.text !== verse.text ||
-        prev.is_chorus !== verse.is_chorus
+        prev.is_chorus !== verse.is_chorus ||
+        prev.heading !== verse.heading
       ) {
         changedVerses.push(verse);
       }
@@ -268,10 +272,12 @@ function buildHymnsPatch(sinceRef, version) {
       authors_plain: normalizeForFtsContent(
         normalizeHymnAuthors(h.authors || '')
       ),
+      note: h.note,
     })),
     hymnVerses: changedVerses.map(v => ({
       hymn_id: v.hymn_id,
       verse_number: v.verse_number,
+      heading: v.heading,
       text: v.text,
       text_plain: normalizeForFtsContent(v.text),
       is_chorus: v.is_chorus,

@@ -1279,6 +1279,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               hymnVerses={hymnVerses}
               isLoading={isHymnsLoading}
               hymnTitle={getCurrentHymn()?.title ?? null}
+              hymnNote={getCurrentHymn()?.note ?? null}
+              hymnAuthors={getCurrentHymn()?.authors}
               fontScale={fontScale}
               marks={hymnMarks}
               onHymnLongPress={handleHymnStanzaLongPress}

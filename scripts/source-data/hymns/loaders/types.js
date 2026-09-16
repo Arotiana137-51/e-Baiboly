@@ -16,6 +16,9 @@
  *                              so the existing reader keeps treating
  *                              `is_chorus` rows as repeatable refrains
  *                              irrespective of position.
+ * @property {string} [heading] Cue printed above this stanza ("Fizarana II",
+ *                              "Vakiteny 3", "Manaraka ny faharoa"). Not
+ *                              lyrics; the reader renders it as a label.
  * @property {string} text      Verse/chorus body. Internal line breaks
  *                              preserved as `\n`.
  * @property {boolean} isChorus True when this block should render as a
@@ -30,6 +33,11 @@
  * @property {number} number       1-based hymn number within its category.
  * @property {string} category     'ffpm' | 'ff' | 'antema' | 'fifo'.
  * @property {string} title        Display title ("lohateny").
+ * @property {string} [note]       Hymn-level annotation ("Maintimolaly",
+ *                                 "Hira Paska", "Hira Antandroy") — printed
+ *                                 under the number in the hymnbook, never
+ *                                 sung. JSON: `fanamarihana`; YAML:
+ *                                 `song_comment`.
  * @property {string[]} authors    Author list; may be empty.
  * @property {HymnVerseRecord[]} verses Ordered verses + choruses as they
  *                                 should appear in the reader.

@@ -8,12 +8,16 @@ export interface Hymn {
   category?: string;
   title: string;
   authors: string[];
+  // Hymnbook annotation under the number ("Maintimolaly", "Hira Paska").
+  note?: string | null;
 }
 
 export interface HymnVerse {
   id: number;
   hymn_id: string;
   verse_number: number;
+  // Cue printed above the stanza ("Fizarana II", "Vakiteny 3").
+  heading?: string | null;
   text: string;
   is_chorus: boolean;
 }
@@ -35,7 +39,8 @@ export const useHymnsData = () => {
         category?: string;
         title: string;
         authors: string;
-      }>('SELECT id, number, category, title, authors FROM Hymns ORDER BY number');
+        note: string | null;
+      }>('SELECT id, number, category, title, authors, note FROM Hymns ORDER BY number');
       
       const hymnsList: Hymn[] = rows.map(hymn => ({
         ...hymn,
@@ -59,10 +64,10 @@ export const useHymnsData = () => {
       setIsLoading(true);
       await hymnsDatabaseService.initDatabase();
       const { rows } = await hymnsDatabaseService.executeQuery<HymnVerse>(
-        'SELECT id, hymn_id, verse_number, text, is_chorus FROM HymnVerses WHERE hymn_id = ? ORDER BY verse_number',
+        'SELECT id, hymn_id, verse_number, heading, text, is_chorus FROM HymnVerses WHERE hymn_id = ? ORDER BY verse_number',
         [hymnId]
       );
-      
+
       const versesList: HymnVerse[] = rows;
 
       setVerses(versesList);

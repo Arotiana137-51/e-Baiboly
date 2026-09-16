@@ -300,7 +300,7 @@ export const buildHymnDisplay = (
       displayText,
       lines: displayText.split('\n'),
       italicLines: new Set(),
-      title: v.is_chorus ? chorusLabel : null,
+      title: v.is_chorus ? chorusLabel : v.heading || null,
       footnotes: [],
     });
     const end = cursor + displayText.length;

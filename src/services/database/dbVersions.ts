@@ -17,4 +17,4 @@
  */
 
 export const BIBLE_DB_VERSION = 20260914;
-export const HYMNS_DB_VERSION = 20260915;
+export const HYMNS_DB_VERSION = 20260916;

@@ -186,11 +186,20 @@ function* parseYamlHymns(text, category) {
         ? []
         : [String(author).trim()];
 
+    // song_comment is the hymn-level annotation ("(Hira Antandroy)",
+    // "(Isaia 35)", …); the source wraps some in parens, some not.
+    const note = String(value?.song_comment || '')
+      .trim()
+      .replace(/^\(\s*/, '')
+      .replace(/\s*\)$/, '')
+      .trim();
+
     yield {
       id: `${category}_${songNumber}`,
       number: songNumber,
       category,
       title: stripTitleNumberPrefix(String(value?.song_name || '')),
+      note,
       authors,
       verses,
     };

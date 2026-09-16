@@ -63,11 +63,15 @@ export interface HymnPatchRow {
   /** JSON-encoded array (matches the existing Hymns.authors column). */
   authors: string | null;
   authors_plain: string;
+  /** Hymnbook annotation under the number ("Maintimolaly"). `null` clears. */
+  note: string | null;
 }
 
 export interface HymnVersePatchRow {
   hymn_id: string;
   verse_number: number;
+  /** Cue printed above the stanza ("Fizarana II"). `null` clears. */
+  heading: string | null;
   text: string;
   text_plain: string;
   is_chorus: 0 | 1;
@@ -127,6 +131,8 @@ function isValidHymnVerseRow(raw: unknown): raw is HymnVersePatchRow {
   return (
     isNonEmptyString(r.hymn_id) &&
     isIntInRange(r.verse_number, 1, 50) &&
+    // Patches published before the column existed carry no `heading` key.
+    (r.heading == null || typeof r.heading === 'string') &&
     typeof r.text === 'string' &&
     typeof r.text_plain === 'string' &&
     (r.is_chorus === 0 || r.is_chorus === 1)

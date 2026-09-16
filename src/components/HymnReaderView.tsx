@@ -50,6 +50,10 @@ interface HymnReaderViewProps {
   hymnVerses: HymnVerse[];
   isLoading: boolean;
   hymnTitle?: string | null;
+  // Hymnbook annotation ("Maintimolaly") and author credit, shown as muted
+  // lines under the title — labels, never part of the sung text.
+  hymnNote?: string | null;
+  hymnAuthors?: string[];
   fontScale?: number;
   // Highlights / notes saved from the chapter editor, offsets into the text
   // built by buildHymnDisplay (same contract as BibleReaderView.chapterMarks).
@@ -61,6 +65,7 @@ interface HymnReaderViewProps {
 
 interface HymnStanza {
   verseNumber: number;
+  heading: string | null;
   lines: HymnVerse[];
 }
 
@@ -68,6 +73,7 @@ interface HymnStanzaItemProps {
   item: HymnStanza;
   fontScale: number;
   readerText: string;
+  labelColor: string;
   verseNumberColor: string;
   stanzaCardBackground: string;
   chorusBackground: string;
@@ -142,6 +148,7 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   item,
   fontScale,
   readerText,
+  labelColor,
   verseNumberColor,
   stanzaCardBackground,
   chorusBackground,
@@ -166,6 +173,7 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   );
   const lineFontSize = styles.hymnText.fontSize * fontScale;
   const lineStyle = [styles.hymnText, {fontSize: lineFontSize, lineHeight, color: readerText}];
+  const labelStyle = [styles.label, {fontSize: styles.label.fontSize * fontScale, color: labelColor}];
   const hasNote = stanzaMarks.some(m => m.style === 'note');
 
   // Same double-tap detection as the Bible reader's verses.
@@ -212,6 +220,11 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
           ) : null}
         </Text>
         <View style={styles.hymnTextContainer}>
+          {item.heading ? (
+            <Text maxFontSizeMultiplier={1.3} style={[...labelStyle, styles.stanzaHeading]}>
+              {item.heading}
+            </Text>
+          ) : null}
           <MarkedLines
             text={stanzaText}
             marks={stanzaMarks}
@@ -250,9 +263,10 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
     </View>
   );
 }, (prev, next) =>
-  prev.item.verseNumber === next.item.verseNumber &&
+  prev.item === next.item &&
   prev.fontScale === next.fontScale &&
   prev.readerText === next.readerText &&
+  prev.labelColor === next.labelColor &&
   prev.verseNumberColor === next.verseNumberColor &&
   prev.stanzaCardBackground === next.stanzaCardBackground &&
   prev.chorusBackground === next.chorusBackground &&
@@ -269,6 +283,8 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   hymnVerses,
   isLoading,
   hymnTitle,
+  hymnNote,
+  hymnAuthors,
   fontScale = 1,
   marks,
   onHymnLongPress,
@@ -280,6 +296,9 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   const insets = useSafeAreaInsets();
 
   const hasTitle = typeof hymnTitle === 'string' && hymnTitle.trim().length > 0;
+  const headerNote = hymnNote?.trim() || '';
+  const headerAuthors = (hymnAuthors ?? []).map(a => a.trim()).filter(Boolean).join(', ');
+  const hasHeader = hasTitle || headerNote.length > 0 || headerAuthors.length > 0;
 
   const bottomScrollSpacer =
     Math.max(insets.bottom, 0) +
@@ -309,6 +328,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       .sort(([a], [b]) => Number(a) - Number(b))
       .map(([verseNumber, stanzaVerses]) => ({
         verseNumber: Number(verseNumber),
+        heading: stanzaVerses[0].heading || null,
         lines: stanzaVerses,
       }));
 
@@ -343,6 +363,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
         item={item}
         fontScale={fontScale}
         readerText={theme.colors.readerText}
+        labelColor={theme.colors.textSecondary}
         verseNumberColor={theme.colors.verseNumber}
         stanzaCardBackground={stanzaCardBackground}
         chorusBackground={chorusBackground}
@@ -358,6 +379,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     [
       fontScale,
       theme.colors.readerText,
+      theme.colors.textSecondary,
       theme.colors.verseNumber,
       theme.isDark,
       stanzaCardBackground,
@@ -405,20 +427,46 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       contentContainerStyle={{paddingBottom: HYMN_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted}}
       ListHeaderComponent={
         <View>
-          {hasTitle ? (
+          {hasHeader ? (
             <View style={styles.headerContainer}>
-              <Text
-                maxFontSizeMultiplier={1.3}
-                style={[
-                  styles.headerTitle,
-                  {
-                    color: theme.colors.readerText,
-                    fontSize: styles.headerTitle.fontSize * fontScale,
-                  },
-                ]}
-              >
-                {hymnTitle!.trim()}
-              </Text>
+              {hasTitle ? (
+                <Text
+                  maxFontSizeMultiplier={1.3}
+                  style={[
+                    styles.headerTitle,
+                    {
+                      color: theme.colors.readerText,
+                      fontSize: styles.headerTitle.fontSize * fontScale,
+                    },
+                  ]}
+                >
+                  {hymnTitle!.trim()}
+                </Text>
+              ) : null}
+              {headerNote ? (
+                <Text
+                  maxFontSizeMultiplier={1.3}
+                  style={[
+                    styles.label,
+                    styles.headerLabel,
+                    {fontSize: styles.label.fontSize * fontScale, color: theme.colors.textSecondary},
+                  ]}
+                >
+                  {headerNote}
+                </Text>
+              ) : null}
+              {headerAuthors ? (
+                <Text
+                  maxFontSizeMultiplier={1.3}
+                  style={[
+                    styles.label,
+                    styles.headerLabel,
+                    {fontSize: styles.label.fontSize * fontScale, color: theme.colors.textSecondary},
+                  ]}
+                >
+                  {headerAuthors}
+                </Text>
+              ) : null}
             </View>
           ) : null}
         </View>
@@ -445,6 +493,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     lineHeight:24,
+  },
+  // Muted italic used for every non-sung label: the hymnbook note and author
+  // credit under the title, and a cue printed above a stanza.
+  label: {
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  headerLabel: {
+    marginTop: 6,
+  },
+  stanzaHeading: {
+    marginBottom: 4,
   },
   centered: {
     flex: 1,

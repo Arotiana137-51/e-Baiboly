@@ -64,18 +64,23 @@ async function buildHymns(dbPath, version) {
   const db = new sqlite3.Database(dbPath);
   await applyBuildPragmas(db);
 
+  // `note` is the hymnbook's under-the-number annotation ("Maintimolaly",
+  // "Hira Paska"); `heading` on a verse is a cue printed above that stanza
+  // ("Fizarana II", "Vakiteny 3"). Both are labels, never lyrics.
   await runAsync(db, `CREATE TABLE Hymns (
     id TEXT PRIMARY KEY,
     number INTEGER NOT NULL,
     category TEXT,
     title TEXT,
-    authors TEXT
+    authors TEXT,
+    note TEXT
   )`);
 
   await runAsync(db, `CREATE TABLE HymnVerses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     hymn_id TEXT NOT NULL,
     verse_number INTEGER NOT NULL,
+    heading TEXT,
     text TEXT NOT NULL,
     is_chorus BOOLEAN NOT NULL DEFAULT 0,
     FOREIGN KEY (hymn_id) REFERENCES Hymns (id) ON DELETE CASCADE,
@@ -133,10 +138,10 @@ async function buildHymns(dbPath, version) {
   ];
 
   const insHymn = db.prepare(
-    `INSERT OR REPLACE INTO Hymns (id, number, category, title, authors) VALUES (?, ?, ?, ?, ?)`
+    `INSERT OR REPLACE INTO Hymns (id, number, category, title, authors, note) VALUES (?, ?, ?, ?, ?, ?)`
   );
   const insVerse = db.prepare(
-    `INSERT OR REPLACE INTO HymnVerses (hymn_id, verse_number, text, is_chorus) VALUES (?, ?, ?, ?)`
+    `INSERT OR REPLACE INTO HymnVerses (hymn_id, verse_number, heading, text, is_chorus) VALUES (?, ?, ?, ?, ?)`
   );
   const insHymnAsync = (p) =>
     new Promise((res, rej) => insHymn.run(p, (e) => (e ? rej(e) : res())));
@@ -153,11 +158,13 @@ async function buildHymns(dbPath, version) {
         hymn.category || '',
         hymn.title,
         authors,
+        hymn.note || null,
       ]);
       for (const verse of hymn.verses) {
         await insVerseAsync([
           hymn.id,
           verse.number,
+          verse.heading || null,
           verse.text,
           verse.isChorus ? 1 : 0,
         ]);

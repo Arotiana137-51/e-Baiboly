@@ -372,10 +372,12 @@ class DatabaseService {
       title_plain: string;
       authors: string | null;
       authors_plain: string;
+      note?: string | null;
     }>;
     hymnVerses: Array<{
       hymn_id: string;
       verse_number: number;
+      heading?: string | null;
       text: string;
       text_plain: string;
       is_chorus: 0 | 1;
@@ -384,9 +386,9 @@ class DatabaseService {
     await this.executeTransaction(async tx => {
       for (const h of patch.hymns) {
         tx.execute(
-          `INSERT OR REPLACE INTO Hymns (id, number, category, title, authors)
-           VALUES (?, ?, ?, ?, ?)`,
-          [h.id, h.number, h.category, h.title, h.authors]
+          `INSERT OR REPLACE INTO Hymns (id, number, category, title, authors, note)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [h.id, h.number, h.category, h.title, h.authors, h.note ?? null]
         );
 
         // HymnsFts is NOT contentless; rowid follows Hymns table insertion
@@ -414,9 +416,9 @@ class DatabaseService {
         const existingId = idLookup.rows?._array?.[0]?.id;
 
         tx.execute(
-          `UPDATE HymnVerses SET text=?, is_chorus=?
+          `UPDATE HymnVerses SET text=?, is_chorus=?, heading=?
            WHERE hymn_id=? AND verse_number=?`,
-          [v.text, v.is_chorus, v.hymn_id, v.verse_number]
+          [v.text, v.is_chorus, v.heading ?? null, v.hymn_id, v.verse_number]
         );
 
         if (existingId != null) {
