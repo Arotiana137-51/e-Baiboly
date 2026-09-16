@@ -15,6 +15,12 @@ default_platform(:ios)
 platform :ios do
   desc "Build and upload to TestFlight"
   lane :beta do
+    # Creates and unlocks a temporary keychain for match to import into. Without
+    # it the cert lands in the runner's login keychain and codesign blocks on a
+    # GUI "allow access" prompt that nothing on a headless runner can answer —
+    # the first run hung for 70 minutes on "Signing DailyVerseWidget.appex".
+    setup_ci
+
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
       issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER_ID"],
