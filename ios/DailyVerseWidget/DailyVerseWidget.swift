@@ -1,3 +1,4 @@
+import ImageIO
 import SwiftUI
 import WidgetKit
 
@@ -79,17 +80,21 @@ private func readFeed() -> Feed? {
   return try? JSONDecoder().decode(Feed.self, from: data)
 }
 
-// Widgets get ~30 MB; a gallery photo decoded at full size would blow that,
-// so it is scaled down to a card-sized bitmap once per timeline.
+// Widgets get ~30 MB, so the photo must never be decoded at full size. ImageIO
+// builds an 800 px thumbnail straight from the file; drawing through
+// UIGraphicsImageRenderer instead silently multiplied the bitmap by the screen
+// scale and got the extension killed mid-render, leaving the previous look.
 private func loadPhoto(named name: String?) -> UIImage? {
-  guard let name = name, !name.isEmpty, let dir = groupDir(),
-        let image = UIImage(contentsOfFile: dir.appendingPathComponent(name).path)
+  guard let name = name, !name.isEmpty, let dir = groupDir() else { return nil }
+  let options: [CFString: Any] = [
+    kCGImageSourceCreateThumbnailFromImageAlways: true,
+    kCGImageSourceCreateThumbnailWithTransform: true,
+    kCGImageSourceThumbnailMaxPixelSize: 800,
+  ]
+  guard let source = CGImageSourceCreateWithURL(dir.appendingPathComponent(name) as CFURL, nil),
+        let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
   else { return nil }
-  let maxEdge: CGFloat = 800
-  let scale = min(1, maxEdge / max(image.size.width, image.size.height))
-  if scale >= 1 { return image }
-  let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-  return UIGraphicsImageRenderer(size: size).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+  return UIImage(cgImage: thumbnail)
 }
 
 private func makeLook(_ feed: FeedLook?) -> Look {
