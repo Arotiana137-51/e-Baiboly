@@ -346,11 +346,13 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   } else {
     cardTop = box.top - CARD_GAP - ch;
   }
-  // Reserve the Android system nav bar (insets.bottom) so a bottom-placed card
-  // never lands under the native navigation. 0 on devices that don't inset,
-  // so this is a no-op where the old clamp was already correct.
+  // Reserve the status bar / notch (insets.top) and the system nav bar
+  // (insets.bottom): this overlay is absoluteFill inside a SafeAreaView, which
+  // ignores the parent's padding, so it spans the full window on both
+  // platforms. Without the top reservation a 'top'-placed card over a tall
+  // target clamps to MARGIN and sits under the iPhone notch.
   cardTop = Math.max(
-    MARGIN,
+    MARGIN + insets.top,
     Math.min(cardTop, H - ch - MARGIN - insets.bottom),
   );
 
