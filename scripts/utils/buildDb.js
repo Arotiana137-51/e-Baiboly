@@ -170,13 +170,18 @@ async function stampUserVersion(db, version) {
 }
 
 // ---------------------------------------------------------------------------
-// ZIP (max compression — what ships in production)
+// ZIP (what ships in production)
+//
+// The .db is STORED, not deflated. The APK deflates every asset anyway, so
+// download and install size are unchanged, but Play's file-by-file delta can
+// then diff the raw SQLite pages instead of re-sending the whole archive
+// every time a few verses change.
 // ---------------------------------------------------------------------------
 
 function createZipFromDb(dbPath, zipPath) {
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = archiver('zip', { store: true });
     output.on('close', () => resolve(zipPath));
     archive.on('error', reject);
     archive.on('warning', (err) => {

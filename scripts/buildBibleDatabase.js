@@ -330,7 +330,7 @@ async function main() {
   console.log('\n📦 Copying dev DB to the iOS asset folder...');
   copyFileSafe(bibleDev, databasePaths.bible.iosDev);
 
-  console.log('🗜️  Creating max-compression ZIP for prod...');
+  console.log('🗜️  Creating stored ZIP for prod...');
   await createZipFromDb(bibleDev, bibleProd);
 
   console.log('📦 Copying prod ZIP to the iOS asset folder...');

@@ -279,7 +279,7 @@ async function main() {
   console.log('\n📦 Copying dev DB to the iOS asset folder...');
   copyFileSafe(hymnsDev, databasePaths.hymns.iosDev);
 
-  console.log('🗜️  Creating max-compression ZIP for prod...');
+  console.log('🗜️  Creating stored ZIP for prod...');
   await createZipFromDb(hymnsDev, hymnsProd);
 
   console.log('📦 Copying prod ZIP to the iOS asset folder...');
