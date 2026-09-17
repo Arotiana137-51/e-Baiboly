@@ -23,7 +23,7 @@ const AboutScreen = () => {
   const phoneNumber = '+261342569879';
   const mobileMoneyNumber = '+261 34 25 698 79';
   const linkedInUrl = 'https://www.linkedin.com/in/arotiana/';
-  const websiteUrl = '';
+  const websiteUrl = 'https://arotiana137-51.github.io/e-Baiboly/';
   const supportUrl = '';
 
   // Store listing for the rating link. An empty App Store id hides the row on
@@ -41,14 +41,20 @@ const AboutScreen = () => {
           t('about.developerLine3'),
         ],
       },
-      {
-        title: t('about.sectionSupport'),
-        lines: [
-          t('about.supportLine1'),
-          t('about.supportLine2'),
-          `Mobile Money: ${mobileMoneyNumber}`,
-        ],
-      },
+      // Apple rejects in-app requests for money outside its own payment
+      // system (guideline 3.1.1), so the donation section is Android-only.
+      ...(Platform.OS === 'android'
+        ? [
+            {
+              title: t('about.sectionSupport'),
+              lines: [
+                t('about.supportLine1'),
+                t('about.supportLine2'),
+                `Mobile Money: ${mobileMoneyNumber}`,
+              ],
+            },
+          ]
+        : []),
       {
         title: t('about.sectionInfo'),
         lines: [

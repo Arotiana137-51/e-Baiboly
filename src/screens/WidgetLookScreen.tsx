@@ -146,7 +146,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: 'hidden',
   },
-  previewVerse: {fontFamily: 'serif', fontSize: 15, lineHeight: 21, marginTop: 10},
+  previewVerse: {
+    fontFamily: Platform.select({ios: 'Georgia', default: 'serif'}),
+    fontSize: 15,
+    lineHeight: 21,
+    marginTop: 10,
+  },
   previewRule: {height: StyleSheet.hairlineWidth, marginTop: 10},
   previewRef: {fontSize: 12, fontWeight: '700', marginTop: 6},
   doneButton: {borderRadius: 999, paddingVertical: 14, alignItems: 'center', marginTop: 8},
