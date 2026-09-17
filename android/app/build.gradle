@@ -109,7 +109,7 @@ android {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 23
+        versionCode 24
         // Single source of truth for the marketing version: the About screen
         // reads package.json, Play reads this, and they drifted (About showed
         // 0.0.1 while Play shipped 1.3.0). versionCode stays manual — Play needs
@@ -173,6 +173,11 @@ android {
             // R8's optimization passes on — Play Console flags the plain file as
             // "optimization not enabled".
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            // Ship native symbol tables inside the bundle so Play Console can
+            // symbolicate native crashes instead of warning that none were uploaded.
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
 
             // Note: ABI filtering handled by splits.abi configuration above
         }
