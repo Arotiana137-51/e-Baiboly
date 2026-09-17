@@ -26,10 +26,10 @@ const AboutScreen = () => {
   const websiteUrl = '';
   const supportUrl = '';
 
-  // Store listing for the rating link. Fill in the App Store id once the iOS
-  // build is published — an empty id hides the row on iOS, same as websiteUrl.
+  // Store listing for the rating link. An empty App Store id hides the row on
+  // iOS, same as websiteUrl.
   const androidPackageName = 'com.ebaiboly.app';
-  const iosAppStoreId = '';
+  const iosAppStoreId = '6812651289';
 
   const sections = useMemo(
     () => [
