@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useRef} from 'react';
-import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Animated, Pressable, StyleSheet, View} from 'react-native';
 import {useLowEndMode} from '../contexts/ThemeContext';
 
 type Props = {
@@ -13,11 +13,47 @@ const TRACK_HEIGHT = 42;
 const KNOB_SIZE = 38;
 const KNOB_PADDING = 2;
 
-const SUN_GLYPH = '☀\uFE0E';
-const SUN_TRACK_FONT_SIZE = 30;
-const SUN_KNOB_FONT_SIZE = 26;
+const TRACK_ICON_SIZE = 24;
+const KNOB_ICON_SIZE = 20;
 
-const MoonIcon: React.FC<{size: number; color: string; backgroundColor: string; opacity?: number}> = ({
+type IconProps = {size: number; color: string; backgroundColor: string; opacity?: number};
+
+// Four bars through the centre give eight rays; a disc in the surface colour
+// masks their inner ends so they read as detached from the core.
+const SUN_RAY_ANGLES = [0, 45, 90, 135];
+
+// Drawn from Views rather than a text glyph: a glyph sits on the font's
+// baseline, which iOS and Android place differently, so it never centred on
+// both (includeFontPadding/textAlignVertical are Android-only).
+const SunIcon: React.FC<IconProps> = ({size, color, backgroundColor, opacity = 1}) => {
+  const core = Math.round(size * 0.46);
+  const gap = Math.round(size * 0.66);
+  const ray = Math.max(2, Math.round(size * 0.1));
+
+  return (
+    <View style={[styles.iconBox, {width: size, height: size, opacity}]}>
+      {SUN_RAY_ANGLES.map(deg => (
+        <View
+          key={deg}
+          style={[
+            styles.centered,
+            {
+              width: size,
+              height: ray,
+              borderRadius: ray / 2,
+              backgroundColor: color,
+              transform: [{rotate: `${deg}deg`}],
+            },
+          ]}
+        />
+      ))}
+      <View style={[styles.centered, {width: gap, height: gap, borderRadius: gap / 2, backgroundColor}]} />
+      <View style={[styles.centered, {width: core, height: core, borderRadius: core / 2, backgroundColor: color}]} />
+    </View>
+  );
+};
+
+const MoonIcon: React.FC<IconProps> = ({
   size,
   color,
   backgroundColor,
@@ -118,26 +154,18 @@ const ToggleThemeButton: React.FC<Props> = ({isDarkMode, onToggle, disabled}) =>
         ]}
       >
         <View style={styles.trackIcons} pointerEvents="none">
-          <Text
-            style={[
-              styles.sunTrack,
-              {
-                color: iconBaseColor,
-                opacity: isDarkMode ? 0.35 : 1,
-              },
-            ]}
-            allowFontScaling={false}
-          >
-            {SUN_GLYPH}
-          </Text>
-          <View style={styles.moonContainer}>
-            <MoonIcon
-              size={24}
-              color={iconBaseColor}
-              backgroundColor={trackBackground}
-              opacity={isDarkMode ? 1 : 0.35}
-            />
-          </View>
+          <SunIcon
+            size={TRACK_ICON_SIZE}
+            color={iconBaseColor}
+            backgroundColor={trackBackground}
+            opacity={isDarkMode ? 0.35 : 1}
+          />
+          <MoonIcon
+            size={TRACK_ICON_SIZE}
+            color={iconBaseColor}
+            backgroundColor={trackBackground}
+            opacity={isDarkMode ? 1 : 0.35}
+          />
         </View>
 
         <Animated.View
@@ -151,11 +179,9 @@ const ToggleThemeButton: React.FC<Props> = ({isDarkMode, onToggle, disabled}) =>
           ]}
         >
           {!isDarkMode ? (
-            <Text style={[styles.sunKnob, {color: iconBaseColor}]} allowFontScaling={false}>
-              {SUN_GLYPH}
-            </Text>
+            <SunIcon size={KNOB_ICON_SIZE} color={iconBaseColor} backgroundColor={knobBackground} />
           ) : (
-            <MoonIcon size={20} color={iconBaseColor} backgroundColor={knobBackground} />
+            <MoonIcon size={KNOB_ICON_SIZE} color={iconBaseColor} backgroundColor={knobBackground} />
           )}
         </Animated.View>
       </View>
@@ -193,31 +219,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sunTrack: {
-    fontSize: SUN_TRACK_FONT_SIZE,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    lineHeight: SUN_TRACK_FONT_SIZE,
-    position: 'absolute',
-    left: 10,
-    top: '50%',
-    marginTop: -SUN_TRACK_FONT_SIZE / 2,
+  iconBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sunKnob: {
-    fontSize: SUN_KNOB_FONT_SIZE,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    lineHeight: SUN_KNOB_FONT_SIZE,
-  },
-  moonContainer: {
+  // Absolute children with no offsets are placed by the parent's
+  // alignItems/justifyContent, so every layer lands on the box centre.
+  centered: {
     position: 'absolute',
-    right: 10,
-    top: '50%',
-    marginTop: -12,
   },
 });
 

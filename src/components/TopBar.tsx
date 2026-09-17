@@ -49,11 +49,17 @@ const TopBar: React.FC<TopBarProps> = ({
   const prevTargetRef = useTutorialTarget('topbarPrev');
   const nextTargetRef = useTutorialTarget('topbarNext');
   const menuTargetRef = useTutorialTarget('topbarMenu');
-  const {isAndroid, isSmall, isXSmall, scale, fontFor} = useResponsive();
+  const {isIOS, isAndroid, isSmall, isXSmall, scale, fontFor} = useResponsive();
   const toolbarHeight = Math.max(isAndroid ? 56 : 44, scale(isAndroid ? 52 : 44));
-  const iconButtonWidth = Math.max(40, scale(44));
-  const arrowFontSize = fontFor(isXSmall ? 28 : 32);
-  const titleFontSize = fontFor(isSmall ? 16 : 18);
+  // 320pt (SE 1st gen and the like) leaves ~113pt for the title next to four
+  // 44pt buttons, so narrow the buttons and the title there on both platforms.
+  const iconButtonWidth = isXSmall ? 40 : Math.max(40, scale(44));
+  // iOS follows the HIG navigation bar: 17pt semibold title and chevrons at
+  // bar-button weight. The heavy 900 glyphs read as oversized in San Francisco.
+  const arrowFontSize = fontFor(isIOS ? 26 : isXSmall ? 28 : 32);
+  const arrowFontWeight = isIOS ? '600' : '900';
+  const titleFontSize = fontFor(isIOS ? (isXSmall ? 15 : 17) : isSmall ? 16 : 18);
+  const titleFontWeight = isIOS ? '600' : '700';
   const tabFontSize = fontFor(isXSmall ? 12 : isSmall ? 13 : 14);
   const searchIconSize = fontFor(isXSmall ? 17 : 19);
 
@@ -100,7 +106,7 @@ const TopBar: React.FC<TopBarProps> = ({
         ]}
         onPress={onPreviousPress}
       >
-        <Text style={[styles.buttonText, {color: '#FFFFFF', fontSize: arrowFontSize}]}>‹‹</Text>
+        <Text style={[styles.buttonText, {fontSize: arrowFontSize, fontWeight: arrowFontWeight}]}>‹‹</Text>
       </Pressable>
       
       {appMode === 'hymnal' && onHymnalCategoryChange ? (
@@ -169,7 +175,7 @@ const TopBar: React.FC<TopBarProps> = ({
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.85}
-            style={[styles.title, {color: '#FFFFFF', fontSize: titleFontSize}]}
+            style={[styles.title, {fontSize: titleFontSize, fontWeight: titleFontWeight}]}
           >
             {displayTitle}
           </Text>
@@ -192,7 +198,7 @@ const TopBar: React.FC<TopBarProps> = ({
         ]}
         onPress={onNextPress}
       >
-        <Text style={[styles.buttonText, {color: '#FFFFFF', fontSize: arrowFontSize}]}>{'››'}</Text>
+        <Text style={[styles.buttonText, {fontSize: arrowFontSize, fontWeight: arrowFontWeight}]}>{'››'}</Text>
       </Pressable>
 
       {/* Search magnifier — opens centralized Bible+Hymn search.
@@ -289,7 +295,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontWeight: '900',
   },
   titleContainer: {
     flex: 1,
@@ -299,7 +304,6 @@ const styles = StyleSheet.create({
   },
   title: {
     color: 'white',
-    fontWeight: '700',
     letterSpacing: 0.15,
     textAlign: 'center',
     width: '100%',
