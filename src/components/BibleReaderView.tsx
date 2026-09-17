@@ -148,7 +148,10 @@ const VerseItem = React.memo(
             {
               fontSize: verseFontSize,
               lineHeight: verseLineHeight,
-              textAlign: 'justify',
+              // iOS breaks lines greedily with no hyphenation, so justify
+              // stretches long Malagasy words into wide gaps. Android balances
+              // line breaks and justifies cleanly.
+              textAlign: Platform.OS === 'ios' ? 'left' : 'justify',
               color: theme.colors.readerText,
               ...(Platform.OS === 'android' ? { includeFontPadding: true } : null),
             },
@@ -166,7 +169,6 @@ const VerseItem = React.memo(
                   theme.colors.textWatermark ??
                   theme.colors.readerText,
                 opacity: 0.62,
-                fontFamily: 'Cinzel',
                 lineHeight: verseLineHeight,
                 transform: [{ skewX: '-8deg' }],
               }}

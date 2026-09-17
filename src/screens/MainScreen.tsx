@@ -77,6 +77,10 @@ const LAST_READ_BIBLE_KEY = 'last_read_bible';
 // closed the app on a hymn reopens on that hymn, not the Bible default.
 const LAST_READ_MODE_KEY = 'last_read_mode';
 const LAST_READ_HYMN_KEY = 'last_read_hymn';
+// Persisted in-app font scale so the reader size survives a relaunch.
+const FONT_SCALE_KEY = 'font_scale';
+const USER_FONT_SCALE_MIN = 0.8;
+const USER_FONT_SCALE_MAX = 1.6;
 
 const TOP_BAR_TOOLBAR_BASE = Platform.OS === 'android' ? 56 : 44;
 const TOP_BAR_EXTRA_TOP_PADDING = 6;
@@ -339,6 +343,24 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       } catch {}
     })();
   }, [route.params?.mode]);
+
+  // Restore the font scale once, then persist every change. The ref keeps the
+  // initial default from overwriting the stored value before the read lands.
+  const didRestoreFontScale = useRef(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = parseFloat((await AsyncStorage.getItem(FONT_SCALE_KEY)) ?? '');
+        if (stored >= USER_FONT_SCALE_MIN && stored <= USER_FONT_SCALE_MAX) setFontScale(stored);
+      } catch {}
+      didRestoreFontScale.current = true;
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!didRestoreFontScale.current) return;
+    AsyncStorage.setItem(FONT_SCALE_KEY, String(fontScale)).catch(() => {});
+  }, [fontScale]);
 
   const didRestoreBible = useRef(false);
   useEffect(() => {
@@ -1460,10 +1482,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         fontControlsTop={insets.top + TOP_BAR_EXTRA_TOP_PADDING}
         fontControlsRight={56}
         onIncreaseFont={() =>
-          setFontScale(scale => Math.min(1.6, Math.round((scale + 0.1) * 10) / 10))
+          setFontScale(scale => Math.min(USER_FONT_SCALE_MAX, Math.round((scale + 0.1) * 10) / 10))
         }
         onDecreaseFont={() =>
-          setFontScale(scale => Math.max(0.8, Math.round((scale - 0.1) * 10) / 10))
+          setFontScale(scale => Math.max(USER_FONT_SCALE_MIN, Math.round((scale - 0.1) * 10) / 10))
         }
       />
 
