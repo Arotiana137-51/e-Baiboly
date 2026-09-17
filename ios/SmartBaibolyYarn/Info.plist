@@ -47,6 +47,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo as the background of a shared verse card.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Not used; required by the photo picker library.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save a shared verse card to your photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose a photo as the background of a shared verse card.</string>
 	<key>UILaunchStoryboardName</key>
