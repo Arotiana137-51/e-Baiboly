@@ -4,9 +4,9 @@ name: iOS Build (Device Archive)
 # on push too meant every PR commit ran this twice on a paid macOS runner.
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, ios ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, ios ]
   workflow_dispatch:
 
 # Superseded runs are wasted spend; a new commit cancels the one it replaces.
