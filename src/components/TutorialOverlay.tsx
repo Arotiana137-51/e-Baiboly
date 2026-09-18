@@ -328,13 +328,31 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   const ch = cardH > 0 ? cardH : 150;
   const MARGIN = CARD_GAP;
 
-  const placeBelow = box
+  // Reserve the status bar / notch (insets.top) and the system nav bar
+  // (insets.bottom): this overlay is absoluteFill inside a SafeAreaView, which
+  // ignores the parent's padding, so it spans the full window on both
+  // platforms. Without the top reservation a 'top'-placed card over a tall
+  // target clamps to MARGIN and sits under the iPhone notch.
+  const minTop = MARGIN + insets.top;
+  const maxTop = H - ch - MARGIN - insets.bottom;
+  const aboveTop = box ? box.top - CARD_GAP - ch : 0;
+  const belowTop = box ? box.bottom + CARD_GAP : 0;
+
+  let placeBelow = box
     ? step?.placement === 'bottom'
       ? true
       : step?.placement === 'top'
         ? false
         : box.bottom < H * 0.6
     : false;
+  // A side that has no room would be clamped back onto the target and hide
+  // the very control the step asks for (short screens, high targets), so flip
+  // to the other side whenever that one fits.
+  if (box && !placeBelow && aboveTop < minTop && belowTop <= maxTop) {
+    placeBelow = true;
+  } else if (box && placeBelow && belowTop > maxTop && aboveTop >= minTop) {
+    placeBelow = false;
+  }
 
   // Always resolve to a single top, then clamp so the whole card stays on-screen
   // regardless of target size (a flex:1 target must not shove the card off-top).
@@ -342,19 +360,11 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   if (!box) {
     cardTop = H * 0.5 - 90;
   } else if (placeBelow) {
-    cardTop = box.bottom + CARD_GAP;
+    cardTop = belowTop;
   } else {
-    cardTop = box.top - CARD_GAP - ch;
+    cardTop = aboveTop;
   }
-  // Reserve the status bar / notch (insets.top) and the system nav bar
-  // (insets.bottom): this overlay is absoluteFill inside a SafeAreaView, which
-  // ignores the parent's padding, so it spans the full window on both
-  // platforms. Without the top reservation a 'top'-placed card over a tall
-  // target clamps to MARGIN and sits under the iPhone notch.
-  cardTop = Math.max(
-    MARGIN + insets.top,
-    Math.min(cardTop, H - ch - MARGIN - insets.bottom),
-  );
+  cardTop = Math.max(minTop, Math.min(cardTop, maxTop));
 
   // "Peek" cards (destination-confirmation steps): ignore the hole-relative
   // placement above entirely — the point is to sit off to the side, mid-
