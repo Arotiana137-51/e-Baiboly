@@ -376,10 +376,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       try {
         const stored = await AsyncStorage.getItem(LAST_READ_BIBLE_KEY);
         if (stored) {
-          const {bookId, bookName, chapter} = JSON.parse(stored);
+          const {bookId, bookName, chapter, verse} = JSON.parse(stored);
           if (books.find(b => b.id === bookId)) {
             setCurrentBook({id: bookId, name: bookName});
             setCurrentChapter(chapter);
+            // Land on the verse that was at the top when the app was closed.
+            if (typeof verse === 'number' && verse > 1) setShouldScrollToVerse(verse);
             return;
           }
         }
@@ -547,6 +549,30 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       AsyncStorage.setItem(LAST_READ_HYMN_KEY, currentHymnId).catch(() => {});
     }
   }, [mode, currentBook, currentChapter, currentHymnId, verses, hymnVerses, hymns, logBibleAccess, logHymnAccess]);
+
+  // Also remember the verse at the top of the viewport, debounced so a
+  // scroll gesture doesn't write on every frame. Restore feeds it to
+  // shouldScrollToVerse above.
+  const lastReadVerseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleTopVerseChange = useCallback(
+    (verse: number) => {
+      if (mode !== 'bible' || !currentBook) return;
+      if (lastReadVerseTimer.current) clearTimeout(lastReadVerseTimer.current);
+      lastReadVerseTimer.current = setTimeout(() => {
+        AsyncStorage.setItem(
+          LAST_READ_BIBLE_KEY,
+          JSON.stringify({bookId: currentBook.id, bookName: currentBook.name, chapter: currentChapter, verse}),
+        ).catch(() => {});
+      }, 500);
+    },
+    [mode, currentBook, currentChapter],
+  );
+  useEffect(
+    () => () => {
+      if (lastReadVerseTimer.current) clearTimeout(lastReadVerseTimer.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (mode !== 'bible') {
@@ -1295,6 +1321,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               chapterMarks={chapterMarks}
               currentBookName={currentBook?.name ?? null}
               onClearRange={() => setSelectedVerseRange(null)}
+              onTopVerseChange={handleTopVerseChange}
             />
           ) : (
             <HymnReaderView

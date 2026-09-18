@@ -1,5 +1,5 @@
 import React, {useCallback, useMemo, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform, ListRenderItemInfo } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform, ListRenderItemInfo, ViewToken } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
@@ -331,6 +331,8 @@ interface BibleReaderViewProps {
   chapterMarks?: ChapterMark[];
   onClearRange?: () => void;
   currentBookName?: string | null;
+  /** Fires with the verse number at the top of the viewport whenever it changes. */
+  onTopVerseChange?: (verse: number) => void;
 }
 
 const BibleReaderView: React.FC<BibleReaderViewProps> = ({
@@ -348,12 +350,30 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   chapterMarks,
   onClearRange,
   currentBookName,
+  onTopVerseChange,
 }) => {
   const { theme } = useTheme();
   const { isLowEndMode } = useLowEndMode();
   const {variant: jesusNameVariant, transformText} = useJesusName();
   const insets = useSafeAreaInsets();
   const isScrollingRef = useRef(false);
+
+  // FlatList refuses to swap onViewableItemsChanged between renders, so the
+  // pair is created once and reads the latest callback through a ref.
+  const onTopVerseChangeRef = useRef(onTopVerseChange);
+  onTopVerseChangeRef.current = onTopVerseChange;
+  const lastTopVerseRef = useRef<number | null>(null);
+  const viewabilityConfigCallbackPairs = useRef([
+    {
+      viewabilityConfig: {itemVisiblePercentThreshold: 10},
+      onViewableItemsChanged: ({viewableItems}: {viewableItems: ViewToken[]}) => {
+        const top = (viewableItems[0]?.item as BibleVerse | undefined)?.verse_number;
+        if (typeof top !== 'number' || top === lastTopVerseRef.current) return;
+        lastTopVerseRef.current = top;
+        onTopVerseChangeRef.current?.(top);
+      },
+    },
+  ]);
 
   const visibleVerses = useMemo(() => {
     if (!selectedVerseRange) return verses;
@@ -542,6 +562,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       onScrollBeginDrag={onScrollBeginDrag}
       onScrollEndDrag={onScrollEndDrag}
       onMomentumScrollEnd={onMomentumScrollEnd}
+      viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
       renderItem={renderItem}
       {...listProps}
       style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
