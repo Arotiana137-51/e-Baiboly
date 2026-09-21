@@ -18,6 +18,7 @@
 		DA11E000000000000000000D /* DailyVerseWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DA11E0000000000000000001 /* DailyVerseWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DA11E000000000000000000E /* DailyVerseWidgetModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA11E0000000000000000006 /* DailyVerseWidgetModule.swift */; };
 		DA11E000000000000000000F /* DailyVerseWidgetModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DA11E0000000000000000007 /* DailyVerseWidgetModule.m */; };
+		DA11E000000000000000001C /* KeepAwakeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DA11E000000000000000001B /* KeepAwakeModule.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +64,7 @@
 		DA11E0000000000000000005 /* SmartBaibolyYarn.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = SmartBaibolyYarn.entitlements; path = SmartBaibolyYarn/SmartBaibolyYarn.entitlements; sourceTree = "<group>"; };
 		DA11E0000000000000000006 /* DailyVerseWidgetModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DailyVerseWidgetModule.swift; path = SmartBaibolyYarn/DailyVerseWidgetModule.swift; sourceTree = "<group>"; };
 		DA11E0000000000000000007 /* DailyVerseWidgetModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = DailyVerseWidgetModule.m; path = SmartBaibolyYarn/DailyVerseWidgetModule.m; sourceTree = "<group>"; };
+		DA11E000000000000000001B /* KeepAwakeModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = KeepAwakeModule.m; path = SmartBaibolyYarn/KeepAwakeModule.m; sourceTree = "<group>"; };
 		DA11E0000000000000000008 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DA11E0000000000000000009 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -100,6 +102,7 @@
 				DA11E0000000000000000005 /* SmartBaibolyYarn.entitlements */,
 				DA11E0000000000000000006 /* DailyVerseWidgetModule.swift */,
 				DA11E0000000000000000007 /* DailyVerseWidgetModule.m */,
+				DA11E000000000000000001B /* KeepAwakeModule.m */,
 			);
 			name = SmartBaibolyYarn;
 			sourceTree = "<group>";
@@ -346,6 +349,7 @@
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				DA11E000000000000000000E /* DailyVerseWidgetModule.swift in Sources */,
 				DA11E000000000000000000F /* DailyVerseWidgetModule.m in Sources */,
+				DA11E000000000000000001C /* KeepAwakeModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
