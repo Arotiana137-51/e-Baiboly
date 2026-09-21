@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Hymn } from '../hooks/useHymnsData';
 
@@ -8,7 +8,21 @@ export interface FavoriteHymn extends Hymn {
 
 const FAVORITES_KEY = 'favorites_hymns';
 
-export const useHymnFavorites = () => {
+type HymnFavoritesContextValue = {
+  favorites: FavoriteHymn[];
+  isLoading: boolean;
+  addToFavorites: (hymn: Hymn) => Promise<void>;
+  removeFromFavorites: (hymn: Hymn) => Promise<void>;
+  isFavorite: (hymn: Hymn) => boolean;
+  clearFavorites: () => Promise<void>;
+  loadFavorites: () => Promise<void>;
+};
+
+// See useFavorites.tsx for why this is a shared singleton rather than a
+// plain hook: MainScreen and FavoritesScreen stay mounted simultaneously.
+const HymnFavoritesContext = createContext<HymnFavoritesContextValue | null>(null);
+
+export const HymnFavoritesProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [favorites, setFavorites] = useState<FavoriteHymn[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,7 +52,7 @@ export const useHymnFavorites = () => {
       setFavorites(prev => {
         // Check if hymn is already in favorites
         const exists = prev.some(fav => fav.id === hymn.id);
-        
+
         if (exists) {
           return prev; // Don't add if already exists
         }
@@ -87,13 +101,26 @@ export const useHymnFavorites = () => {
     loadFavorites();
   }, [loadFavorites]);
 
-  return {
-    favorites,
-    isLoading,
-    addToFavorites,
-    removeFromFavorites,
-    isFavorite,
-    clearFavorites,
-    loadFavorites,
-  };
+  const value = useMemo(
+    () => ({
+      favorites,
+      isLoading,
+      addToFavorites,
+      removeFromFavorites,
+      isFavorite,
+      clearFavorites,
+      loadFavorites,
+    }),
+    [favorites, isLoading, addToFavorites, removeFromFavorites, isFavorite, clearFavorites, loadFavorites]
+  );
+
+  return <HymnFavoritesContext.Provider value={value}>{children}</HymnFavoritesContext.Provider>;
+};
+
+export const useHymnFavorites = () => {
+  const ctx = useContext(HymnFavoritesContext);
+  if (!ctx) {
+    throw new Error('useHymnFavorites must be used within HymnFavoritesProvider');
+  }
+  return ctx;
 };

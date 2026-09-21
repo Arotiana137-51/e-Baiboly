@@ -9,6 +9,10 @@ import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
 import {JesusNameProvider, useJesusName} from './src/contexts/JesusNameContext';
 import {CultModeProvider} from './src/contexts/CultModeContext';
 import {TutorialProvider} from './src/contexts/TutorialContext';
+import {FavoritesProvider} from './src/hooks/useFavorites';
+import {HymnFavoritesProvider} from './src/hooks/useHymnFavorites';
+import {BibleHistoryProvider} from './src/hooks/useBibleHistory';
+import {HymnHistoryProvider} from './src/hooks/useHymnHistory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {STORAGE_KEY_PRIVACY_POLICY_ACCEPTED} from './src/screens/PrivacyPolicyScreen';
 import {isOnboardingDone} from './src/contexts/TutorialContext';
@@ -179,18 +183,26 @@ const App = () => {
               <DatabaseProvider>
                 <CultModeProvider>
                   <TutorialProvider>
-                    <NavigationContainer
-                      ref={navigationRef}
-                      onReady={() => {
-                        // Cold start from a notification or widget tap.
-                        notifee
-                          .getInitialNotification()
-                          .then(initial => openVerseFromNotification(initial?.notification))
-                          .catch(() => {});
-                        Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
-                      }}>
-                      <AppContent />
-                    </NavigationContainer>
+                    <FavoritesProvider>
+                      <HymnFavoritesProvider>
+                        <BibleHistoryProvider>
+                          <HymnHistoryProvider>
+                            <NavigationContainer
+                              ref={navigationRef}
+                              onReady={() => {
+                                // Cold start from a notification or widget tap.
+                                notifee
+                                  .getInitialNotification()
+                                  .then(initial => openVerseFromNotification(initial?.notification))
+                                  .catch(() => {});
+                                Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
+                              }}>
+                              <AppContent />
+                            </NavigationContainer>
+                          </HymnHistoryProvider>
+                        </BibleHistoryProvider>
+                      </HymnFavoritesProvider>
+                    </FavoritesProvider>
                   </TutorialProvider>
                 </CultModeProvider>
               </DatabaseProvider>

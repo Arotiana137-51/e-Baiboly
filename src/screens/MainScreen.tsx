@@ -119,6 +119,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // use `shouldScrollToVerse` for their own scroll target and never set
   // this flag, so the two paths cannot collide.
   const [shouldScrollToTop, setShouldScrollToTop] = useState(false);
+  // Set right before restoring the last-read book/chapter or hymn from
+  // storage on launch, so the history-logging effect below can tell "the app
+  // reopened here" apart from "the user actually navigated here" and skip
+  // logging the former. Without this, reopening the app re-logs (and so
+  // resurrects) whatever history entry the user deleted for the last-read
+  // item, since restoring position and logging a visit shared one effect.
+  const skipNextHistoryLogRef = useRef(false);
 
   const appState = useRef(AppState.currentState);
 
@@ -380,6 +387,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         if (stored) {
           const {bookId, bookName, chapter, verse} = JSON.parse(stored);
           if (books.find(b => b.id === bookId)) {
+            skipNextHistoryLogRef.current = true;
             setCurrentBook({id: bookId, name: bookName});
             setCurrentChapter(chapter);
             // Land on the verse that was at the top when the app was closed.
@@ -391,6 +399,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         console.error('Error restoring last-read Bible position:', error);
       }
       const defaultBook = books.find(b => b.name === 'Marka') ?? books[0];
+      skipNextHistoryLogRef.current = true;
       setCurrentBook({id: defaultBook.id, name: defaultBook.name});
     })();
   }, [books, currentBook]);
@@ -423,8 +432,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     (async () => {
       try {
         const storedId = await AsyncStorage.getItem(LAST_READ_HYMN_KEY);
-        if (storedId && applyHymn(storedId)) return;
+        if (storedId) {
+          skipNextHistoryLogRef.current = true;
+          if (applyHymn(storedId)) return;
+          skipNextHistoryLogRef.current = false;
+        }
       } catch {}
+      skipNextHistoryLogRef.current = true;
       applyHymn(defaultHymn.id);
     })();
   }, [mode, hymns, currentHymnId]);
@@ -532,10 +546,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   useEffect(() => {
     if (mode === 'bible' && currentBook && verses.length > 0) {
-      logBibleAccess(
-        { book_id: currentBook.id, chapter: currentChapter, verse_number: 1, text: '', id: 0 } as BibleVerse,
-        currentBook.name
-      );
+      if (skipNextHistoryLogRef.current) {
+        skipNextHistoryLogRef.current = false;
+      } else {
+        logBibleAccess(
+          { book_id: currentBook.id, chapter: currentChapter, verse_number: 1, text: '', id: 0 } as BibleVerse,
+          currentBook.name
+        );
+      }
       // Remember where we are, so the next launch reopens here (not Marka 16).
       AsyncStorage.setItem(
         LAST_READ_BIBLE_KEY,
@@ -545,7 +563,11 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     } else if (mode === 'hymnal' && currentHymnId && hymnVerses.length > 0) {
       const currentHymn = hymns.find(h => h.id === currentHymnId);
       if (currentHymn) {
-        logHymnAccess(currentHymn);
+        if (skipNextHistoryLogRef.current) {
+          skipNextHistoryLogRef.current = false;
+        } else {
+          logHymnAccess(currentHymn);
+        }
       }
       AsyncStorage.setItem(LAST_READ_MODE_KEY, 'hymnal').catch(() => {});
       AsyncStorage.setItem(LAST_READ_HYMN_KEY, currentHymnId).catch(() => {});

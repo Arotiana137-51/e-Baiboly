@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BibleVerse } from '../hooks/useBibleData';
 
@@ -9,7 +9,25 @@ export interface FavoriteVerse extends BibleVerse {
 
 const FAVORITES_KEY = 'favorites_verses';
 
-export const useFavorites = () => {
+type FavoritesContextValue = {
+  favorites: FavoriteVerse[];
+  isLoading: boolean;
+  addToFavorites: (verse: BibleVerse, bookName: string) => Promise<void>;
+  removeFromFavorites: (verse: BibleVerse) => Promise<void>;
+  isFavorite: (verse: BibleVerse) => boolean;
+  clearFavorites: () => Promise<void>;
+  loadFavorites: () => Promise<void>;
+};
+
+// A single shared instance, provided once at the app root. MainScreen and
+// FavoritesScreen both stay mounted at the same time (native-stack doesn't
+// unmount screens underneath), so two independent copies of this hook would
+// each hold their own stale in-memory list and could overwrite each other's
+// AsyncStorage writes (e.g. a delete in FavoritesScreen getting silently
+// undone by a later write from MainScreen's stale copy).
+const FavoritesContext = createContext<FavoritesContextValue | null>(null);
+
+export const FavoritesProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [favorites, setFavorites] = useState<FavoriteVerse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -40,12 +58,12 @@ export const useFavorites = () => {
       setFavorites(prev => {
         // Check if verse is already in favorites
         const exists = prev.some(
-          fav => 
-            fav.book_id === verse.book_id && 
-            fav.chapter === verse.chapter && 
+          fav =>
+            fav.book_id === verse.book_id &&
+            fav.chapter === verse.chapter &&
             fav.verse_number === verse.verse_number
         );
-        
+
         if (exists) {
           return prev; // Don't add if already exists
         }
@@ -65,9 +83,9 @@ export const useFavorites = () => {
     try {
       setFavorites(prev => {
         const updated = prev.filter(
-          fav => 
-            !(fav.book_id === verse.book_id && 
-              fav.chapter === verse.chapter && 
+          fav =>
+            !(fav.book_id === verse.book_id &&
+              fav.chapter === verse.chapter &&
               fav.verse_number === verse.verse_number)
         );
         // Save to storage
@@ -82,9 +100,9 @@ export const useFavorites = () => {
   // Check if a verse is in favorites
   const isFavorite = useCallback((verse: BibleVerse) => {
     return favorites.some(
-      fav => 
-        fav.book_id === verse.book_id && 
-        fav.chapter === verse.chapter && 
+      fav =>
+        fav.book_id === verse.book_id &&
+        fav.chapter === verse.chapter &&
         fav.verse_number === verse.verse_number
     );
   }, [favorites]);
@@ -104,13 +122,26 @@ export const useFavorites = () => {
     loadFavorites();
   }, [loadFavorites]);
 
-  return {
-    favorites,
-    isLoading,
-    addToFavorites,
-    removeFromFavorites,
-    isFavorite,
-    clearFavorites,
-    loadFavorites,
-  };
+  const value = useMemo(
+    () => ({
+      favorites,
+      isLoading,
+      addToFavorites,
+      removeFromFavorites,
+      isFavorite,
+      clearFavorites,
+      loadFavorites,
+    }),
+    [favorites, isLoading, addToFavorites, removeFromFavorites, isFavorite, clearFavorites, loadFavorites]
+  );
+
+  return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
+};
+
+export const useFavorites = () => {
+  const ctx = useContext(FavoritesContext);
+  if (!ctx) {
+    throw new Error('useFavorites must be used within FavoritesProvider');
+  }
+  return ctx;
 };

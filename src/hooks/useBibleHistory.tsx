@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BibleVerse } from '../hooks/useBibleData';
 
@@ -11,7 +11,20 @@ export interface BibleHistoryItem {
 const BIBLE_HISTORY_KEY = 'bible_history';
 const MAX_HISTORY_ITEMS = 50;
 
-export const useBibleHistory = () => {
+type BibleHistoryContextValue = {
+  history: BibleHistoryItem[];
+  isLoading: boolean;
+  logAccess: (verse: BibleVerse, bookName: string) => Promise<void>;
+  removeItem: (id: string) => Promise<void>;
+  clearHistory: () => Promise<void>;
+  loadHistory: () => Promise<void>;
+};
+
+// See useFavorites.tsx for why this is a shared singleton rather than a
+// plain hook: MainScreen and HistoryScreen stay mounted simultaneously.
+const BibleHistoryContext = createContext<BibleHistoryContextValue | null>(null);
+
+export const BibleHistoryProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [history, setHistory] = useState<BibleHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -40,13 +53,13 @@ export const useBibleHistory = () => {
       setHistory(prev => {
         // Remove existing entry if present
         const filtered = prev.filter(item => item.id !== historyId);
-        
+
         // Add new entry at the beginning
         const updated = [{ id: historyId, title, lastAccessed: now }, ...filtered];
-        
+
         // Limit to MAX_HISTORY_ITEMS
         const limited = updated.slice(0, MAX_HISTORY_ITEMS);
-        
+
         // Save to storage
         AsyncStorage.setItem(BIBLE_HISTORY_KEY, JSON.stringify(limited));
         return limited;
@@ -84,12 +97,25 @@ export const useBibleHistory = () => {
     loadHistory();
   }, [loadHistory]);
 
-  return {
-    history,
-    isLoading,
-    logAccess,
-    removeItem,
-    clearHistory,
-    loadHistory,
-  };
+  const value = useMemo(
+    () => ({
+      history,
+      isLoading,
+      logAccess,
+      removeItem,
+      clearHistory,
+      loadHistory,
+    }),
+    [history, isLoading, logAccess, removeItem, clearHistory, loadHistory]
+  );
+
+  return <BibleHistoryContext.Provider value={value}>{children}</BibleHistoryContext.Provider>;
+};
+
+export const useBibleHistory = () => {
+  const ctx = useContext(BibleHistoryContext);
+  if (!ctx) {
+    throw new Error('useBibleHistory must be used within BibleHistoryProvider');
+  }
+  return ctx;
 };
