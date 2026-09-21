@@ -21,6 +21,7 @@ const realBible = {
   chapter: 1,
   verseStart: 1,
   verseEnd: 1,
+  isWholeChapter: false,
   label: 'Genesisy 1:1',
 };
 const demoHymn = {
