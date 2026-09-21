@@ -47,6 +47,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useHymnFavorites } from '../hooks/useHymnFavorites';
 import { useBibleHistory } from '../hooks/useBibleHistory';
 import { useHymnHistory } from '../hooks/useHymnHistory';
+import { useKeepAwake } from '../hooks/useKeepAwake';
 import HamburgerMenuPopover, {
   HamburgerMenuItemKey,
 } from '../components/HamburgerMenuPopover';
@@ -106,6 +107,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const {theme, isDarkMode, setDarkMode} = useTheme();
   const insets = useSafeAreaInsets();
+  useKeepAwake();
   const { scale: rScale, isAndroid: rIsAndroid } = useResponsive();
   const TOP_BAR_TOOLBAR_HEIGHT = Math.max(TOP_BAR_TOOLBAR_BASE, rScale(rIsAndroid ? 52 : 44));
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);

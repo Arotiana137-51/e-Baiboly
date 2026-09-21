@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
@@ -7,6 +7,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {t} from '../i18n/strings';
 import {PRIVACY_POLICY_URL} from '../constants/legal';
 import {useTheme, useLowEndMode} from '../contexts/ThemeContext';
+import {getKeepScreenOn, setKeepScreenOn} from '../hooks/useKeepAwake';
 import packageJson from '../../package.json';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
@@ -14,6 +15,16 @@ const AboutScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {theme} = useTheme();
   const { isLowEndMode, enableLowEndMode, disableLowEndMode } = useLowEndMode();
+
+  // Read by useKeepAwake on the reader's next focus, so no context needed.
+  const [keepScreenOn, setKeepScreenOnState] = useState(true);
+  useEffect(() => {
+    getKeepScreenOn().then(setKeepScreenOnState);
+  }, []);
+  const toggleKeepScreenOn = (on: boolean) => {
+    setKeepScreenOnState(on);
+    setKeepScreenOn(on);
+  };
 
   const appVersion = String((packageJson as any)?.version ?? '');
 
@@ -261,6 +272,28 @@ const AboutScreen = () => {
               </Text>
               <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
                 Tsy mandeha haingana ny telefonanao? Alefaso ity
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            style={styles.toggleRow}
+            onPress={() => toggleKeepScreenOn(!keepScreenOn)}
+          >
+            <Switch
+              value={keepScreenOn}
+              onValueChange={toggleKeepScreenOn}
+              trackColor={{ false: '#767577', true: theme.colors.accentBlue }}
+              thumbColor={keepScreenOn ? '#FFFFFF' : '#F4F3F4'}
+            />
+            <View style={styles.toggleTextContainer}>
+              <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
+                {/* TODO(copy): MG title, e.g. keep the screen on while reading */}
+                Tsy maty ny efijery rehefa mamaky
+              </Text>
+              <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
+                {/* TODO(copy): MG hint, e.g. like an open book; turn off to save battery */}
+                Toy ny boky misokatra. Vonoy raha te hitsitsy bateria
               </Text>
             </View>
           </Pressable>
