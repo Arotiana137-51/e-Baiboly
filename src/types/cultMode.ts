@@ -6,6 +6,9 @@ export type CultBibleEntry = {
   chapter: number;
   verseStart: number;
   verseEnd: number;
+  // Whole-chapter selection — tells the MainScreen propagator to pass
+  // selectedVerseRange={null} to the reader instead of highlighting a range.
+  isWholeChapter: boolean;
   label: string;
 };
 
@@ -29,6 +32,11 @@ export const isCultHymnEntry = (e: CultEntry): e is CultHymnEntry =>
 
 export const generateCultEntryId = (): string =>
   `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
+// Entries saved before whole-chapter selections carried a real verse count
+// used this as a verseEnd placeholder. Kept only so those old playlist
+// entries still play back without a range banner.
+export const WHOLE_CHAPTER_VERSE_END = 999;
 
 export const buildBibleLabel = (
   bookName: string,

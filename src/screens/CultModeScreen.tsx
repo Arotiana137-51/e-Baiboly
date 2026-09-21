@@ -90,6 +90,7 @@ const CultModeScreen = () => {
     ) => {
       let verseStart = 1;
       let verseEnd = 1;
+      let isWholeChapter = false;
       if (selection.kind === 'single') {
         verseStart = selection.verse;
         verseEnd = selection.verse;
@@ -97,10 +98,11 @@ const CultModeScreen = () => {
         verseStart = selection.start;
         verseEnd = selection.end;
       } else {
-        // 'whole' chapter — sentinel verseEnd=999 tells the MainScreen
-        // propagator to pass selectedVerseRange={null} to the reader.
+        // 'whole' chapter — verseEnd is the chapter's real last verse, so
+        // the label shows the correct range.
         verseStart = 1;
-        verseEnd = 999;
+        verseEnd = selection.verseCount;
+        isWholeChapter = true;
       }
       const id = addEntry({
         type: 'bible',
@@ -109,6 +111,7 @@ const CultModeScreen = () => {
         chapter,
         verseStart,
         verseEnd,
+        isWholeChapter,
         label: buildBibleLabel(bookName, chapter, verseStart, verseEnd),
       });
       setBibleModalVisible(false);

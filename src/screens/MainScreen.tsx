@@ -53,6 +53,7 @@ import HamburgerMenuPopover, {
 } from '../components/HamburgerMenuPopover';
 import {useTheme} from '../contexts/ThemeContext';
 import {useCultMode} from '../contexts/CultModeContext';
+import {WHOLE_CHAPTER_VERSE_END} from '../types/cultMode';
 import {useTutorial, useTutorialTarget, isOnboardingDone} from '../contexts/TutorialContext';
 import {ONBOARDING_ID, CULT_TUTORIAL_ID, HIGHLIGHT_TUTORIAL_ID} from '../tutorials/registry';
 import TutorialOverlay from '../components/TutorialOverlay';
@@ -651,8 +652,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   // Cult mode propagator: when the active entry changes, drive the reader
   // (mode + book/chapter/range or hymn id/number/category) from it.
-  // Whole-chapter Bible entries use verseEnd=999 as a sentinel — translate
-  // back to a null range so no banner shows.
+  // Whole-chapter Bible entries translate back to a null range so no banner
+  // shows. The verseEnd>=WHOLE_CHAPTER_VERSE_END fallback covers entries
+  // saved before isWholeChapter existed.
   useEffect(() => {
     if (!cultMode.isActive || !cultMode.currentEntry) return;
     const entry = cultMode.currentEntry;
@@ -662,7 +664,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       setCurrentChapter(entry.chapter);
       setSelectedVerseNumber(null);
       const isWholeChapter =
-        entry.verseStart === 1 && entry.verseEnd >= 999;
+        entry.isWholeChapter ?? entry.verseEnd >= WHOLE_CHAPTER_VERSE_END;
       if (isWholeChapter) {
         setSelectedVerseRange(null);
         setShouldScrollToVerse(null);

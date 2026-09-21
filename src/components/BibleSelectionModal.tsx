@@ -20,7 +20,7 @@ type SelectionStep = 'book' | 'chapter' | 'verse';
 export type VerseSelection =
   | {kind: 'single'; verse: number}
   | {kind: 'range'; start: number; end: number}
-  | {kind: 'whole'};
+  | {kind: 'whole'; verseCount: number};
 
 interface BibleSelectionModalOptimizedProps {
   onClose: () => void;
@@ -224,12 +224,13 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   }, [selectedBook, selectedChapter, pendingStartVerse, onBibleSelect, handleClose]);
 
   const handleWholeChapterPress = useCallback(() => {
-    if (!selectedBook || selectedChapter === null) return;
+    if (!selectedBook || selectedChapter === null || verseCount <= 0) return;
     onBibleSelect(selectedBook.id, selectedBook.name, selectedChapter, {
       kind: 'whole',
+      verseCount,
     });
     handleClose();
-  }, [selectedBook, selectedChapter, onBibleSelect, handleClose]);
+  }, [selectedBook, selectedChapter, verseCount, onBibleSelect, handleClose]);
 
   const onProgressChangeRef = useRef(onProgressChange);
   useEffect(() => {
