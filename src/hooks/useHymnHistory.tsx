@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Hymn } from '../hooks/useHymnsData';
 
@@ -11,7 +11,20 @@ export interface HymnHistoryItem {
 const HYMN_HISTORY_KEY = 'hymn_history';
 const MAX_HISTORY_ITEMS = 50;
 
-export const useHymnHistory = () => {
+type HymnHistoryContextValue = {
+  history: HymnHistoryItem[];
+  isLoading: boolean;
+  logAccess: (hymn: Hymn) => Promise<void>;
+  removeItem: (id: string) => Promise<void>;
+  clearHistory: () => Promise<void>;
+  loadHistory: () => Promise<void>;
+};
+
+// See useFavorites.tsx for why this is a shared singleton rather than a
+// plain hook: MainScreen and HistoryScreen stay mounted simultaneously.
+const HymnHistoryContext = createContext<HymnHistoryContextValue | null>(null);
+
+export const HymnHistoryProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [history, setHistory] = useState<HymnHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,13 +52,13 @@ export const useHymnHistory = () => {
       setHistory(prev => {
         // Remove existing entry if present
         const filtered = prev.filter(item => item.id !== hymn.id);
-        
+
         // Add new entry at the beginning
         const updated = [{ id: hymn.id, title, lastAccessed: now }, ...filtered];
-        
+
         // Limit to MAX_HISTORY_ITEMS
         const limited = updated.slice(0, MAX_HISTORY_ITEMS);
-        
+
         // Save to storage
         AsyncStorage.setItem(HYMN_HISTORY_KEY, JSON.stringify(limited));
         return limited;
@@ -83,12 +96,25 @@ export const useHymnHistory = () => {
     loadHistory();
   }, [loadHistory]);
 
-  return {
-    history,
-    isLoading,
-    logAccess,
-    removeItem,
-    clearHistory,
-    loadHistory,
-  };
+  const value = useMemo(
+    () => ({
+      history,
+      isLoading,
+      logAccess,
+      removeItem,
+      clearHistory,
+      loadHistory,
+    }),
+    [history, isLoading, logAccess, removeItem, clearHistory, loadHistory]
+  );
+
+  return <HymnHistoryContext.Provider value={value}>{children}</HymnHistoryContext.Provider>;
+};
+
+export const useHymnHistory = () => {
+  const ctx = useContext(HymnHistoryContext);
+  if (!ctx) {
+    throw new Error('useHymnHistory must be used within HymnHistoryProvider');
+  }
+  return ctx;
 };
