@@ -13,6 +13,7 @@ import {bibleDatabaseService} from '../database/DatabaseService';
 import {dailyVerseFor, type VerseRef} from '../../constants/dailyVerses';
 import {getBibleBookShortName} from '../../utils/bibleBookNames';
 import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
+import {getStoredJesusNameVariant, transformJesusName} from '../../utils/jesusName';
 import {PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {enqueueIssueReport} from '../reporting/issueReportQueue';
 
@@ -196,9 +197,10 @@ export const verseForDate = async (date: Date): Promise<DailyVerse | null> => {
   );
   if (rows.length === 0) return null;
   const bookName = rows[0].name;
+  const variant = await getStoredJesusNameVariant();
   return {
     ref: `${getBibleBookShortName(bookName, ref.b)} ${ref.c}:${ref.v}${ref.to ? `-${ref.to}` : ''}`,
-    body: rows.map(r => plainVerseText(r.text)).join(' '),
+    body: transformJesusName(rows.map(r => plainVerseText(r.text)).join(' '), variant),
     bookId: ref.b,
     bookName,
     chapter: ref.c,
