@@ -1,7 +1,10 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {STORAGE_KEY_JESUS_NAME, transformJesusName, type JesusNameVariant} from '../utils/jesusName';
+import {ensureRemindersScheduled} from '../services/reminders/readingReminder';
+import {syncDailyVerseWidget} from '../services/widget/dailyVerseWidget';
 
-export type JesusNameVariant = 'jesosy' | 'jesoa';
+export type {JesusNameVariant};
 
 type JesusNameContextValue = {
   variant: JesusNameVariant;
@@ -10,21 +13,7 @@ type JesusNameContextValue = {
   transformText: (text: string) => string;
 };
 
-const STORAGE_KEY_JESUS_NAME = 'settings.jesusName';
-
 const JesusNameContext = createContext<JesusNameContextValue | null>(null);
-
-const transformJesusName = (text: string, variant: JesusNameVariant) => {
-  if (!text) {
-    return text;
-  }
-
-  // Replace any casing variant of Jesosy/Jesoa, but avoid replacing inside other words.
-  // Use ASCII word boundaries; this should work for Malagasy text around these words.
-  const regex = /\b(Jesosy|Jesoa)\b/gi;
-  const replacement = variant === 'jesoa' ? 'Jesoa' : 'Jesosy';
-  return text.replace(regex, replacement);
-};
 
 export const JesusNameProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [variant, setVariantState] = useState<JesusNameVariant>('jesosy');
@@ -49,6 +38,9 @@ export const JesusNameProvider: React.FC<{children: React.ReactNode}> = ({childr
     } catch {
       // ignore persistence errors
     }
+    // Pending daily-verse notifications and the widget feed hold resolved text.
+    ensureRemindersScheduled();
+    syncDailyVerseWidget();
   }, []);
 
   const setVariant = useCallback(
