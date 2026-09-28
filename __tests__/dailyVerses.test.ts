@@ -41,7 +41,7 @@ describe('dailyVerses', () => {
   it('every ref resolves in the bundled Bible DB', async () => {
     const sqlite3 = require('sqlite3');
     const db = new sqlite3.Database(
-      path.join(__dirname, '../assets/data/BibleMG65.db'),
+      path.join(__dirname, '../assets/data/dev/BibleMG65.db'),
       sqlite3.OPEN_READONLY,
     );
     const count = (r: VerseRef) =>

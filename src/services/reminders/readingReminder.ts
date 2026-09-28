@@ -42,11 +42,25 @@ import {enqueueIssueReport} from '../reporting/issueReportQueue';
  */
 
 const STORAGE_KEY_SLOTS = 'settings.readingReminder.slots';
-const CHANNEL_ID = 'reading-reminder';
 // Android channel settings are immutable once created, so the user's
-// "quiet vs prominent" choice for the verse maps to two channels.
+// "quiet vs prominent" choice for the verse maps to two channels, and giving
+// the sounding channels the app's own sound meant new ids (see
+// retireOldChannels).
+const CHANNEL_ID = 'reading-reminder-v2';
 const VERSE_CHANNEL_QUIET_ID = 'daily-verse-quiet';
-const VERSE_CHANNEL_PROMINENT_ID = 'daily-verse';
+const VERSE_CHANNEL_PROMINENT_ID = 'daily-verse-v2';
+
+// The app's own notification sound, so a Bible notification is recognisable
+// by ear: android/app/src/main/res/raw/ (kept through resource shrinking by
+// res/raw/keep.xml) and the iOS app bundle (.caf).
+const NOTIFICATION_SOUND = 'ebaiboly_notification';
+const NOTIFICATION_SOUND_IOS = `${NOTIFICATION_SOUND}.caf`;
+
+// Pre-sound channel id -> its replacement.
+const RETIRED_CHANNELS: Record<string, string> = {
+  'reading-reminder': CHANNEL_ID,
+  'daily-verse': VERSE_CHANNEL_PROMINENT_ID,
+};
 
 export const MAX_REMINDER_SLOTS = 5;
 
@@ -141,7 +155,7 @@ const notificationAccent = async (): Promise<string> =>
 const androidBase = (channelId: string, color: string) => ({
   channelId,
   color,
-  smallIcon: 'ic_notification', // kept through shrinking by res/raw/keep.xml
+  smallIcon: 'ic_notification', // kept through shrinking by the manifest's default-icon meta-data
   badgeIconType: AndroidBadgeIconType.SMALL,
   pressAction: {id: 'default'},
 });
@@ -152,7 +166,7 @@ const androidBase = (channelId: string, color: string) => ({
 const iosFor = (prominent: boolean): NotificationIOS =>
   prominent
     ? {
-        sound: 'default',
+        sound: NOTIFICATION_SOUND_IOS,
         interruptionLevel: 'active',
         foregroundPresentationOptions: {banner: true, list: true, sound: true, badge: false},
       }
@@ -236,6 +250,7 @@ const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<voi
           ...androidBase(prominent ? VERSE_CHANNEL_PROMINENT_ID : VERSE_CHANNEL_QUIET_ID, color),
           visibility: prominent ? AndroidVisibility.PUBLIC : AndroidVisibility.PRIVATE,
           style: {type: AndroidStyle.BIGTEXT, text: body},
+          sound: prominent ? NOTIFICATION_SOUND : undefined, // Android 7 only; 8+ uses the channel's
         },
         ios: {...iosFor(prominent), threadId: 'daily-verse'},
       },
@@ -244,12 +259,34 @@ const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<voi
   }
 };
 
+/**
+ * Deletes the pre-sound channels so they don't linger in system settings, and
+ * returns the replacement ids whose old channel the user had turned off: the
+ * replacement is then created off too, instead of suddenly ringing. Other
+ * per-channel tweaks (vibration, pop-up, DND) can't be carried over. No-op on
+ * iOS and Android 7, which have no channels.
+ */
+const retireOldChannels = async (): Promise<Set<string>> => {
+  const turnedOff = new Set<string>();
+  for (const [oldId, newId] of Object.entries(RETIRED_CHANNELS)) {
+    const old = await notifee.getChannel(oldId);
+    if (!old) continue;
+    if (old.blocked) turnedOff.add(newId);
+    await notifee.deleteChannel(oldId);
+  }
+  return turnedOff;
+};
+
 // Channel names are placeholder MG copy — user-owned.
 const ensureChannels = async (): Promise<void> => {
+  // Android never lets an app raise a channel's importance, so NONE set here
+  // on first creation sticks until the user turns the channel back on.
+  const turnedOff = await retireOldChannels();
   await notifee.createChannel({
     id: CHANNEL_ID,
     name: 'Ora famakiana',
-    importance: AndroidImportance.DEFAULT,
+    importance: turnedOff.has(CHANNEL_ID) ? AndroidImportance.NONE : AndroidImportance.DEFAULT,
+    sound: NOTIFICATION_SOUND,
   });
   await notifee.createChannel({
     id: VERSE_CHANNEL_QUIET_ID,
@@ -260,9 +297,9 @@ const ensureChannels = async (): Promise<void> => {
   await notifee.createChannel({
     id: VERSE_CHANNEL_PROMINENT_ID,
     name: 'Sakafom-panahy (mipoitra)',
-    importance: AndroidImportance.HIGH,
+    importance: turnedOff.has(VERSE_CHANNEL_PROMINENT_ID) ? AndroidImportance.NONE : AndroidImportance.HIGH,
     visibility: AndroidVisibility.PUBLIC,
-    sound: 'default',
+    sound: NOTIFICATION_SOUND,
     vibration: true,
     badge: true,
   });
@@ -291,7 +328,7 @@ const scheduleSlot = async (slot: ReminderSlot): Promise<void> => {
       id: notificationIdFor(slot.id),
       title: 'Ora famakiana Baiboly', // placeholder — user-owned MG copy
       body: "Tonga ny fotoana hamakiana ny Tenin'Andriamanitra", // placeholder
-      android: androidBase(CHANNEL_ID, color),
+      android: {...androidBase(CHANNEL_ID, color), sound: NOTIFICATION_SOUND}, // sound: Android 7 only
       ios: iosFor(true), // an explicit "remind me" request
     },
     {

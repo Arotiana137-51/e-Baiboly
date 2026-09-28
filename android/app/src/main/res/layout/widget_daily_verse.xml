@@ -60,6 +60,9 @@
                 android:textSize="10sp" />
         </LinearLayout>
 
+        <!-- Font follows the verse length: a short verse grows to fill the
+             card, a long one shrinks before it is cut (API 26+; older
+             versions keep the provider's fixed size per size class). -->
         <TextView
             android:id="@+id/widget_text"
             android:layout_width="match_parent"
@@ -67,6 +70,10 @@
             android:layout_marginTop="6dp"
             android:layout_marginBottom="6dp"
             android:layout_weight="1"
+            android:autoSizeMaxTextSize="24sp"
+            android:autoSizeMinTextSize="11sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
             android:ellipsize="end"
             android:fontFamily="serif"
             android:gravity="center_vertical"

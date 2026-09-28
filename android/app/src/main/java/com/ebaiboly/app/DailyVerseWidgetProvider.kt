@@ -70,10 +70,13 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
     }
 
     // Widget cells are ~70dp each; thresholds in dp of the placed size.
+    // verseSp only applies below API 26: from 26 the layout's autosize picks
+    // the size and setTextSize is a no-op. verseLines is a safety cap, set
+    // high enough that the card's height, not the line count, is the limit.
     private enum class Size(val verseSp: Float, val verseLines: Int, val minimal: Boolean) {
-        SMALL(13f, 5, true),
-        MEDIUM(15f, 4, false),
-        LARGE(18f, 9, false);
+        SMALL(13f, 7, true),
+        MEDIUM(15f, 7, false),
+        LARGE(18f, 14, false);
 
         companion object {
             fun of(widthDp: Float, heightDp: Float): Size = when {

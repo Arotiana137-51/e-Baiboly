@@ -34,8 +34,8 @@ yarn
 
 This project includes prebuilt SQLite databases in:
 
-- `assets/data/BibleMG65.db`
-- `assets/data/Hymns.db`
+- `assets/data/dev/BibleMG65.db`, `assets/data/dev/Hymns.db` (debug builds)
+- `assets/data/prod/BibleMG65.zip`, `assets/data/prod/Hymns.zip` (release builds)
 
 ### Building Databases
 
