@@ -171,18 +171,21 @@ struct DailyVerseView: View {
   let entry: VerseEntry
 
   private var isSmall: Bool { family == .systemSmall }
+  // Starting size; a long verse shrinks to fit (minimumScaleFactor below)
+  // and a short one keeps it, so the card never looks empty or cut.
   private var verseSize: CGFloat {
     switch family {
-    case .systemSmall: return 13
-    case .systemLarge: return 19
-    default: return 15.5
+    case .systemSmall: return 18
+    case .systemLarge: return 28
+    default: return 22
     }
   }
+  // Safety cap only: the card's height is the real limit.
   private var verseLines: Int {
     switch family {
-    case .systemSmall: return 5
-    case .systemLarge: return 10
-    default: return 4
+    case .systemSmall: return 8
+    case .systemLarge: return 16
+    default: return 8
     }
   }
 
@@ -210,13 +213,14 @@ struct DailyVerseView: View {
         }
       }
 
-      Spacer(minLength: 4)
       Text(entry.ref == nil ? entry.text : "\u{201C}\(entry.text)\u{201D}")
         .font(.system(size: verseSize, weight: .medium, design: .serif))
         .foregroundColor(ink)
         .lineSpacing(3)
         .lineLimit(verseLines)
-      Spacer(minLength: 4)
+        .minimumScaleFactor(0.5)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
 
       if let ref = entry.ref {
         Rectangle()
@@ -294,6 +298,19 @@ struct DailyVerseWidget: Widget {
     .configurationDisplayName("Sakafom-panahy")
     .description("Andinin-teny iray isan'andro eo amin'ny efijery.")
     .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    .ownContentMargins()
+  }
+}
+
+private extension WidgetConfiguration {
+  // iOS 17 adds its own content margins around every widget; the view already
+  // pads itself, so without this the verse sits ~30pt in from each edge.
+  func ownContentMargins() -> some WidgetConfiguration {
+    if #available(iOSApplicationExtension 17.0, *) {
+      return contentMarginsDisabled()
+    } else {
+      return self
+    }
   }
 }
 
