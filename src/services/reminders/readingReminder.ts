@@ -71,7 +71,7 @@ export const DAILY_VERSE_SLOT_ID = 'daily-verse';
 // A repeating trigger has a fixed body, so verse slots are scheduled as
 // one-shot triggers for the next N occurrences and topped up on every launch
 // by ensureRemindersScheduled.
-// ponytail: 12-day window — if the app isn't opened for two weeks the verse
+// NOTE: 12-day window — if the app isn't opened for two weeks the verse
 // stops until next launch. Upgrade path: notifee onBackgroundEvent DELIVERED
 // → schedule the next one. 12 keeps 5 slots under iOS's cap of 64 pending.
 const VERSE_WINDOW_DAYS = 12;
