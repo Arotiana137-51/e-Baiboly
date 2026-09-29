@@ -1,10 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { AppMode } from '../screens/MainScreen';
 import {useTheme} from '../contexts/ThemeContext';
 import { useAdaptiveInsets } from '../hooks/useAdaptiveInsets';
 import { SPACING, useResponsive } from '../theme/responsive';
 import { useTutorialTarget } from '../contexts/TutorialContext';
+import { useSlidingPill } from '../hooks/useSlidingPill';
+import { SegmentLabel } from './SegmentedToggle';
+
+// segmentedTrack padding + border width.
+const TRACK_INSET = 5;
 
 interface CustomBottomNavProps {
   activeMode: AppMode;
@@ -57,6 +63,12 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
     ? 'rgba(255,255,255,0.08)'
     : 'rgba(0,0,0,0.06)';
 
+  const { segmentWidth, translateX, pillStyle, onLayout } = useSlidingPill(
+    activeMode === 'bible' ? 0 : 1,
+    2,
+    TRACK_INSET,
+  );
+
   return (
     <View
       pointerEvents="box-none"
@@ -72,6 +84,7 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
       <View
         ref={navTargetRef}
         collapsable={false}
+        onLayout={onLayout}
         style={[
           styles.segmentedTrack,
           {
@@ -82,6 +95,15 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
           },
         ]}
       >
+        {segmentWidth > 0 && (
+          <Animated.View
+            style={[
+              styles.pill,
+              { width: segmentWidth, backgroundColor: theme.colors.navBackground },
+              pillStyle,
+            ]}
+          />
+        )}
         <Pressable
           ref={bibleTabTargetRef}
           collapsable={false}
@@ -89,7 +111,8 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
           style={({pressed}) => [
             styles.segment,
             { height: segmentHeight },
-            activeMode === 'bible'
+            // Until the track is measured there is no pill yet.
+            segmentWidth === 0 && activeMode === 'bible'
               ? {backgroundColor: theme.colors.navBackground}
               : null,
             pressed && activeMode !== 'bible'
@@ -97,17 +120,15 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
               : null,
           ]}
         >
-          <Text
-            style={[
-              styles.segmentText,
-              { fontSize: labelFontSize },
-              activeMode === 'bible'
-                ? {color: '#FFFFFF', fontWeight: '700'}
-                : {color: theme.colors.textPrimary, fontWeight: '600'},
-            ]}
-          >
-            Baiboly
-          </Text>
+          <SegmentLabel
+            label="Baiboly"
+            index={0}
+            active={activeMode === 'bible'}
+            segmentWidth={segmentWidth}
+            translateX={translateX}
+            inactiveColor={theme.colors.textPrimary}
+            fontSize={labelFontSize}
+          />
         </Pressable>
 
         <Pressable
@@ -117,7 +138,8 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
           style={({pressed}) => [
             styles.segment,
             { height: segmentHeight },
-            activeMode === 'hymnal'
+            // Until the track is measured there is no pill yet.
+            segmentWidth === 0 && activeMode === 'hymnal'
               ? {backgroundColor: theme.colors.navBackground}
               : null,
             pressed && activeMode !== 'hymnal'
@@ -125,17 +147,15 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
               : null,
           ]}
         >
-          <Text
-            style={[
-              styles.segmentText,
-              { fontSize: labelFontSize },
-              activeMode === 'hymnal'
-                ? {color: '#FFFFFF', fontWeight: '700'}
-                : {color: theme.colors.textPrimary, fontWeight: '600'},
-            ]}
-          >
-            Fihirana
-          </Text>
+          <SegmentLabel
+            label="Fihirana"
+            index={1}
+            active={activeMode === 'hymnal'}
+            segmentWidth={segmentWidth}
+            translateX={translateX}
+            inactiveColor={theme.colors.textPrimary}
+            fontSize={labelFontSize}
+          />
         </Pressable>
       </View>
     </View>
@@ -175,8 +195,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segmentText: {
-    fontSize: 16,
+  pill: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    left: 4,
+    borderRadius: 999,
   },
 });
 

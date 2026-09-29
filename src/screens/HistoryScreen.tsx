@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
@@ -8,16 +8,25 @@ import { useHymnHistory, HymnHistoryItem } from '../hooks/useHymnHistory';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import {t} from '../i18n/strings';
+import { SegmentedToggle } from '../components/SegmentedToggle';
 
 type HistoryScreenRouteProp = RouteProp<RootStackParamList, 'History'>;
 type HistoryNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type HistoryItem = BibleHistoryItem | HymnHistoryItem;
+type HistoryKind = 'bible' | 'hymnal';
+type HistoryFilter = 'all' | HistoryKind;
+type HistoryItem = (BibleHistoryItem | HymnHistoryItem) & { kind: HistoryKind };
+
+const FILTER_OPTIONS: ReadonlyArray<{ key: HistoryFilter; label: string }> = [
+  { key: 'all', label: t('history.filterAll') },
+  { key: 'bible', label: t('tabs.bible') },
+  { key: 'hymnal', label: t('tabs.hymns') },
+];
 
 const HistoryScreen = () => {
   const route = useRoute<HistoryScreenRouteProp>();
   const navigation = useNavigation<HistoryNavigationProp>();
-  const { mode } = route.params;
+  const [filter, setFilter] = useState<HistoryFilter>(route.params.mode);
   const {
     history: bibleHistory,
     clearHistory: clearBibleHistory,
@@ -30,11 +39,31 @@ const HistoryScreen = () => {
   } = useHymnHistory();
   const { theme } = useTheme();
 
-  const history: HistoryItem[] = mode === 'bible' ? bibleHistory : hymnHistory;
-  const clearHistoryFn = mode === 'bible' ? clearBibleHistory : clearHymnHistory;
-  const removeItemFn = mode === 'bible' ? removeBibleItem : removeHymnItem;
+  const history = useMemo<HistoryItem[]>(() => {
+    const bible = bibleHistory.map(item => ({ ...item, kind: 'bible' as const }));
+    const hymnal = hymnHistory.map(item => ({ ...item, kind: 'hymnal' as const }));
+    if (filter === 'bible') {
+      return bible;
+    }
+    if (filter === 'hymnal') {
+      return hymnal;
+    }
+    return [...bible, ...hymnal].sort((a, b) => b.lastAccessed - a.lastAccessed);
+  }, [filter, bibleHistory, hymnHistory]);
 
-  const handleClearHistory = () => {
+  const clearHistoryFn = useCallback(() => {
+    if (filter !== 'hymnal') {
+      clearBibleHistory();
+    }
+    if (filter !== 'bible') {
+      clearHymnHistory();
+    }
+  }, [filter, clearBibleHistory, clearHymnHistory]);
+
+  const removeItemFn = (item: HistoryItem) =>
+    item.kind === 'bible' ? removeBibleItem(item.id) : removeHymnItem(item.id);
+
+  const handleClearHistory = useCallback(() => {
     Alert.alert(
       t('history.clearTitle'),
       t('history.clearMessage'),
@@ -47,10 +76,39 @@ const HistoryScreen = () => {
         }
       ]
     );
-  };
+  }, [clearHistoryFn]);
+
+  const hasHistory = history.length > 0;
+  const title =
+    filter === 'all'
+      ? t('menu.history')
+      : filter === 'bible'
+      ? t('history.titleBible')
+      : t('history.titleHymnal');
+
+  // Title and "Fafao daholo" live in the stack header so the toggle sits right
+  // under it. Outlined white, not accentBlue: with a custom color accentBlue is
+  // the header color itself and the button would vanish into the bar.
+  const headerRight = useCallback(
+    () =>
+      hasHistory ? (
+        <Pressable
+          style={({ pressed }) => [styles.clearButton, pressed && styles.clearButtonPressed]}
+          onPress={handleClearHistory}
+          accessibilityRole="button"
+        >
+          <Text style={styles.clearButtonText}>{t('history.clearAll')}</Text>
+        </Pressable>
+      ) : null,
+    [hasHistory, handleClearHistory],
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title, headerRight });
+  }, [navigation, title, headerRight]);
 
   const handlePress = (item: HistoryItem) => {
-    if (mode === 'bible') {
+    if (item.kind === 'bible') {
       // id shape: "<book_id>-<chapter>-<verse_number>"
       // title shape: "<bookName> <chapter>:<verse_number>"
       const parts = item.id.split('-');
@@ -109,12 +167,15 @@ const HistoryScreen = () => {
             {item.title}
           </Text>
           <Text style={[styles.itemDate, { color: theme.colors.textSecondary }]}>
+            {filter === 'all'
+              ? `${item.kind === 'bible' ? t('tabs.bible') : t('tabs.hymns')} · `
+              : ''}
             {formatDate(item.lastAccessed)}
           </Text>
         </View>
         <Pressable
           // Stop the parent row from receiving the press.
-          onPress={() => removeItemFn(item.id)}
+          onPress={() => removeItemFn(item)}
           hitSlop={8}
           style={styles.deleteButton}
           accessibilityRole="button"
@@ -127,34 +188,27 @@ const HistoryScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
-      <View style={[styles.header, { backgroundColor: theme.colors.navBackground }]}>
-        <Text style={[styles.title, { color: '#FFFFFF' }]}>
-          {mode === 'bible' ? t('history.titleBible') : t('history.titleHymnal')}
-        </Text>
-        {history.length > 0 && (
-          <Pressable
-            style={[styles.clearButton, { backgroundColor: theme.colors.accentBlue }]}
-            onPress={handleClearHistory}
-          >
-            <Text style={styles.clearButtonText}>{t('history.clearAll')}</Text>
-          </Pressable>
-        )}
-      </View>
-      
+    <SafeAreaView
+      // The native header already covers the top inset.
+      edges={['bottom', 'left', 'right']}
+      style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}
+    >
+      <SegmentedToggle options={FILTER_OPTIONS} selected={filter} onChange={setFilter} />
+
       {history.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-            {mode === 'bible' 
+            {filter === 'all'
+              ? t('history.emptyAll')
+              : filter === 'bible'
               ? t('history.emptyBible')
-              : t('history.emptyHymnal')
-            }
+              : t('history.emptyHymnal')}
           </Text>
         </View>
       ) : (
         <FlatList
           data={history}
-          keyExtractor={(item: HistoryItem) => item.id}
+          keyExtractor={(item: HistoryItem) => `${item.kind}-${item.id}`}
           renderItem={renderHistoryItem}
           style={styles.list}
         />
@@ -167,22 +221,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
   clearButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  clearButtonPressed: {
+    opacity: 0.6,
   },
   clearButtonText: {
     color: 'white',
