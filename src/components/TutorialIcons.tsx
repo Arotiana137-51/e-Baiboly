@@ -14,7 +14,7 @@ type ShapeProps = {
   backgroundColor: string;
 };
 
-// ponytail: geometry is hardcoded to a 28px box (the one size the quest log
+// NOTE: geometry is hardcoded to a 28px box (the one size the quest log
 // uses). Parameterise on size if a second caller ever needs another.
 const SIZE = 28;
 

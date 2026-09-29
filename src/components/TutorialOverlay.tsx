@@ -280,7 +280,7 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
     );
   }
 
-  // Padded holes, one per measured target. ponytail: multi-hole steps assume
+  // Padded holes, one per measured target. NOTE: multi-hole steps assume
   // their targets share a row (e.g. the two chapter chevrons) — side scrims use
   // the shared band, add per-hole y-tiling if a future step stacks vertically.
   const holes = rects.map(r => ({

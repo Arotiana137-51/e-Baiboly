@@ -22,7 +22,7 @@ import {lookForColor, type ShareCardLook} from '../../utils/shareCard';
  * the file name travels in the JSON because the sandbox path can change
  * between launches.
  *
- * ponytail: 60-day window — a phone that doesn't open the app for two months
+ * NOTE: 60-day window — a phone that doesn't open the app for two months
  * shows the widget's built-in "open the app" fallback until the next launch.
  */
 
