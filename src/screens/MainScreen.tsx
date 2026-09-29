@@ -65,6 +65,7 @@ import { useResponsive } from '../theme/responsive';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
 import {t} from '../i18n/strings';
 import {hexToRgba} from '../utils/colorUtils';
+import {maybeRequestReview, REVIEW_DELAY_DAYS} from '../utils/appReview';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
   enqueueIssueReport,
@@ -887,6 +888,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     const unsub = NetInfo.addEventListener((state: NetInfoState) => {
       if (state.isConnected) {
         maybeFlushReports();
+        // Once per app version; the store decides whether the dialog shows.
+        maybeRequestReview(REVIEW_DELAY_DAYS);
       }
     });
 
