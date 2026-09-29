@@ -60,9 +60,10 @@
                 android:textSize="10sp" />
         </LinearLayout>
 
-        <!-- Font follows the verse length: a short verse grows to fill the
-             card, a long one shrinks before it is cut (API 26+; older
-             versions keep the provider's fixed size per size class). -->
+        <!-- Font follows the verse length: a long verse shrinks before it is
+             cut (API 26+; older versions keep the provider's fixed size per
+             size class). The max is the old large-widget size: a short verse
+             on a large widget otherwise grew to an oversized headline. -->
         <TextView
             android:id="@+id/widget_text"
             android:layout_width="match_parent"
@@ -70,7 +71,7 @@
             android:layout_marginTop="6dp"
             android:layout_marginBottom="6dp"
             android:layout_weight="1"
-            android:autoSizeMaxTextSize="24sp"
+            android:autoSizeMaxTextSize="18sp"
             android:autoSizeMinTextSize="11sp"
             android:autoSizeStepGranularity="1sp"
             android:autoSizeTextType="uniform"

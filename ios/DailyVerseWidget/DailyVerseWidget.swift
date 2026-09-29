@@ -171,13 +171,14 @@ struct DailyVerseView: View {
   let entry: VerseEntry
 
   private var isSmall: Bool { family == .systemSmall }
-  // Starting size; a long verse shrinks to fit (minimumScaleFactor below)
-  // and a short one keeps it, so the card never looks empty or cut.
+  // Largest size, which a short verse keeps; a long verse shrinks to fit
+  // (minimumScaleFactor below) instead of being cut. Kept close to reading
+  // size: a larger start made a short verse on the large widget oversized.
   private var verseSize: CGFloat {
     switch family {
-    case .systemSmall: return 18
-    case .systemLarge: return 28
-    default: return 22
+    case .systemSmall: return 15
+    case .systemLarge: return 21
+    default: return 17
     }
   }
   // Safety cap only: the card's height is the real limit.
@@ -218,7 +219,7 @@ struct DailyVerseView: View {
         .foregroundColor(ink)
         .lineSpacing(3)
         .lineLimit(verseLines)
-        .minimumScaleFactor(0.5)
+        .minimumScaleFactor(0.6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.vertical, 6)
 
