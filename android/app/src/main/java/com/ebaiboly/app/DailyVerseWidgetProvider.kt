@@ -76,7 +76,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
     private enum class Size(val verseSp: Float, val verseLines: Int, val minimal: Boolean) {
         SMALL(13f, 7, true),
         MEDIUM(15f, 7, false),
-        LARGE(18f, 14, false);
+        LARGE(16f, 14, false);
 
         companion object {
             fun of(widthDp: Float, heightDp: Float): Size = when {

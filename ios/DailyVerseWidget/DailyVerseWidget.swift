@@ -177,7 +177,7 @@ struct DailyVerseView: View {
   private var verseSize: CGFloat {
     switch family {
     case .systemSmall: return 15
-    case .systemLarge: return 21
+    case .systemLarge: return 18
     default: return 17
     }
   }
@@ -221,13 +221,13 @@ struct DailyVerseView: View {
         .lineLimit(verseLines)
         .minimumScaleFactor(0.6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(.vertical, 6)
+        .padding(.vertical, 10)
 
       if let ref = entry.ref {
         Rectangle()
           .fill(ink.opacity(0.2))
           .frame(height: 1)
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
           Text(ref)
             .font(.system(size: isSmall ? 11 : 12, weight: .semibold))
             .foregroundColor(entry.look.accent)
@@ -235,9 +235,9 @@ struct DailyVerseView: View {
           if !entry.translation.isEmpty {
             Text(entry.translation.uppercased())
               .font(.system(size: 9, weight: .medium))
-              .kerning(1)
+              .kerning(0.5)
               .foregroundColor(ink.opacity(0.6))
-              .padding(.horizontal, 4)
+              .padding(.horizontal, 3)
               .padding(.vertical, 1)
               .background(RoundedRectangle(cornerRadius: 4).fill(ink.opacity(0.1)))
           }
@@ -246,23 +246,23 @@ struct DailyVerseView: View {
           // of the line so it is an easy target next to the verse tap.
           if !isSmall {
             Link(destination: settingsURL) {
-              HStack(spacing: 5) {
-                Spacer(minLength: 12)
+              HStack(spacing: 3) {
+                Spacer(minLength: 8)
                 Image(systemName: "slider.horizontal.3")
                   .font(.system(size: 12, weight: .semibold))
                 Text("Loko".uppercased()) // placeholder MG copy — user-owned
                   .font(.system(size: 10, weight: .bold))
-                  .kerning(1)
+                  .kerning(0.5)
               }
               .foregroundColor(ink.opacity(0.7))
-              .frame(maxWidth: .infinity, minHeight: 36, alignment: .trailing)
+              .frame(maxWidth: .infinity, minHeight: 28, alignment: .trailing)
               .contentShape(Rectangle())
             }
           } else {
             Spacer(minLength: 0)
           }
         }
-        .padding(.top, 6)
+        .padding(.top, 4)
       }
     }
     .padding(isSmall ? 12 : 14)

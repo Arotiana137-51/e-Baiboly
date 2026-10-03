@@ -62,16 +62,16 @@
 
         <!-- Font follows the verse length: a long verse shrinks before it is
              cut (API 26+; older versions keep the provider's fixed size per
-             size class). The max is the old large-widget size: a short verse
-             on a large widget otherwise grew to an oversized headline. -->
+             size class). The max stays near reading size: a short verse on a
+             large widget otherwise grew to an oversized headline. -->
         <TextView
             android:id="@+id/widget_text"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="6dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
             android:layout_weight="1"
-            android:autoSizeMaxTextSize="18sp"
+            android:autoSizeMaxTextSize="16sp"
             android:autoSizeMinTextSize="11sp"
             android:autoSizeStepGranularity="1sp"
             android:autoSizeTextType="uniform"
@@ -92,7 +92,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="4dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -110,13 +110,13 @@
                 android:id="@+id/widget_translation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="4dp"
                 android:background="@drawable/widget_tag"
-                android:letterSpacing="0.08"
+                android:letterSpacing="0.05"
                 android:maxLines="1"
-                android:paddingStart="4dp"
+                android:paddingStart="3dp"
                 android:paddingTop="1dp"
-                android:paddingEnd="4dp"
+                android:paddingEnd="3dp"
                 android:paddingBottom="1dp"
                 android:textAllCaps="true"
                 android:textColor="#99FFFFFF"
@@ -130,9 +130,9 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="end|center_vertical"
-                android:minHeight="36dp"
+                android:minHeight="28dp"
                 android:orientation="horizontal"
-                android:paddingStart="12dp">
+                android:paddingStart="8dp">
 
                 <ImageView
                     android:id="@+id/widget_settings_icon"
@@ -145,8 +145,8 @@
                     android:id="@+id/widget_settings_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
-                    android:letterSpacing="0.08"
+                    android:layout_marginStart="3dp"
+                    android:letterSpacing="0.05"
                     android:maxLines="1"
                     android:text="@string/widget_settings"
                     android:textAllCaps="true"
