@@ -128,6 +128,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // resurrects) whatever history entry the user deleted for the last-read
   // item, since restoring position and logging a visit shared one effect.
   const skipNextHistoryLogRef = useRef(false);
+  // Set once a route param (deep link, notification, favorites…) picks the
+  // Bible position, so the last-read restore never overwrites it.
+  const explicitBibleTargetRef = useRef(false);
 
   const appState = useRef(AppState.currentState);
 
@@ -192,6 +195,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     // caller actually meant to set.
     if (params.mode !== 'hymnal') {
       if (params.selectedBook) {
+        // Wins over the async last-read restore below if that read is
+        // still in flight (cold start from the widget or a notification).
+        explicitBibleTargetRef.current = true;
         setMode('bible');
         setCurrentBook(params.selectedBook);
       }
@@ -386,6 +392,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     (async () => {
       try {
         const stored = await AsyncStorage.getItem(LAST_READ_BIBLE_KEY);
+        if (explicitBibleTargetRef.current) return;
         if (stored) {
           const {bookId, bookName, chapter} = JSON.parse(stored);
           if (books.find(b => b.id === bookId)) {
@@ -398,6 +405,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       } catch (error) {
         console.error('Error restoring last-read Bible position:', error);
       }
+      if (explicitBibleTargetRef.current) return;
       const defaultBook = books.find(b => b.name === 'Marka') ?? books[0];
       skipNextHistoryLogRef.current = true;
       setCurrentBook({id: defaultBook.id, name: defaultBook.name});
@@ -486,6 +494,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     if (shouldScrollToVerse === null || verses.length === 0) {
       return;
     }
+    // The target chapter's verses may not have loaded yet (book/chapter and
+    // the scroll target change together, loadVerses lands a render later).
+    // Matching against the previous chapter would scroll to the wrong verse
+    // and consume the request, so wait for the right chapter.
+    if (verses[0].book_id !== currentBook?.id || verses[0].chapter !== currentChapter) {
+      return;
+    }
 
     // When a range is active, the reader filters its FlatList down to just
     // the range, so the target verse is at index 0 — no scroll needed, and
@@ -519,7 +534,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [verses, shouldScrollToVerse, selectedVerseRange]);
+  }, [verses, shouldScrollToVerse, selectedVerseRange, currentBook?.id, currentChapter]);
 
   // Chevron-driven scroll-to-top: wait until the new chapter's verses have
   // loaded before scrolling, otherwise the call lands on the previous

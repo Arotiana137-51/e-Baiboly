@@ -178,13 +178,18 @@ const iosFor = (prominent: boolean): NotificationIOS =>
 // Inexact alarm that may still fire in Doze; no exact-alarm permission needed.
 const ALARM = {alarmManager: {type: AlarmType.SET_AND_ALLOW_WHILE_IDLE}};
 
-// Section headings (<n>[...]</n>) belong to the reader layout, not the verse.
+// Section headings (<n>[...]</n>) belong to the reader layout, not the verse;
+// inline cross-references like "(Sal. 55.22)" only make sense in the reader.
 const plainVerseText = (text: string): string =>
   text
     .replace(/<n>\s*\[.*?\]\s*<\/n>/gis, '')
     .replace(/<[^>]*>/g, '')
+    .replace(/\s*\([^()]*[A-Za-z][^()]*\d+\s*[.:]\s*\d+[^()]*\)/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+
+// A verse picked out of its sentence can start lowercase ("ary apetraho…").
+const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 const yyyymmdd = (date: Date): string =>
   `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
@@ -214,7 +219,7 @@ export const verseForDate = async (date: Date): Promise<DailyVerse | null> => {
   const variant = await getStoredJesusNameVariant();
   return {
     ref: `${getBibleBookShortName(bookName, ref.b)} ${ref.c}:${ref.v}${ref.to ? `-${ref.to}` : ''}`,
-    body: transformJesusName(rows.map(r => plainVerseText(r.text)).join(' '), variant),
+    body: capitalize(transformJesusName(rows.map(r => plainVerseText(r.text)).join(' '), variant)),
     bookId: ref.b,
     bookName,
     chapter: ref.c,
