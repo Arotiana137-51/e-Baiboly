@@ -768,6 +768,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       case 'readingReminder':
         navigation.navigate('ReadingReminder');
         return;
+      case 'tenyHoAnao':
+        navigation.navigate('TenyHoAnao');
+        return;
       default: {
         const _exhaustiveCheck: never = key;
         return _exhaustiveCheck;

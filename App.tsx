@@ -22,7 +22,7 @@ import {
   drainFatalErrorToQueue,
 } from './src/services/reporting/crashReporter';
 import {ensureRemindersScheduled} from './src/services/reminders/readingReminder';
-import {syncDailyVerseWidget} from './src/services/widget/dailyVerseWidget';
+import {syncDailyVerseWidget, TENY_HO_ANAO_URL} from './src/services/widget/dailyVerseWidget';
 import notifee, {EventType, type Notification} from '@notifee/react-native';
 
 // Capture uncaught JS errors (async, timers, event handlers) before RN's
@@ -59,6 +59,11 @@ const openVerseFromUrl = (url: string | null) => {
   // the app again on "Vita" so the user lands back on the widget.
   if (url?.startsWith('ebaiboly://widget-look')) {
     if (navigationRef.isReady()) navigationRef.navigate('WidgetLook', {fromWidget: true});
+    return;
+  }
+  // The widget's "Teny ho anao" check-in card.
+  if (url?.startsWith(TENY_HO_ANAO_URL)) {
+    if (navigationRef.isReady()) navigationRef.navigate('TenyHoAnao');
     return;
   }
   if (!url?.startsWith('ebaiboly://verse')) return;

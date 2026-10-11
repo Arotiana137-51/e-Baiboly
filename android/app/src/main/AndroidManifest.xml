@@ -67,6 +67,7 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="ebaiboly" android:host="verse" />
             <data android:scheme="ebaiboly" android:host="widget-look" />
+            <data android:scheme="ebaiboly" android:host="teny-ho-anao" />
         </intent-filter>
       </activity>
 

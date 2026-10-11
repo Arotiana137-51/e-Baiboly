@@ -6,6 +6,9 @@ import {reportSchedulingFailure, verseForDate} from '../reminders/readingReminde
 import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
 import {PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {lookForColor, type ShareCardLook} from '../../utils/shareCard';
+import {isoDay} from '../../utils/isoDay';
+import {isCheckInDay, situationSchedule} from '../../utils/lifeSituations';
+import {loadTenyHoAnao} from '../lifeSituations/situationStore';
 
 /**
  * Home-screen widget feed. Widgets are native UI on both platforms, so JS
@@ -36,6 +39,17 @@ const STORAGE_KEY_LOOK = 'settings.widget.look';
 // copied photo exists.
 type StoredLook = {background: string; text: string; accent: string; image?: boolean};
 
+// Opens the "Teny ho anao" screen, where the check-in is answered.
+export const TENY_HO_ANAO_URL = 'ebaiboly://teny-ho-anao';
+
+// Check-in card shown instead of the verse on a check-in day. Deliberately
+// generic: whoever glances at the home screen must not learn the situation.
+// Placeholder MG copy — user-owned.
+const CHECK_IN_CARD = {
+  ref: 'Teny ho anao',
+  text: 'Mbola mety aminao ve ireo teny ireo? Tsindrio eto raha hamaly.',
+};
+
 export const verseDeepLink = (v: {bookId: number; bookName: string; chapter: number; verse: number}) =>
   `ebaiboly://verse?book=${v.bookId}&chapter=${v.chapter}&verse=${v.verse}&name=${encodeURIComponent(v.bookName)}`;
 
@@ -48,9 +62,6 @@ const TRANSLATION = 'MG1865';
 // "Tal 15 Sep" — shown in the widget's date badge.
 const dateLabel = (date: Date): string =>
   `${DAY_SHORT[date.getDay()]} ${date.getDate()} ${MONTH_SHORT[date.getMonth()]}`;
-
-const isoDay = (date: Date): string =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 const widgetDir = async (): Promise<string> =>
   Platform.OS === 'ios' ? await RNFS.pathForGroup(IOS_APP_GROUP) : RNFS.DocumentDirectoryPath;
@@ -100,10 +111,17 @@ export const syncDailyVerseWidget = async (): Promise<void> => {
     await bibleDatabaseService.initDatabase(); // idempotent
     const days: Record<string, {ref: string; text: string; url: string; dateLabel: string}> = {};
     const today = new Date();
+    const tenyHoAnao = await loadTenyHoAnao(today);
+    const situations = tenyHoAnao.onWidget ? tenyHoAnao.situations : [];
+    const schedule = situationSchedule(situations, today, WIDGET_WINDOW_DAYS);
     for (let i = 0; i < WIDGET_WINDOW_DAYS; i += 1) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      const verse = await verseForDate(date);
+      if (isCheckInDay(date, situations)) {
+        days[isoDay(date)] = {...CHECK_IN_CARD, url: TENY_HO_ANAO_URL, dateLabel: dateLabel(date)};
+        continue;
+      }
+      const verse = await verseForDate(date, schedule[i][0]?.ref);
       if (verse) {
         days[isoDay(date)] = {
           ref: verse.ref,

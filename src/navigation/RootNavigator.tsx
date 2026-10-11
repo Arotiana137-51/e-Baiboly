@@ -20,6 +20,7 @@ import NotesScreen from '../screens/NotesScreen';
 import HelpScreen from '../screens/HelpScreen';
 import ReadingReminderScreen from '../screens/ReadingReminderScreen';
 import WidgetLookScreen from '../screens/WidgetLookScreen';
+import TenyHoAnaoScreen from '../screens/TenyHoAnaoScreen';
 
 export type RootStackParamList = {
   Home:
@@ -46,6 +47,7 @@ export type RootStackParamList = {
   CultMode: undefined;
   Help: undefined;
   ReadingReminder: undefined;
+  TenyHoAnao: undefined;
   // fromWidget: opened from the widget's own shortcut — "done" leaves the app.
   WidgetLook: {fromWidget?: boolean} | undefined;
 };
@@ -166,6 +168,11 @@ const RootNavigator = ({
         name="ReadingReminder"
         component={ReadingReminderScreen}
         options={{title: 'Ora famakiana tiana', ...headerOptions}}
+      />
+      <Stack.Screen
+        name="TenyHoAnao"
+        component={TenyHoAnaoScreen}
+        options={{title: 'Teny ho anao', ...headerOptions}}
       />
       <Stack.Screen
         name="WidgetLook"

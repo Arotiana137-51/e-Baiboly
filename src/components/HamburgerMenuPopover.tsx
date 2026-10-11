@@ -28,6 +28,7 @@ export type HamburgerMenuItemKey =
   | 'notes'
   | 'personalization'
   | 'readingReminder'
+  | 'tenyHoAnao'
   | 'cultMode'
   | 'help';
 
@@ -175,6 +176,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         {key: 'cultMode' as const, label: t('menu.cultMode')},
         {key: 'personalization' as const, label: t('menu.personalization')},
         {key: 'readingReminder' as const, label: 'Ora famakiana tiana'},
+        {key: 'tenyHoAnao' as const, label: 'Teny ho anao'},
         {key: 'notes' as const, label: t('menu.notes')},
         {key: 'help' as const, label: 'Toro-lalana'},
       ] satisfies Array<{key: HamburgerMenuItemKey; label: string}>,

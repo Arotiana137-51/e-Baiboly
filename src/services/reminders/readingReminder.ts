@@ -16,6 +16,8 @@ import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
 import {getStoredJesusNameVariant, transformJesusName} from '../../utils/jesusName';
 import {PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {enqueueIssueReport} from '../reporting/issueReportQueue';
+import {loadTenyHoAnao} from '../lifeSituations/situationStore';
+import {versesForDate} from '../../utils/lifeSituations';
 
 /**
  * "Ora famakiana tiana" — optional, on-device reminders to read the Bible,
@@ -179,11 +181,14 @@ const iosFor = (prominent: boolean): NotificationIOS =>
 const ALARM = {alarmManager: {type: AlarmType.SET_AND_ALLOW_WHILE_IDLE}};
 
 // Section headings (<n>[...]</n>) belong to the reader layout, not the verse;
-// inline cross-references like "(Sal. 55.22)" only make sense in the reader.
+// so do translators' footnotes ("farany*. [*Hebreo: …]") and inline
+// cross-references like "(Sal. 55.22)".
 const plainVerseText = (text: string): string =>
   text
     .replace(/<n>\s*\[.*?\]\s*<\/n>/gis, '')
     .replace(/<[^>]*>/g, '')
+    .replace(/\s*\[\*[^\]]*\]/g, '')
+    .replace(/\*/g, '')
     .replace(/\s*\([^()]*[A-Za-z][^()]*\d+\s*[.:]\s*\d+[^()]*\)/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -205,11 +210,14 @@ export type DailyVerse = {
 
 /**
  * The day's verse resolved against the bundled Bible DB — shared by the
- * notification scheduler and the home-screen widget file. Caller ensures
+ * notification scheduler and the home-screen widget file. `ref` overrides
+ * the calendar (a "Teny ho anao" plan). Caller ensures
  * bibleDatabaseService.initDatabase() has run.
  */
-export const verseForDate = async (date: Date): Promise<DailyVerse | null> => {
-  const ref: VerseRef = dailyVerseFor(date);
+export const verseForDate = async (
+  date: Date,
+  ref: VerseRef = dailyVerseFor(date),
+): Promise<DailyVerse | null> => {
   const {rows} = await bibleDatabaseService.executeQuery<{text: string; name: string}>(
     'SELECT v.text, b.name FROM Verses v JOIN Books b ON b.id = v.book_id WHERE v.book_id = ? AND v.chapter = ? AND v.verse_number BETWEEN ? AND ? ORDER BY v.verse_number',
     [ref.b, ref.c, ref.v, ref.to ?? ref.v],
@@ -236,11 +244,15 @@ const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<voi
       : nextDailyOccurrence(slot.time),
   );
 
+  // "Teny ho anao" replaces the calendar verse on the days a plan is live.
+  const tenyHoAnao = await loadTenyHoAnao();
+  const situations = tenyHoAnao.inReminders ? tenyHoAnao.situations : [];
+
   for (let i = 0; i < VERSE_WINDOW_DAYS; i += step) {
     // setDate rather than adding ms so a DST change doesn't shift the hour.
     const when = new Date(first);
     when.setDate(first.getDate() + i);
-    const verse = await verseForDate(when);
+    const verse = await verseForDate(when, versesForDate(when, situations)[0]?.ref);
     if (!verse) continue;
     const {ref: title, body, bookId, bookName, chapter, verse: verseNumber} = verse;
 
