@@ -1,8 +1,8 @@
 // Icons for the hamburger menu, drawn from plain Views like
 // TutorialIcons and ShareIcon — no icon library, no native rebuild (the
-// praying hands are a tinted image). Each is a single colour with no
-// cut-outs, so it reads on any cell background (except the colour picker,
-// which shows colours).
+// heart and the praying hands are tinted images). Each is a single colour
+// with no cut-outs, so it reads on any cell background (except the colour
+// picker, which shows colours).
 import React from 'react';
 import {Image, StyleSheet, View} from 'react-native';
 
@@ -24,13 +24,10 @@ const STROKE = 2;
 
 type IconProps = {color: string};
 
-// Classic two-lobe heart: two circles over a square turned 45°.
+// Filled heart from SVG Repo (heart-svgrepo-com.svg), rendered with a 1/16
+// margin to 24/48/72px PNGs and tinted like the others.
 const Heart: React.FC<IconProps> = ({color}) => (
-  <View style={styles.box}>
-    <View style={[styles.heartLobe, styles.heartLobeLeft, {backgroundColor: color}]} />
-    <View style={[styles.heartLobe, styles.heartLobeRight, {backgroundColor: color}]} />
-    <View style={[styles.heartPoint, {backgroundColor: color}]} />
-  </View>
+  <Image source={require('./shared/heart.png')} style={[styles.box, {tintColor: color}]} />
 );
 
 // A clock face: ring plus hour and minute hands.
@@ -56,8 +53,8 @@ const Notes: React.FC<IconProps> = ({color}) => (
 );
 
 // Praying hands are too organic to draw from Views, so this one is an image:
-// Phosphor's "hands-praying" (bold, MIT, phosphoricons.com), rendered to
-// 24/48/72px PNGs and tinted like the others.
+// a 512px line drawing (hands.png), cropped, its lines thickened (max
+// filter 9) so they hold up at 24dp, scaled to 24/48/72px and tinted.
 const Hands: React.FC<IconProps> = ({color}) => (
   <Image source={require('./shared/handsPraying.png')} style={[styles.box, {tintColor: color}]} />
 );
@@ -126,24 +123,11 @@ export const MenuIcon: React.FC<IconProps & {name: MenuIconName}> = ({name, colo
   return <Icon color={color} />;
 };
 
-const LOBE = 12;
 const CLOCK = 20;
 const WHEEL = 22;
 
 const styles = StyleSheet.create({
   box: {width: SIZE, height: SIZE},
-
-  heartLobe: {position: 'absolute', top: 4, width: LOBE, height: LOBE, borderRadius: LOBE / 2},
-  heartLobeLeft: {left: 1},
-  heartLobeRight: {right: 1},
-  heartPoint: {
-    position: 'absolute',
-    left: (SIZE - LOBE) / 2,
-    top: 7.5,
-    width: LOBE,
-    height: LOBE,
-    transform: [{rotate: '45deg'}],
-  },
 
   clockRing: {
     position: 'absolute',

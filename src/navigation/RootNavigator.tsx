@@ -172,7 +172,7 @@ const RootNavigator = ({
       <Stack.Screen
         name="TenyHoAnao"
         component={TenyHoAnaoScreen}
-        options={{title: 'Teny ho anao', ...headerOptions}}
+        options={{title: 'Widget', ...headerOptions}}
       />
       <Stack.Screen
         name="WidgetLook"

@@ -182,10 +182,11 @@ const HamburgerMenuPopover: React.FC<Props> = ({
     }
   }, [visible, opacity, scale, isLowEndMode]);
 
-  // Platform menu pattern: a top row of three icon + label tiles for the
-  // most used actions (UIMenu's "medium" element size on iOS), then
-  // full-width rows with a leading icon, grouped by purpose with dividers
-  // (Material's drawer/menu list). Labels stay on one line; help comes last.
+  // Platform menu pattern: icon + label tiles for the most used actions
+  // (like the top row of UIMenu's "medium" element size on iOS; four don't
+  // fit one row with whole labels, so they sit two by two), then full-width
+  // rows with a leading icon, grouped by purpose with dividers (Material's
+  // drawer/menu list). Labels stay on one line; help comes last.
   const quickItems = useMemo(
     () =>
       [
@@ -193,6 +194,8 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         {key: 'history' as const, label: t('menu.history'), icon: 'history' as const},
         // Short label here; the Notes screen keeps "Ireo Naoty".
         {key: 'notes' as const, label: 'Naoty', icon: 'notes' as const},
+        // Short label here too; the screen keeps "Loko manokana".
+        {key: 'personalization' as const, label: 'Loko', icon: 'palette' as const},
       ] satisfies MenuEntry[],
     []
   );
@@ -204,13 +207,12 @@ const HamburgerMenuPopover: React.FC<Props> = ({
           {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
         ],
         [
-          {key: 'tenyHoAnao' as const, label: 'Teny ho anao', icon: 'bubble' as const},
+          // "Widget" is the word in most languages; the feature itself is
+          // still "Teny ho anao" on the screen and on the widget's check-in.
+          {key: 'tenyHoAnao' as const, label: 'Widget', icon: 'bubble' as const},
           {key: 'readingReminder' as const, label: 'Ora famakiana tiana', icon: 'bell' as const},
         ],
-        [
-          {key: 'personalization' as const, label: t('menu.personalization'), icon: 'palette' as const},
-          {key: 'help' as const, label: 'Toro-lalana', icon: 'signpost' as const},
-        ],
+        [{key: 'help' as const, label: 'Toro-lalana', icon: 'signpost' as const}],
       ] satisfies MenuEntry[][],
     []
   );
@@ -612,11 +614,13 @@ const styles = StyleSheet.create({
   },
   quickRow: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 8,
     padding: 10,
   },
   quickTile: {
-    flex: 1,
+    width: '48.5%',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
