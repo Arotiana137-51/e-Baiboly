@@ -24,8 +24,8 @@ const VARIANT_SEGMENT_WIDTH = 74;
 const VARIANT_KNOB_WIDTH = VARIANT_SEGMENT_WIDTH;
 const VARIANT_TRACK_PAD = 3;
 
-// Fixed so the three quick tiles get room for their labels.
-const MENU_WIDTH = 250;
+// Fixed so each grid cell (two per row) has room for a two-line label.
+const MENU_WIDTH = 280;
 // Must match styles.caret's borderBottomWidth.
 const CARET_HEIGHT = 12;
 // Breathing room kept below the card when it has to scroll.
@@ -177,33 +177,22 @@ const HamburgerMenuPopover: React.FC<Props> = ({
     }
   }, [visible, opacity, scale, isLowEndMode]);
 
-  // The reader's own collections sit side by side as tiles; the rest are
-  // grouped by purpose (reading & prayer, daily verse, app) with dividers.
-  const quickItems = useMemo(
+  // One grid of icon buttons, two per row: the reader's own collections and
+  // reading/prayer first, settings last. An odd last item spans the row.
+  const gridItems = useMemo(
     () =>
       [
         {key: 'favorites' as const, label: t('menu.favorites'), icon: 'heart' as const},
         {key: 'history' as const, label: t('menu.history'), icon: 'history' as const},
-        {key: 'notes' as const, label: t('menu.notes'), icon: 'notes' as const},
+        // Short label here; the Notes screen keeps "Ireo Naoty".
+        {key: 'notes' as const, label: 'Naoty', icon: 'notes' as const},
+        {key: 'cultMode' as const, label: t('menu.cultMode'), icon: 'church' as const},
+        {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
+        {key: 'tenyHoAnao' as const, label: 'Teny ho anao', icon: 'bubble' as const},
+        {key: 'readingReminder' as const, label: 'Ora famakiana tiana', icon: 'bell' as const},
+        {key: 'personalization' as const, label: t('menu.personalization'), icon: 'drop' as const},
+        {key: 'help' as const, label: 'Toro-lalana', icon: 'signpost' as const},
       ] satisfies Array<{key: HamburgerMenuItemKey; label: string; icon: MenuIconName}>,
-    []
-  );
-  const itemGroups = useMemo(
-    () =>
-      [
-        [
-          {key: 'cultMode' as const, label: t('menu.cultMode')},
-          {key: 'misc' as const, label: t('menu.misc')},
-        ],
-        [
-          {key: 'tenyHoAnao' as const, label: 'Teny ho anao'},
-          {key: 'readingReminder' as const, label: 'Ora famakiana tiana'},
-        ],
-        [
-          {key: 'personalization' as const, label: t('menu.personalization')},
-          {key: 'help' as const, label: 'Toro-lalana'},
-        ],
-      ] satisfies Array<Array<{key: HamburgerMenuItemKey; label: string}>>,
     []
   );
 
@@ -316,54 +305,37 @@ const HamburgerMenuPopover: React.FC<Props> = ({
               style={{maxHeight: menuMaxHeight}}
               bounces={false}
               showsVerticalScrollIndicator>
-              <View style={styles.quickRow}>
-                {quickItems.map(item => (
-                  <Pressable
-                    key={item.key}
-                    accessibilityRole="button"
-                    accessibilityLabel={item.label}
-                    onPress={() => onSelect(item.key)}
-                    style={({pressed}) => [
-                      styles.quickTile,
-                      {
-                        backgroundColor: pressed
-                          ? theme.colors.divider
-                          : theme.isDark
-                            ? theme.colors.backgroundTertiary
-                            : theme.colors.backgroundPrimary,
-                      },
-                    ]}>
-                    <MenuIcon name={item.icon} color={menuAccent} />
-                    <Text style={[styles.quickTileText, {color: menuAccent}]} numberOfLines={1}>
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              {itemGroups.map((group, groupIndex) => (
-                <View key={group[0].key}>
-                  {groupIndex > 0 ? (
-                    <View style={[styles.groupDivider, {backgroundColor: theme.colors.divider}]} />
-                  ) : null}
-                  {group.map(item => (
+              <View style={styles.grid}>
+                {gridItems.map((item, index) => {
+                  const spansRow = index === gridItems.length - 1 && gridItems.length % 2 === 1;
+                  return (
                     <Pressable
                       key={item.key}
-                      // Tutorial spotlights the Fotoam-pivavahana row via this ref.
+                      // Tutorial spotlights the Fotoam-pivavahana cell via this ref.
                       ref={item.key === 'cultMode' ? cultItemRef : undefined}
                       collapsable={false}
+                      accessibilityRole="button"
+                      accessibilityLabel={item.label}
                       onPress={() => onSelect(item.key)}
                       style={({pressed}) => [
-                        styles.menuItem,
-                        pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null
+                        styles.gridCell,
+                        spansRow ? styles.gridCellWide : null,
+                        {
+                          backgroundColor: pressed
+                            ? theme.colors.divider
+                            : theme.isDark
+                              ? theme.colors.backgroundTertiary
+                              : theme.colors.backgroundPrimary,
+                        },
                       ]}>
-                      <Text style={[styles.menuItemText, {color: menuAccent}]}>
+                      <MenuIcon name={item.icon} color={menuAccent} />
+                      <Text style={[styles.gridCellText, {color: menuAccent}]} numberOfLines={2}>
                         {item.label}
                       </Text>
                     </Pressable>
-                  ))}
-                </View>
-              ))}
+                  );
+                })}
+              </View>
 
               <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
 
@@ -585,42 +557,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  menuItem: {
-    paddingVertical: 11,
-    paddingHorizontal: 18,
-  },
-  quickRow: {
+  grid: {
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 6,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 8,
+    padding: 12,
   },
-  quickTile: {
-    flex: 1,
+  gridCell: {
+    width: '48.5%',
+    minHeight: 76,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 10,
-    borderRadius: 10,
-    minHeight: 64,
+    paddingHorizontal: 8,
+    borderRadius: 12,
   },
-  quickTileText: {
-    fontSize: 12,
+  gridCellWide: {
+    width: '100%',
+  },
+  gridCellText: {
+    fontSize: 13,
     fontWeight: '600',
-  },
-  groupDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: 18,
-    marginVertical: 4,
+    textAlign: 'center',
   },
   menuItemPressed: {
     backgroundColor: '#f2f6fb',
-  },
-  menuItemText: {
-    fontSize: 17,
-    color: '#2c7fb8',
-    fontWeight: '400',
   },
 });
 

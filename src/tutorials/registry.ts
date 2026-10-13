@@ -18,7 +18,7 @@ export type TargetId =
   | 'topbarPrev'        // ‹‹ chevron (previous chapter/hymn)
   | 'topbarNext'        // › chevron (next chapter/hymn)
   | 'topbarMenu'        // hamburger
-  | 'cultMenuItem'      // "Fotoam-pivavahana" row inside the hamburger popover
+  | 'cultMenuItem'      // "Fotoam-pivavahana" cell inside the hamburger popover
   | 'selBookTab'        // Boky tab inside BibleSelectionModal's SelectionTopBar
   | 'selChapterGrid'    // Toko grid
   | 'selVerseGrid'      // Andininy grid
@@ -367,7 +367,7 @@ export const TUTORIALS: Tutorial[] = [
         id: 'cultPickMenuItem',
         targetId: 'cultMenuItem',
         scope: 'modal',
-        text: "Tsindrio \"Fotoam-pivavahana\" ao anaty lisitra.",
+        text: "Tsindrio \"Fotoam-pivavahana\" ao anaty menio.",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultMenuSelected',
       },
