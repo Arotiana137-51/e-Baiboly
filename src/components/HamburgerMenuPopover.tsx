@@ -3,9 +3,11 @@ import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
@@ -14,12 +16,20 @@ import TutorialOverlay from './TutorialOverlay';
 import ToggleThemeButton from './ToggleThemeButton';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {getRelativeLuminance, lightenHex} from '../utils/colorUtils';
+import {MenuIcon, type MenuIconName} from './MenuIcons';
 
 // Jesosy/Jesoa slide toggle geometry — a two-label pill with a knob that
 // covers exactly one half and slides between them.
 const VARIANT_SEGMENT_WIDTH = 74;
 const VARIANT_KNOB_WIDTH = VARIANT_SEGMENT_WIDTH;
 const VARIANT_TRACK_PAD = 3;
+
+// Fixed so the three quick tiles get room for their labels.
+const MENU_WIDTH = 250;
+// Must match styles.caret's borderBottomWidth.
+const CARET_HEIGHT = 12;
+// Breathing room kept below the card when it has to scroll.
+const MENU_BOTTOM_GAP = 24;
 
 export type HamburgerMenuItemKey =
   | 'favorites'
@@ -167,21 +177,41 @@ const HamburgerMenuPopover: React.FC<Props> = ({
     }
   }, [visible, opacity, scale, isLowEndMode]);
 
-  const items = useMemo(
+  // The reader's own collections sit side by side as tiles; the rest are
+  // grouped by purpose (reading & prayer, daily verse, app) with dividers.
+  const quickItems = useMemo(
     () =>
       [
-        {key: 'favorites' as const, label: t('menu.favorites')},
-        {key: 'history' as const, label: t('menu.history')},
-        {key: 'misc' as const, label: t('menu.misc')},
-        {key: 'cultMode' as const, label: t('menu.cultMode')},
-        {key: 'personalization' as const, label: t('menu.personalization')},
-        {key: 'readingReminder' as const, label: 'Ora famakiana tiana'},
-        {key: 'tenyHoAnao' as const, label: 'Teny ho anao'},
-        {key: 'notes' as const, label: t('menu.notes')},
-        {key: 'help' as const, label: 'Toro-lalana'},
-      ] satisfies Array<{key: HamburgerMenuItemKey; label: string}>,
+        {key: 'favorites' as const, label: t('menu.favorites'), icon: 'heart' as const},
+        {key: 'history' as const, label: t('menu.history'), icon: 'history' as const},
+        {key: 'notes' as const, label: t('menu.notes'), icon: 'notes' as const},
+      ] satisfies Array<{key: HamburgerMenuItemKey; label: string; icon: MenuIconName}>,
     []
   );
+  const itemGroups = useMemo(
+    () =>
+      [
+        [
+          {key: 'cultMode' as const, label: t('menu.cultMode')},
+          {key: 'misc' as const, label: t('menu.misc')},
+        ],
+        [
+          {key: 'tenyHoAnao' as const, label: 'Teny ho anao'},
+          {key: 'readingReminder' as const, label: 'Ora famakiana tiana'},
+        ],
+        [
+          {key: 'personalization' as const, label: t('menu.personalization')},
+          {key: 'help' as const, label: 'Toro-lalana'},
+        ],
+      ] satisfies Array<Array<{key: HamburgerMenuItemKey; label: string}>>,
+    []
+  );
+
+  // Small phones can't fit the whole card below the top bar: cap it at the
+  // space left and let it scroll instead of cutting the last rows off.
+  const {height: windowHeight} = useWindowDimensions();
+  const menuTopValue = menuTop ?? styles.menuContainer.top;
+  const menuMaxHeight = windowHeight - menuTopValue - CARET_HEIGHT - MENU_BOTTOM_GAP;
 
   return (
     <Modal
@@ -262,7 +292,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
           style={[
             styles.menuContainer,
             {
-              top: menuTop ?? styles.menuContainer.top,
+              top: menuTopValue,
               right: menuRight,
               opacity,
               transform: [{scale}],
@@ -282,93 +312,130 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                 borderColor: theme.colors.divider,
               },
             ]}>
-            {items.map(item => (
-              <Pressable
-                key={item.key}
-                // Tutorial spotlights the Fotoam-pivavahana row via this ref.
-                ref={item.key === 'cultMode' ? cultItemRef : undefined}
-                collapsable={false}
-                onPress={() => onSelect(item.key)}
-                style={({pressed}) => [
-                  styles.menuItem,
-                  pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null
-                ]}>
-                <Text style={[styles.menuItemText, {color: menuAccent}]}>
-                  {item.label}
-                </Text>
-              </Pressable>
-            ))}
-
-            <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
-
-            <View style={styles.variantSection}>
-              <Text style={[styles.variantTitle, {color: theme.colors.textSecondary}]}>
-                Anaran'ny Tompo
-              </Text>
-
-              {/* Sliding-knob toggle, mirroring the dark/light theme switch. */}
-              <Pressable
-                accessibilityRole="switch"
-                accessibilityState={{checked: jesusNameVariant === 'jesoa'}}
-                accessibilityLabel="Anaran'ny Tompo"
-                onPress={() =>
-                  setJesusNameVariant(jesusNameVariant === 'jesoa' ? 'jesosy' : 'jesoa')
-                }
-                style={({pressed}) => [pressed ? {opacity: 0.9} : null]}>
-                <View
-                  style={[
-                    styles.variantTrack,
-                    {
-                      backgroundColor: theme.colors.backgroundTertiary,
-                      borderColor: theme.isDark ? '#FFFFFF20' : '#00000020',
-                    },
-                  ]}>
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      styles.variantKnob,
+            <ScrollView
+              style={{maxHeight: menuMaxHeight}}
+              bounces={false}
+              showsVerticalScrollIndicator>
+              <View style={styles.quickRow}>
+                {quickItems.map(item => (
+                  <Pressable
+                    key={item.key}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    onPress={() => onSelect(item.key)}
+                    style={({pressed}) => [
+                      styles.quickTile,
                       {
-                        backgroundColor: menuCheckAccent,
-                        transform: [{translateX: variantKnobTranslate}],
+                        backgroundColor: pressed
+                          ? theme.colors.divider
+                          : theme.isDark
+                            ? theme.colors.backgroundTertiary
+                            : theme.colors.backgroundPrimary,
                       },
-                    ]}
-                  />
-                  {(['jesosy', 'jesoa'] as const).map(variant => {
-                    const active = jesusNameVariant === variant;
-                    return (
-                      <View key={variant} style={styles.variantSegment} pointerEvents="none">
-                        <Text
-                          style={[
-                            styles.variantSegmentText,
-                            {color: active ? '#FFFFFF' : menuAccent},
-                          ]}>
-                          {variant === 'jesosy' ? 'Jesosy' : 'Jesoa'}
-                        </Text>
-                      </View>
-                    );
-                  })}
+                    ]}>
+                    <MenuIcon name={item.icon} color={menuAccent} />
+                    <Text style={[styles.quickTileText, {color: menuAccent}]} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {itemGroups.map((group, groupIndex) => (
+                <View key={group[0].key}>
+                  {groupIndex > 0 ? (
+                    <View style={[styles.groupDivider, {backgroundColor: theme.colors.divider}]} />
+                  ) : null}
+                  {group.map(item => (
+                    <Pressable
+                      key={item.key}
+                      // Tutorial spotlights the Fotoam-pivavahana row via this ref.
+                      ref={item.key === 'cultMode' ? cultItemRef : undefined}
+                      collapsable={false}
+                      onPress={() => onSelect(item.key)}
+                      style={({pressed}) => [
+                        styles.menuItem,
+                        pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null
+                      ]}>
+                      <Text style={[styles.menuItemText, {color: menuAccent}]}>
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
-              </Pressable>
-            </View>
+              ))}
 
-            <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
+              <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
 
-            <View style={styles.themeRow}>
-              <ToggleThemeButton
-                isDarkMode={isDarkMode}
-                onToggle={onToggleDarkMode}
-              />
-              <Pressable
-                accessibilityLabel={t('menu.about')}
-                onPress={onAbout}
-                style={({pressed}) => [
-                  styles.aboutButton,
-                  {borderColor: menuAccent},
-                  pressed ? styles.aboutButtonPressed : null,
-                ]}>
-                <Text style={[styles.aboutButtonText, {color: menuAccent}]}>?</Text>
-              </Pressable>
-            </View>
+              <View style={styles.variantSection}>
+                <Text style={[styles.variantTitle, {color: theme.colors.textSecondary}]}>
+                  Anaran'ny Tompo
+                </Text>
+
+                {/* Sliding-knob toggle, mirroring the dark/light theme switch. */}
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityState={{checked: jesusNameVariant === 'jesoa'}}
+                  accessibilityLabel="Anaran'ny Tompo"
+                  onPress={() =>
+                    setJesusNameVariant(jesusNameVariant === 'jesoa' ? 'jesosy' : 'jesoa')
+                  }
+                  style={({pressed}) => [pressed ? {opacity: 0.9} : null]}>
+                  <View
+                    style={[
+                      styles.variantTrack,
+                      {
+                        backgroundColor: theme.colors.backgroundTertiary,
+                        borderColor: theme.isDark ? '#FFFFFF20' : '#00000020',
+                      },
+                    ]}>
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.variantKnob,
+                        {
+                          backgroundColor: menuCheckAccent,
+                          transform: [{translateX: variantKnobTranslate}],
+                        },
+                      ]}
+                    />
+                    {(['jesosy', 'jesoa'] as const).map(variant => {
+                      const active = jesusNameVariant === variant;
+                      return (
+                        <View key={variant} style={styles.variantSegment} pointerEvents="none">
+                          <Text
+                            style={[
+                              styles.variantSegmentText,
+                              {color: active ? '#FFFFFF' : menuAccent},
+                            ]}>
+                            {variant === 'jesosy' ? 'Jesosy' : 'Jesoa'}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </Pressable>
+              </View>
+
+              <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
+
+              <View style={styles.themeRow}>
+                <ToggleThemeButton
+                  isDarkMode={isDarkMode}
+                  onToggle={onToggleDarkMode}
+                />
+                <Pressable
+                  accessibilityLabel={t('menu.about')}
+                  onPress={onAbout}
+                  style={({pressed}) => [
+                    styles.aboutButton,
+                    {borderColor: menuAccent},
+                    pressed ? styles.aboutButtonPressed : null,
+                  ]}>
+                  <Text style={[styles.aboutButtonText, {color: menuAccent}]}>?</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
         </Animated.View>
 
@@ -454,7 +521,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: 10,
     overflow: 'hidden',
-    minWidth: 180,
+    width: MENU_WIDTH,
     borderWidth: 2,
     borderColor: '#2c7fb8',
   },
@@ -519,14 +586,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   menuItem: {
-    paddingVertical: 14,
+    paddingVertical: 11,
     paddingHorizontal: 18,
+  },
+  quickRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 6,
+  },
+  quickTile: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minHeight: 64,
+  },
+  quickTileText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  groupDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 18,
+    marginVertical: 4,
   },
   menuItemPressed: {
     backgroundColor: '#f2f6fb',
   },
   menuItemText: {
-    fontSize: 20,
+    fontSize: 17,
     color: '#2c7fb8',
     fontWeight: '400',
   },
