@@ -1,6 +1,8 @@
-import React, {useRef, useState} from 'react';
+import React, {useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
 import {useTenyHoAnao} from '../hooks/useTenyHoAnao';
 import {
@@ -9,7 +11,8 @@ import {
   type SituationId,
   type SituationKind,
 } from '../constants/lifeSituations';
-import {situationById} from '../utils/lifeSituations';
+import {situationById, type ActiveSituation} from '../utils/lifeSituations';
+import type {RootStackParamList} from '../navigation/RootNavigator';
 
 // All copy on this screen is placeholder MG — user-owned.
 
@@ -19,49 +22,268 @@ const KIND_SECTIONS: Array<{kind: SituationKind; title: string}> = [
   {kind: 'long', title: 'Ady maharitra'},
 ];
 
+const STEP_COUNT = 3;
+
 const lengthLabel = (situation: LifeSituation): string =>
   situation.days
     ? `${situation.days} andro`
     : `Tsy misy farany · fanontaniana isaky ny ${situation.checkEvery} andro`;
 
-// "Teny ho anao": the person says which situations they are living through,
-// ranks them, and the widget and verse notifications follow those plans
-// instead of the general calendar (see utils/lifeSituations).
+type Colors = ReturnType<typeof useTheme>['theme']['colors'];
+
+// The person's situations in their order, with ▲ ▼ (and ✕ when given).
+const RankedList = ({
+  situations,
+  colors,
+  onMove,
+  onRemove,
+}: {
+  situations: ActiveSituation[];
+  colors: Colors;
+  onMove: (id: SituationId, delta: -1 | 1) => void;
+  onRemove?: (id: SituationId) => void;
+}) => (
+  <View style={[styles.card, {backgroundColor: colors.backgroundSecondary, borderColor: colors.divider}]}>
+    {situations.map((active, index) => {
+      const situation = situationById(active.id);
+      if (!situation) return null;
+      const first = index === 0;
+      const last = index === situations.length - 1;
+      return (
+        <View key={active.id}>
+          {index > 0 ? <View style={[styles.divider, {backgroundColor: colors.divider}]} /> : null}
+          <View style={styles.row}>
+            <Text style={[styles.rank, {color: colors.accentBlue}]}>{index + 1}</Text>
+            <View style={styles.rowText}>
+              <Text style={[styles.rowTitle, {color: colors.textPrimary}]}>{situation.label}</Text>
+              <Text style={[styles.rowHint, {color: colors.textSecondary}]}>{lengthLabel(situation)}</Text>
+            </View>
+            <Pressable
+              hitSlop={8}
+              disabled={first}
+              onPress={() => onMove(active.id, -1)}
+              style={[styles.iconButton, first && styles.disabled]}
+              accessibilityLabel="Atsangano"
+            >
+              <Text style={[styles.iconText, {color: colors.textSecondary}]}>▲</Text>
+            </Pressable>
+            <Pressable
+              hitSlop={8}
+              disabled={last}
+              onPress={() => onMove(active.id, 1)}
+              style={[styles.iconButton, last && styles.disabled]}
+              accessibilityLabel="Ampidino"
+            >
+              <Text style={[styles.iconText, {color: colors.textSecondary}]}>▼</Text>
+            </Pressable>
+            {onRemove ? (
+              <Pressable
+                hitSlop={8}
+                onPress={() => onRemove(active.id)}
+                style={styles.iconButton}
+                accessibilityLabel="Esory"
+              >
+                <Text style={[styles.iconText, {color: colors.textSecondary}]}>✕</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      );
+    })}
+  </View>
+);
+
+// A step's buttons: the next step as a wide button, the quiet way back as
+// text under it. Both centred, so either thumb reaches them.
+const StepFooter = ({
+  colors,
+  backLabel,
+  onBack,
+  nextLabel,
+  onNext,
+  nextDisabled,
+}: {
+  colors: Colors;
+  backLabel: string;
+  onBack: () => void;
+  nextLabel: string;
+  onNext: () => void;
+  nextDisabled?: boolean;
+}) => (
+  <View style={[styles.footer, {backgroundColor: colors.backgroundPrimary}]}>
+    <Pressable
+      disabled={nextDisabled}
+      style={[styles.nextButton, {backgroundColor: colors.accentBlue}, nextDisabled && styles.disabled]}
+      onPress={onNext}
+      accessibilityRole="button"
+    >
+      <Text style={styles.nextText}>{nextLabel}</Text>
+    </Pressable>
+    <Pressable style={styles.backButton} onPress={onBack} accessibilityRole="button">
+      <Text style={[styles.answerText, {color: colors.textSecondary}]}>{backLabel}</Text>
+    </Pressable>
+  </View>
+);
+
+// "Teny ho anao" (menu "Widget"): the person can choose words for the widget
+// that fit what they are living through. Gentle by design, after
+// trauma-informed guidance: an explanation instead of a question, at most
+// three steps, each one leavable, then a summary. The widget and verse
+// notifications follow those plans instead of the general calendar (see
+// utils/lifeSituations).
 const TenyHoAnaoScreen = () => {
   const {theme} = useTheme();
-  const {state, loaded, due, add, remove, move, stillIn, setOnWidget, setInReminders, clearAll} =
-    useTenyHoAnao();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const {
+    state,
+    loaded,
+    due,
+    remove,
+    move,
+    stillIn,
+    setOnWidget,
+    setInReminders,
+    clearAll,
+    draft,
+    startEditing,
+    cancelEditing,
+    toggleDraft,
+    moveDraft,
+    commitDraft,
+  } = useTenyHoAnao();
+  const [step, setStep] = useState<'choose' | 'order'>('choose');
   const [confirmClear, setConfirmClear] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
-  const pickerY = useRef(0);
 
   const colors = theme.colors;
-  const chosen = new Set(state.situations.map(s => s.id));
-  const needsSafetyNote = state.situations.some(s => situationById(s.id)?.safetyNote);
-
-  // "Toe-javatra hafa": this one ends, and the list to pick another opens.
-  const switchSituation = (id: SituationId) => {
-    remove(id);
-    scrollRef.current?.scrollTo({y: pickerY.current, animated: true});
-  };
+  const cardStyle = [styles.card, {backgroundColor: colors.backgroundSecondary, borderColor: colors.divider}];
 
   if (!loaded) {
     return <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]} />;
   }
 
-  const cardStyle = [styles.card, {backgroundColor: colors.backgroundSecondary, borderColor: colors.divider}];
+  const leave = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.reset({index: 0, routes: [{name: 'Home'}]});
+  };
+  const edit = () => {
+    startEditing();
+    setStep('choose');
+  };
+  const view = draft ? step : state.situations.length > 0 ? 'summary' : 'intro';
+
+  const stepCounter = (n: number) => (
+    <Text style={[styles.stepCounter, {color: colors.textSecondary}]}>
+      {n} / {STEP_COUNT}
+    </Text>
+  );
+
+  if (view === 'intro') {
+    return (
+      <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
+        {/* Short text and its buttons together mid-screen, in the thumb's
+            natural reach, not split between the top and the bottom edge. */}
+        <ScrollView contentContainerStyle={[styles.scroll, styles.introScroll]}>
+          {stepCounter(1)}
+          <Text style={[styles.introText, {color: colors.textPrimary}]}>
+            Eto no misafidy ny teny hiseho ao amin'ny widget. Teny ampaherezana anao
+            mifanaraka amin'izay toe-javatra hiainanao.
+          </Text>
+          <StepFooter colors={colors} backLabel="Tsy izao" onBack={leave} nextLabel="Hanohy" onNext={edit} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (view === 'choose' && draft) {
+    const chosen = new Set(draft.situations.map(s => s.id));
+    const count = draft.situations.length;
+    return (
+      <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          {stepCounter(2)}
+          <Text style={[styles.title, {color: colors.textPrimary}]}>Safidio izay mety aminao</Text>
+          <Text style={[styles.body, {color: colors.textSecondary}]}>Azonao atao ny misafidy maromaro.</Text>
+          {KIND_SECTIONS.map(section => (
+            <View key={section.kind}>
+              <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>{section.title}</Text>
+              <View style={cardStyle}>
+                {LIFE_SITUATIONS.filter(s => s.kind === section.kind).map((situation, index) => {
+                  const isChosen = chosen.has(situation.id);
+                  return (
+                    <View key={situation.id}>
+                      {index > 0 ? <View style={[styles.divider, {backgroundColor: colors.divider}]} /> : null}
+                      <Pressable
+                        onPress={() => toggleDraft(situation.id)}
+                        style={styles.row}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{checked: isChosen}}
+                      >
+                        <View style={styles.rowText}>
+                          <Text style={[styles.rowTitle, {color: colors.textPrimary}]}>{situation.label}</Text>
+                          <Text style={[styles.rowHint, {color: colors.textSecondary}]}>
+                            {lengthLabel(situation)}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.check,
+                            {borderColor: colors.accentBlue},
+                            isChosen && {backgroundColor: colors.accentBlue},
+                          ]}
+                        >
+                          {isChosen ? <Text style={styles.checkMark}>✓</Text> : null}
+                        </View>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+        <StepFooter
+          colors={colors}
+          backLabel="Hiverina"
+          onBack={cancelEditing}
+          // With one situation there is nothing to order: finish here.
+          nextLabel={count > 1 ? 'Manaraka' : 'Vita'}
+          onNext={() => (count > 1 ? setStep('order') : commitDraft())}
+          nextDisabled={count === 0}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (view === 'order' && draft) {
+    return (
+      <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          {stepCounter(3)}
+          <Text style={[styles.title, {color: colors.textPrimary}]}>Alaharo araka izay tianao</Text>
+          <Text style={[styles.body, {color: colors.textSecondary}]}>
+            Andininy iray isan'andro, mifandimby araka io filaharana io.
+          </Text>
+          <RankedList situations={draft.situations} colors={colors} onMove={moveDraft} />
+        </ScrollView>
+        <StepFooter
+          colors={colors}
+          backLabel="Hiverina"
+          onBack={() => setStep('choose')}
+          nextLabel="Vita"
+          onNext={commitDraft}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const needsSafetyNote = state.situations.some(s => situationById(s.id)?.safetyNote);
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
-        <Text style={[styles.question, {color: colors.textPrimary}]}>
-          Inona no iainanao amin'izao fotoana izao?
-        </Text>
-        <Text style={[styles.subtitle, {color: colors.textSecondary}]}>
-          Safidio izay mety aminao, dia ho tonga isan'andro ao amin'ny widget sy ny
-          fampahatsiahivana ny andininy mifanaraka amin'izany. Ato amin'ny findainao
-          ihany no voatahiry izany, ary tsy hiseho na aiza na aiza ny anaran'ny
-          toe-javatra.
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Text style={[styles.body, {color: colors.textSecondary}]}>
+          Ireto no hiseho ao amin'ny widget: andininy iray isan'andro, mifandimby araka
+          ity filaharana ity.
         </Text>
 
         {due.map(active => {
@@ -87,7 +309,11 @@ const TenyHoAnaoScreen = () => {
                 </Pressable>
                 <Pressable
                   style={[styles.answerButton, {borderColor: colors.accentBlue}, styles.answerOutline]}
-                  onPress={() => switchSituation(active.id)}
+                  // This one ends, and the list opens to choose another.
+                  onPress={() => {
+                    remove(active.id);
+                    edit();
+                  }}
                 >
                   <Text style={[styles.answerText, {color: colors.accentBlue}]}>Toe-javatra hafa</Text>
                 </Pressable>
@@ -96,61 +322,11 @@ const TenyHoAnaoScreen = () => {
           );
         })}
 
-        {state.situations.length > 0 ? (
-          <>
-            <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Ny ahy</Text>
-            <Text style={[styles.rowHint, styles.sectionHint, {color: colors.textSecondary}]}>
-              Alaharo araka ny maha-mavesatra azy aminao. Andininy iray isan'andro,
-              mifandimby araka io filaharana io.
-            </Text>
-            <View style={cardStyle}>
-              {state.situations.map((active, index) => {
-                const situation = situationById(active.id);
-                if (!situation) return null;
-                return (
-                  <View key={active.id}>
-                    {index > 0 ? <View style={[styles.divider, {backgroundColor: colors.divider}]} /> : null}
-                    <View style={styles.row}>
-                      <Text style={[styles.rank, {color: colors.accentBlue}]}>{index + 1}</Text>
-                      <View style={styles.rowText}>
-                        <Text style={[styles.rowTitle, {color: colors.textPrimary}]}>{situation.label}</Text>
-                        <Text style={[styles.rowHint, {color: colors.textSecondary}]}>
-                          {lengthLabel(situation)}
-                        </Text>
-                      </View>
-                      <Pressable
-                        hitSlop={8}
-                        disabled={index === 0}
-                        onPress={() => move(active.id, -1)}
-                        style={[styles.iconButton, index === 0 && styles.disabled]}
-                        accessibilityLabel="Atsangano"
-                      >
-                        <Text style={[styles.iconText, {color: colors.textSecondary}]}>▲</Text>
-                      </Pressable>
-                      <Pressable
-                        hitSlop={8}
-                        disabled={index === state.situations.length - 1}
-                        onPress={() => move(active.id, 1)}
-                        style={[styles.iconButton, index === state.situations.length - 1 && styles.disabled]}
-                        accessibilityLabel="Ampidino"
-                      >
-                        <Text style={[styles.iconText, {color: colors.textSecondary}]}>▼</Text>
-                      </Pressable>
-                      <Pressable
-                        hitSlop={8}
-                        onPress={() => remove(active.id)}
-                        style={styles.iconButton}
-                        accessibilityLabel="Esory"
-                      >
-                        <Text style={[styles.iconText, {color: colors.textSecondary}]}>✕</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </>
-        ) : null}
+        <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Ny teninao</Text>
+        <RankedList situations={state.situations} colors={colors} onMove={move} onRemove={remove} />
+        <Pressable style={[styles.answerButton, styles.answerOutline, styles.editButton, {borderColor: colors.accentBlue}]} onPress={edit}>
+          <Text style={[styles.answerText, {color: colors.accentBlue}]}>Ovay</Text>
+        </Pressable>
 
         {needsSafetyNote ? (
           // NOTE: confirm 117 (national emergency number) before release.
@@ -159,38 +335,6 @@ const TenyHoAnaoScreen = () => {
             Raha misy loza: 117.
           </Text>
         ) : null}
-
-        <View onLayout={event => (pickerY.current = event.nativeEvent.layout.y)}>
-          {KIND_SECTIONS.map(section => (
-            <View key={section.kind}>
-              <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>{section.title}</Text>
-              <View style={cardStyle}>
-                {LIFE_SITUATIONS.filter(s => s.kind === section.kind).map((situation, index) => {
-                  const isChosen = chosen.has(situation.id);
-                  return (
-                    <View key={situation.id}>
-                      {index > 0 ? <View style={[styles.divider, {backgroundColor: colors.divider}]} /> : null}
-                      <Pressable
-                        disabled={isChosen}
-                        onPress={() => add(situation.id)}
-                        style={styles.row}
-                        accessibilityState={{selected: isChosen}}
-                      >
-                        <View style={styles.rowText}>
-                          <Text style={[styles.rowTitle, {color: colors.textPrimary}]}>{situation.label}</Text>
-                          <Text style={[styles.rowHint, {color: colors.textSecondary}]}>
-                            {lengthLabel(situation)}
-                          </Text>
-                        </View>
-                        <Text style={[styles.iconText, {color: colors.accentBlue}]}>{isChosen ? '✓' : '+'}</Text>
-                      </Pressable>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-          ))}
-        </View>
 
         <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Aiza no hisehoany?</Text>
         <View style={cardStyle}>
@@ -221,6 +365,12 @@ const TenyHoAnaoScreen = () => {
             />
           </View>
         </View>
+
+        {/* A quiet way to the widget's look, not a step: nothing is asked. */}
+        <Pressable style={[...cardStyle, styles.row]} onPress={() => navigation.navigate('WidgetLook')}>
+          <Text style={[styles.rowTitle, styles.rowText, {color: colors.textPrimary}]}>Lokon'ny widget</Text>
+          <Text style={[styles.iconText, {color: colors.textSecondary}]}>›</Text>
+        </Pressable>
 
         {confirmClear ? (
           <View style={cardStyle}>
@@ -255,10 +405,10 @@ const TenyHoAnaoScreen = () => {
 const styles = StyleSheet.create({
   container: {flex: 1},
   scroll: {padding: 16, paddingBottom: 32},
-  question: {fontSize: 18, fontWeight: '700', marginBottom: 8},
-  subtitle: {fontSize: 14, marginBottom: 16, lineHeight: 20},
+  stepCounter: {fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8},
+  title: {fontSize: 20, fontWeight: '700', marginBottom: 10},
+  body: {fontSize: 15, lineHeight: 22, marginBottom: 14},
   sectionTitle: {fontSize: 13, fontWeight: '700', marginBottom: 6, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5},
-  sectionHint: {marginBottom: 8},
   card: {borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 14},
   divider: {height: StyleSheet.hairlineWidth, marginVertical: 10},
   row: {flexDirection: 'row', alignItems: 'center', gap: 8},
@@ -269,11 +419,27 @@ const styles = StyleSheet.create({
   iconButton: {paddingHorizontal: 6, paddingVertical: 4},
   iconText: {fontSize: 16, fontWeight: '700'},
   disabled: {opacity: 0.3},
+  check: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkMark: {color: '#FFFFFF', fontSize: 13, fontWeight: '700'},
+  introScroll: {flexGrow: 1, justifyContent: 'center', paddingBottom: 64},
+  introText: {fontSize: 18, lineHeight: 27, marginBottom: 28},
+  footer: {paddingHorizontal: 16, paddingTop: 8, paddingBottom: 20, gap: 4},
+  nextButton: {borderRadius: 999, minHeight: 50, alignItems: 'center', justifyContent: 'center'},
+  nextText: {color: '#FFFFFF', fontSize: 16, fontWeight: '700'},
+  backButton: {alignItems: 'center', paddingVertical: 12},
   answerRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12, justifyContent: 'flex-end'},
   answerButton: {paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10},
   answerOutline: {borderWidth: 1},
   answerPrimaryText: {fontSize: 14, fontWeight: '700', color: '#FFFFFF'},
   answerText: {fontSize: 14, fontWeight: '700'},
+  editButton: {alignSelf: 'flex-start', marginTop: -4, marginBottom: 14},
   textButton: {paddingVertical: 9, paddingHorizontal: 10},
   safety: {fontSize: 13, lineHeight: 19, borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 14},
   clearButton: {alignItems: 'center', paddingVertical: 12},

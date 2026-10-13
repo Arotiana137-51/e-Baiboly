@@ -49,7 +49,6 @@ export const useTenyHoAnao = () => {
     resync();
   }, []);
 
-  const add = useCallback((id: SituationId) => apply(addSituation(stateRef.current, id)), [apply]);
   const remove = useCallback((id: SituationId) => apply(removeSituation(stateRef.current, id)), [apply]);
   const move = useCallback(
     (id: SituationId, delta: -1 | 1) => apply(moveSituation(stateRef.current, id, delta)),
@@ -65,6 +64,29 @@ export const useTenyHoAnao = () => {
     [apply],
   );
 
+  // Step-by-step editing works on a copy, saved in one go at the end. It
+  // starts from the current state, so situations kept keep their start date
+  // and their place in their plan.
+  const [draft, setDraft] = useState<TenyHoAnaoState | null>(null);
+  const startEditing = useCallback(() => setDraft(stateRef.current), []);
+  const cancelEditing = useCallback(() => setDraft(null), []);
+  const toggleDraft = useCallback(
+    (id: SituationId) =>
+      setDraft(d =>
+        d && (d.situations.some(s => s.id === id) ? removeSituation(d, id) : addSituation(d, id)),
+      ),
+    [],
+  );
+  const moveDraft = useCallback(
+    (id: SituationId, delta: -1 | 1) => setDraft(d => d && moveSituation(d, id, delta)),
+    [],
+  );
+  const commitDraft = useCallback(async () => {
+    if (!draft) return;
+    setDraft(null);
+    await apply(draft);
+  }, [draft, apply]);
+
   const clearAll = useCallback(async () => {
     stateRef.current = EMPTY_STATE;
     setState(EMPTY_STATE);
@@ -74,5 +96,21 @@ export const useTenyHoAnao = () => {
 
   const due: ActiveSituation[] = checkInsDue(new Date(), state.situations);
 
-  return {state, loaded, due, add, remove, move, stillIn, setOnWidget, setInReminders, clearAll};
+  return {
+    state,
+    loaded,
+    due,
+    remove,
+    move,
+    stillIn,
+    setOnWidget,
+    setInReminders,
+    clearAll,
+    draft,
+    startEditing,
+    cancelEditing,
+    toggleDraft,
+    moveDraft,
+    commitDraft,
+  };
 };
