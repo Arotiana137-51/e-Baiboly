@@ -17,6 +17,7 @@ import ToggleThemeButton from './ToggleThemeButton';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {getRelativeLuminance, lightenHex} from '../utils/colorUtils';
 import {MenuIcon, type MenuIconName} from './MenuIcons';
+import {useResponsive} from '../theme/responsive';
 
 // Jesosy/Jesoa slide toggle geometry — a two-label pill with a knob that
 // covers exactly one half and slides between them.
@@ -24,8 +25,10 @@ const VARIANT_SEGMENT_WIDTH = 74;
 const VARIANT_KNOB_WIDTH = VARIANT_SEGMENT_WIDTH;
 const VARIANT_TRACK_PAD = 3;
 
-// Fixed so each grid cell (two per row) has room for a two-line label.
-const MENU_WIDTH = 280;
+// Design sizes at the 375dp baseline, scaled per screen in the component.
+// The width leaves each grid cell (two per row) room for a two-line label.
+const MENU_WIDTH = 252;
+const CELL_MIN_HEIGHT = 62;
 // Must match styles.caret's borderBottomWidth.
 const CARET_HEIGHT = 12;
 // Breathing room kept below the card when it has to scroll.
@@ -186,15 +189,23 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         {key: 'history' as const, label: t('menu.history'), icon: 'history' as const},
         // Short label here; the Notes screen keeps "Ireo Naoty".
         {key: 'notes' as const, label: 'Naoty', icon: 'notes' as const},
-        {key: 'cultMode' as const, label: t('menu.cultMode'), icon: 'church' as const},
-        {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
+        {key: 'cultMode' as const, label: t('menu.cultMode'), icon: 'hands' as const},
+        {key: 'help' as const, label: 'Toro-lalana', icon: 'signpost' as const},
         {key: 'tenyHoAnao' as const, label: 'Teny ho anao', icon: 'bubble' as const},
         {key: 'readingReminder' as const, label: 'Ora famakiana tiana', icon: 'bell' as const},
-        {key: 'personalization' as const, label: t('menu.personalization'), icon: 'drop' as const},
-        {key: 'help' as const, label: 'Toro-lalana', icon: 'signpost' as const},
+        {key: 'personalization' as const, label: t('menu.personalization'), icon: 'palette' as const},
+        {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
       ] satisfies Array<{key: HamburgerMenuItemKey; label: string; icon: MenuIconName}>,
     []
   );
+
+  // Card and cells follow the screen width like the top and bottom bars
+  // (theme/responsive: Android only, clamped; iOS keeps fixed points), and
+  // labels follow the phone's font size capped at 130%.
+  const {scale: rScale, fontFor} = useResponsive();
+  const menuWidth = rScale(MENU_WIDTH);
+  const cellMinHeight = rScale(CELL_MIN_HEIGHT);
+  const labelFontSize = fontFor(12);
 
   // Small phones can't fit the whole card below the top bar: cap it at the
   // space left and let it scroll instead of cutting the last rows off.
@@ -297,6 +308,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
             style={[
               styles.menuCard,
               {
+                width: menuWidth,
                 backgroundColor: theme.colors.backgroundSecondary,
                 borderColor: theme.colors.divider,
               },
@@ -321,6 +333,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                         styles.gridCell,
                         spansRow ? styles.gridCellWide : null,
                         {
+                          minHeight: cellMinHeight,
                           backgroundColor: pressed
                             ? theme.colors.divider
                             : theme.isDark
@@ -329,7 +342,11 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                         },
                       ]}>
                       <MenuIcon name={item.icon} color={menuAccent} />
-                      <Text style={[styles.gridCellText, {color: menuAccent}]} numberOfLines={2}>
+                      {/* fontFor already applies the phone's font size (capped). */}
+                      <Text
+                        style={[styles.gridCellText, {color: menuAccent, fontSize: labelFontSize}]}
+                        numberOfLines={2}
+                        allowFontScaling={false}>
                         {item.label}
                       </Text>
                     </Pressable>
@@ -493,7 +510,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: 10,
     overflow: 'hidden',
-    width: MENU_WIDTH,
     borderWidth: 2,
     borderColor: '#2c7fb8',
   },
@@ -561,24 +577,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 8,
-    padding: 12,
+    rowGap: 6,
+    padding: 10,
   },
   gridCell: {
     width: '48.5%',
-    minHeight: 76,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     borderRadius: 12,
   },
   gridCellWide: {
     width: '100%',
   },
   gridCellText: {
-    fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
   },

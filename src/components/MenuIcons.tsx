@@ -1,18 +1,20 @@
 // Icons for the hamburger menu's grid, drawn from plain Views like
-// TutorialIcons and ShareIcon — no icon library, no native rebuild. Each is
-// a single colour with no cut-outs, so it reads on any cell background.
+// TutorialIcons and ShareIcon — no icon library, no native rebuild (the
+// praying hands are a tinted image). Each is a single colour with no
+// cut-outs, so it reads on any cell background (except the colour picker,
+// which shows colours).
 import React from 'react';
-import {StyleSheet, View} from 'react-native';
+import {Image, StyleSheet, View} from 'react-native';
 
 export type MenuIconName =
   | 'heart'
   | 'history'
   | 'notes'
-  | 'church'
+  | 'hands'
   | 'book'
   | 'bubble'
   | 'bell'
-  | 'drop'
+  | 'palette'
   | 'signpost';
 
 // NOTE: geometry is hardcoded to a 24px box (the one size the menu grid
@@ -53,14 +55,11 @@ const Notes: React.FC<IconProps> = ({color}) => (
   </View>
 );
 
-// Cross, triangular roof and an outlined nave.
-const Church: React.FC<IconProps> = ({color}) => (
-  <View style={styles.box}>
-    <View style={[styles.crossStem, {backgroundColor: color}]} />
-    <View style={[styles.crossArm, {backgroundColor: color}]} />
-    <View style={[styles.churchRoof, {borderBottomColor: color}]} />
-    <View style={[styles.churchBody, {borderColor: color}]} />
-  </View>
+// Praying hands are too organic to draw from Views, so this one is an image:
+// Phosphor's "hands-praying" (bold, MIT, phosphoricons.com), rendered to
+// 24/48/72px PNGs and tinted like the others.
+const Hands: React.FC<IconProps> = ({color}) => (
+  <Image source={require('./shared/handsPraying.png')} style={[styles.box, {tintColor: color}]} />
 );
 
 // An open book: two outlined pages meeting at the spine.
@@ -88,10 +87,16 @@ const Bell: React.FC<IconProps> = ({color}) => (
   </View>
 );
 
-// A drop of colour: a rounded square turned 45° with one sharp corner up.
-const Drop: React.FC<IconProps> = ({color}) => (
+// Colour picker: a wheel of four of the app's own colours, ringed in the
+// menu colour. The one multicolour icon, on purpose: it stands for colours.
+const PALETTE_COLORS = ['#C8102E', '#D4AF37', '#007991', '#006747']; // red, gold, teal, green
+const Palette: React.FC<IconProps> = ({color}) => (
   <View style={styles.box}>
-    <View style={[styles.drop, {borderColor: color}]} />
+    <View style={[styles.wheel, {borderColor: color}]}>
+      {PALETTE_COLORS.map(hex => (
+        <View key={hex} style={[styles.wheelQuarter, {backgroundColor: hex}]} />
+      ))}
+    </View>
   </View>
 );
 
@@ -108,11 +113,11 @@ const ICONS: Record<MenuIconName, React.FC<IconProps>> = {
   heart: Heart,
   history: History,
   notes: Notes,
-  church: Church,
+  hands: Hands,
   book: Book,
   bubble: Bubble,
   bell: Bell,
-  drop: Drop,
+  palette: Palette,
   signpost: Signpost,
 };
 
@@ -123,7 +128,7 @@ export const MenuIcon: React.FC<IconProps & {name: MenuIconName}> = ({name, colo
 
 const LOBE = 12;
 const CLOCK = 20;
-const DROP = 13;
+const WHEEL = 22;
 
 const styles = StyleSheet.create({
   box: {width: SIZE, height: SIZE},
@@ -190,21 +195,6 @@ const styles = StyleSheet.create({
     transform: [{rotate: '40deg'}],
   },
 
-  crossStem: {position: 'absolute', left: SIZE / 2 - 1, top: 0, width: STROKE, height: 7},
-  crossArm: {position: 'absolute', left: SIZE / 2 - 3, top: 2, width: 6, height: STROKE},
-  churchRoof: {
-    position: 'absolute',
-    left: 3,
-    top: 6,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderBottomWidth: 7,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-  },
-  churchBody: {position: 'absolute', left: 5, top: 13, width: 14, height: 10, borderWidth: STROKE},
 
   bookPage: {position: 'absolute', top: 4, width: 11, height: 16, borderWidth: STROKE},
   bookPageLeft: {left: 1, borderTopLeftRadius: 3, borderBottomLeftRadius: 3},
@@ -227,17 +217,19 @@ const styles = StyleSheet.create({
   bellRim: {position: 'absolute', left: 2, top: 17, width: 20, height: STROKE, borderRadius: 1},
   bellClapper: {position: 'absolute', left: SIZE / 2 - 2, top: 19, width: 4, height: 4, borderRadius: 2},
 
-  drop: {
+  wheel: {
     position: 'absolute',
-    left: (SIZE - DROP) / 2,
-    top: 8,
-    width: DROP,
-    height: DROP,
+    left: (SIZE - WHEEL) / 2,
+    top: (SIZE - WHEEL) / 2,
+    width: WHEEL,
+    height: WHEEL,
+    borderRadius: WHEEL / 2,
     borderWidth: STROKE,
-    borderRadius: DROP / 2,
-    borderTopLeftRadius: 0,
-    transform: [{rotate: '45deg'}],
+    overflow: 'hidden',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
+  wheelQuarter: {width: '50%', height: '50%'},
 
   pole: {position: 'absolute', left: SIZE / 2 - 1, top: 2, width: STROKE, height: 21},
   sign: {position: 'absolute', width: 10, height: 7, borderWidth: STROKE, borderRadius: 2},
