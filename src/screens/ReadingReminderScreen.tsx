@@ -40,7 +40,7 @@ const PROMINENCE_CHOICES: Choice<boolean>[] = [
   {
     value: true,
     label: 'Mipoitra sy misy feo',
-    hint: "Mipoitra eo amin'ny efijery sady maneno ny finday. Hita eo amin'ny efijery mihidy koa ny andininy.",
+    hint: "Mipoitra eo amin'ny écran sady maneno ny finday. Hita eo amin'ny écran mihidy koa ny andininy.",
   },
   {
     value: false,
