@@ -15,22 +15,26 @@ import {dayNumber} from './isoDay';
  *   (array order). Each situation's plan advances only on the days it is
  *   shown, so ranking several never makes one skip verses.
  * - A check-in falls every `checkEvery` days after the start or the last
- *   "still" answer. Short and season plans that go unanswered stop
+ *   "still" answer. That day the widget asks instead of showing a verse, so
+ *   no plan verse is used. Short and season plans that go unanswered stop
  *   CHECK_IN_GRACE_DAYS after it and the normal daily verse comes back;
  *   long plans keep going until the person says otherwise.
+ * - Positions come from replaying the days since `since`, starting from each
+ *   situation's `shown`. Any change to the list (add, remove, reorder,
+ *   answer) first freezes those positions at today (rebaseSituations), so
+ *   the change never rewrites the past and no plan skips or repeats.
  */
 
 export type ActiveSituation = {
   id: SituationId;
   startedOn: string; // yyyy-MM-dd, local
   checkedOn?: string; // last "Mbola eo" answer, yyyy-MM-dd
+  shown?: number; // plan verses shown before the state's `since`
 };
 
 export type ScheduledVerse = {situationId: SituationId; ref: SituationVerse};
 
 export const CHECK_IN_GRACE_DAYS = 3;
-// Agreed ceiling: more than three verses a day can't be meditated on.
-export const MAX_VERSES_PER_DAY = 3;
 
 const BY_ID = new Map(LIFE_SITUATIONS.map(s => [s.id, s]));
 
@@ -69,50 +73,73 @@ export const isCheckInDay = (date: Date, actives: ReadonlyArray<ActiveSituation>
 };
 
 /**
- * The verses for `days` consecutive days from `from`, up to `perDay` each
- * (empty = no live situation, use the normal daily verse). Replays every day
- * since the earliest start so each plan's position is exact.
+ * Replays the days from `since` (default: the earliest start) up to `end`
+ * (a day number, exclusive), calling `onDay` with each day's verse. Returns
+ * every situation's position reached at `end`.
+ */
+const walk = (
+  actives: ReadonlyArray<ActiveSituation>,
+  since: string | undefined,
+  end: number,
+  onDay?: (day: number, verse: ScheduledVerse) => void,
+): Map<SituationId, number> => {
+  const known = actives.flatMap(active => {
+    const situation = situationById(active.id);
+    return situation ? [{active, situation}] : [];
+  });
+  const shown = new Map(known.map(k => [k.active.id, k.active.shown ?? 0]));
+  if (known.length === 0) return shown;
+  let turn = 0;
+  const start = since ? dayNumber(since) : Math.min(...known.map(k => dayNumber(k.active.startedOn)));
+  for (let day = start; day < end; day += 1) {
+    const live = known.filter(k => isLiveOn(k.active, k.situation, day));
+    if (live.length === 0) continue;
+    if (live.some(k => day === nextCheckInDay(k.active, k.situation))) continue;
+    const {active, situation} = live[turn % live.length];
+    const count = shown.get(active.id) ?? 0;
+    shown.set(active.id, count + 1);
+    onDay?.(day, {situationId: active.id, ref: situation.verses[count % situation.verses.length]});
+    turn += 1;
+  }
+  return shown;
+};
+
+/**
+ * The verse for each of `days` consecutive days from `from` (empty = no plan
+ * verse that day: none live, or a check-in day; use the daily calendar).
  */
 export const situationSchedule = (
   actives: ReadonlyArray<ActiveSituation>,
   from: Date,
   days: number,
-  perDay = 1,
+  since?: string,
 ): ScheduledVerse[][] => {
-  const known = actives.flatMap(active => {
-    const situation = situationById(active.id);
-    return situation ? [{active, situation}] : [];
-  });
   const first = dayNumber(from);
   const result: ScheduledVerse[][] = Array.from({length: Math.max(0, days)}, () => []);
-  if (known.length === 0 || days <= 0) return result;
-
-  const shown = new Map<SituationId, number>();
-  const perDayCap = Math.min(Math.max(1, perDay), MAX_VERSES_PER_DAY);
-  let turn = 0;
-  const start = Math.min(...known.map(k => dayNumber(k.active.startedOn)));
-  for (let day = start; day < first + days; day += 1) {
-    const live = known.filter(k => isLiveOn(k.active, k.situation, day));
-    if (live.length === 0) continue;
-    const picks = Math.min(perDayCap, live.length);
-    for (let i = 0; i < picks; i += 1) {
-      const {active, situation} = live[(turn + i) % live.length];
-      const count = shown.get(active.id) ?? 0;
-      shown.set(active.id, count + 1);
-      if (day >= first) {
-        result[day - first].push({
-          situationId: active.id,
-          ref: situation.verses[count % situation.verses.length],
-        });
-      }
-    }
-    turn += picks;
-  }
+  walk(actives, since, first + days, (day, verse) => {
+    if (day >= first) result[day - first].push(verse);
+  });
   return result;
 };
 
 export const versesForDate = (
   date: Date,
   actives: ReadonlyArray<ActiveSituation>,
-  perDay = 1,
-): ScheduledVerse[] => situationSchedule(actives, date, 1, perDay)[0];
+  since?: string,
+): ScheduledVerse[] => situationSchedule(actives, date, 1, since)[0];
+
+/**
+ * Freezes each plan's position at `today` and drops the plans that have
+ * ended, so a change made today (add, remove, reorder, answer) leaves every
+ * earlier day as it was. The caller stores `today` as the new `since`.
+ */
+export const rebaseSituations = (
+  actives: ReadonlyArray<ActiveSituation>,
+  since: string | undefined,
+  today: Date,
+): ActiveSituation[] => {
+  const shown = walk(actives, since, dayNumber(today));
+  return actives
+    .filter(active => isLive(active, today))
+    .map(active => ({...active, shown: shown.get(active.id) ?? 0}));
+};

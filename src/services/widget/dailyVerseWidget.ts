@@ -111,9 +111,9 @@ export const syncDailyVerseWidget = async (): Promise<void> => {
     await bibleDatabaseService.initDatabase(); // idempotent
     const days: Record<string, {ref: string; text: string; url: string; dateLabel: string}> = {};
     const today = new Date();
-    const tenyHoAnao = await loadTenyHoAnao(today);
+    const tenyHoAnao = await loadTenyHoAnao();
     const situations = tenyHoAnao.onWidget ? tenyHoAnao.situations : [];
-    const schedule = situationSchedule(situations, today, WIDGET_WINDOW_DAYS);
+    const schedule = situationSchedule(situations, today, WIDGET_WINDOW_DAYS, tenyHoAnao.since);
     for (let i = 0; i < WIDGET_WINDOW_DAYS; i += 1) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);

@@ -5,21 +5,37 @@ import {syncDailyVerseWidget} from '../services/widget/dailyVerseWidget';
 import {
   EMPTY_STATE,
   addSituation,
-  clearTenyHoAnao,
   confirmStillIn,
   loadTenyHoAnao,
   moveSituation,
+  rebaseState,
   removeSituation,
   saveTenyHoAnao,
   type TenyHoAnaoState,
 } from '../services/lifeSituations/situationStore';
-import {checkInsDue, type ActiveSituation} from '../utils/lifeSituations';
+import {checkInsDue, isLive} from '../utils/lifeSituations';
 
 // Widget feed and verse notifications are precomputed, so every change is
-// pushed to both. Fire-and-forget: each one already swallows its errors.
-const resync = () => {
-  syncDailyVerseWidget();
-  ensureRemindersScheduled();
+// pushed to both. One rebuild at a time: taps during a run fold into one more
+// run, so an older rebuild never lands after a newer one. Each step already
+// swallows its own errors.
+let resyncing = false;
+let resyncAgain = false;
+const resync = async () => {
+  if (resyncing) {
+    resyncAgain = true;
+    return;
+  }
+  resyncing = true;
+  try {
+    do {
+      resyncAgain = false;
+      await syncDailyVerseWidget();
+      await ensureRemindersScheduled();
+    } while (resyncAgain);
+  } finally {
+    resyncing = false;
+  }
 };
 
 /** State and actions behind the "Teny ho anao" screen. */
@@ -49,12 +65,19 @@ export const useTenyHoAnao = () => {
     resync();
   }, []);
 
-  const remove = useCallback((id: SituationId) => apply(removeSituation(stateRef.current, id)), [apply]);
-  const move = useCallback(
-    (id: SituationId, delta: -1 | 1) => apply(moveSituation(stateRef.current, id, delta)),
+  // A change to the list starts from positions frozen at today, so it never
+  // makes the other plans skip or repeat a verse.
+  const change = useCallback(
+    (fn: (base: TenyHoAnaoState) => TenyHoAnaoState) => apply(fn(rebaseState(stateRef.current))),
     [apply],
   );
-  const stillIn = useCallback((id: SituationId) => apply(confirmStillIn(stateRef.current, id)), [apply]);
+
+  const remove = useCallback((id: SituationId) => change(s => removeSituation(s, id)), [change]);
+  const move = useCallback(
+    (id: SituationId, delta: -1 | 1) => change(s => moveSituation(s, id, delta)),
+    [change],
+  );
+  const stillIn = useCallback((id: SituationId) => change(s => confirmStillIn(s, id)), [change]);
   const setOnWidget = useCallback(
     (onWidget: boolean) => apply({...stateRef.current, onWidget}),
     [apply],
@@ -65,16 +88,24 @@ export const useTenyHoAnao = () => {
   );
 
   // Step-by-step editing works on a copy, saved in one go at the end. It
-  // starts from the current state, so situations kept keep their start date
-  // and their place in their plan.
+  // starts from the frozen current state, and a situation unticked then
+  // ticked again comes back as it was, so situations kept keep their start
+  // date and their place in their plan.
   const [draft, setDraft] = useState<TenyHoAnaoState | null>(null);
-  const startEditing = useCallback(() => setDraft(stateRef.current), []);
+  const draftBase = useRef<TenyHoAnaoState | null>(null);
+  const startEditing = useCallback(() => {
+    draftBase.current = rebaseState(stateRef.current);
+    setDraft(draftBase.current);
+  }, []);
   const cancelEditing = useCallback(() => setDraft(null), []);
   const toggleDraft = useCallback(
     (id: SituationId) =>
-      setDraft(d =>
-        d && (d.situations.some(s => s.id === id) ? removeSituation(d, id) : addSituation(d, id)),
-      ),
+      setDraft(d => {
+        if (!d) return d;
+        if (d.situations.some(s => s.id === id)) return removeSituation(d, id);
+        const kept = draftBase.current?.situations.find(s => s.id === id);
+        return kept ? {...d, situations: [...d.situations, kept]} : addSituation(d, id);
+      }),
     [],
   );
   const moveDraft = useCallback(
@@ -87,19 +118,17 @@ export const useTenyHoAnao = () => {
     await apply(draft);
   }, [draft, apply]);
 
-  const clearAll = useCallback(async () => {
-    stateRef.current = EMPTY_STATE;
-    setState(EMPTY_STATE);
-    await clearTenyHoAnao();
-    resync();
-  }, []);
+  const clearAll = useCallback(() => apply(EMPTY_STATE), [apply]);
 
-  const due: ActiveSituation[] = checkInsDue(new Date(), state.situations);
+  // Ended plans stay in storage until the next change; the screen only
+  // shows the live ones.
+  const today = new Date();
+  const live = state.situations.filter(s => isLive(s, today));
 
   return {
-    state,
+    state: live.length === state.situations.length ? state : {...state, situations: live},
     loaded,
-    due,
+    due: checkInsDue(today, live),
     remove,
     move,
     stillIn,

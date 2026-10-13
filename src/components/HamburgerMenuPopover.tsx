@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
@@ -26,7 +25,8 @@ const VARIANT_KNOB_WIDTH = VARIANT_SEGMENT_WIDTH;
 const VARIANT_TRACK_PAD = 3;
 
 // Design sizes at the 375dp baseline, scaled per screen in the component.
-// The width fits the longest row label ("Ora famakiana tiana") on one line.
+// The width fits the longest row label ("Ora famakiana tiana") on one line at
+// the normal font size; larger system fonts end it with "…" (never wraps).
 const MENU_WIDTH = 260;
 const TILE_MIN_HEIGHT = 60;
 // Must match styles.caret's borderBottomWidth.
@@ -220,7 +220,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   // Card, tiles and rows follow the screen width like the top and bottom
   // bars (theme/responsive: Android only, clamped; iOS keeps fixed points),
   // and labels follow the phone's font size capped at 130%.
-  const {scale: rScale, fontFor} = useResponsive();
+  const {scale: rScale, fontFor, height: windowHeight} = useResponsive();
   const menuWidth = rScale(MENU_WIDTH);
   const tileMinHeight = rScale(TILE_MIN_HEIGHT);
   const tileFontSize = fontFor(12);
@@ -234,7 +234,6 @@ const HamburgerMenuPopover: React.FC<Props> = ({
 
   // Small phones can't fit the whole card below the top bar: cap it at the
   // space left and let it scroll instead of cutting the last rows off.
-  const {height: windowHeight} = useWindowDimensions();
   const menuTopValue = menuTop ?? styles.menuContainer.top;
   const menuMaxHeight = windowHeight - menuTopValue - CARET_HEIGHT - MENU_BOTTOM_GAP;
 
@@ -379,7 +378,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                       onPress={() => onSelect(item.key)}
                       style={({pressed}) => [
                         styles.menuRow,
-                        pressed ? {backgroundColor: cellBackground(true)} : null,
+                        pressed ? {backgroundColor: theme.colors.divider} : null,
                       ]}>
                       <MenuIcon name={item.icon} color={menuAccent} />
                       <Text
@@ -647,9 +646,6 @@ const styles = StyleSheet.create({
   menuRowText: {
     flex: 1,
     fontWeight: '500',
-  },
-  menuItemPressed: {
-    backgroundColor: '#f2f6fb',
   },
 });
 

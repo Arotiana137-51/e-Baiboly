@@ -15,6 +15,7 @@ import {
   addSituation,
   confirmStillIn,
   moveSituation,
+  rebaseState,
   removeSituation,
 } from '../src/services/lifeSituations/situationStore';
 
@@ -118,13 +119,34 @@ describe('lifeSituations schedule', () => {
     expect(versesForDate(day('2026-10-03'), [grief, work])).toEqual([days[2]]);
   });
 
-  it('gives up to three verses a day, never more', () => {
-    const fear: ActiveSituation = {id: 'fear', startedOn: '2026-10-01'};
-    const lonely: ActiveSituation = {id: 'lonely', startedOn: '2026-10-01'};
-    const all = [grief, work, fear, lonely];
-    expect(versesForDate(day('2026-10-01'), all, 3)).toHaveLength(3);
-    expect(versesForDate(day('2026-10-01'), all, 10)).toHaveLength(3);
-    expect(versesForDate(day('2026-10-01'), [grief], 3)).toHaveLength(1);
+  it('uses no plan verse on a check-in day, so none is skipped', () => {
+    const days = situationSchedule([grief], day('2026-10-01'), 9);
+    expect(days[7]).toEqual([]); // the widget asks instead
+    expect(days[8][0].ref).toBe(byId('grief').verses[7]);
+  });
+
+  it('keeps a plan in order while another one ends', () => {
+    const workRefs = situationSchedule([grief, work], day('2026-10-01'), 20)
+      .flat()
+      .filter(v => v.situationId === 'work')
+      .map(v => v.ref);
+    expect(workRefs).toEqual(byId('work').verses.slice(0, workRefs.length));
+  });
+
+  it('freezes positions before a change, so removing one plan never moves another', () => {
+    const today = day('2026-10-06');
+    const shownWork = situationSchedule([grief, work], day('2026-10-01'), 5)
+      .flat()
+      .filter(v => v.situationId === 'work').length;
+    const rebased = rebaseState({...EMPTY_STATE, situations: [grief, work]}, today);
+    const state = removeSituation(rebased, 'grief');
+    expect(state.since).toBe('2026-10-06');
+    expect(versesForDate(today, state.situations, state.since)[0].ref).toBe(
+      byId('work').verses[shownWork],
+    );
+    // A plan that has ended is dropped at the next change.
+    const later = rebaseState({...EMPTY_STATE, situations: [grief, work]}, day('2026-10-12'));
+    expect(later.situations.map(s => s.id)).toEqual(['work']);
   });
 
   it('asks every checkEvery days and stops a season plan left unanswered', () => {

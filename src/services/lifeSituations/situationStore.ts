@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {SituationId} from '../../constants/lifeSituations';
-import {isLive, situationById, type ActiveSituation} from '../../utils/lifeSituations';
+import {rebaseSituations, situationById, type ActiveSituation} from '../../utils/lifeSituations';
 import {isoDay} from '../../utils/isoDay';
 
 /**
@@ -17,7 +17,11 @@ import {isoDay} from '../../utils/isoDay';
 
 export type TenyHoAnaoState = {
   // Rank order: the person's own, first = weighs on them most.
+  // Plans that ended stay until the next change (see rebaseState), so the
+  // replay that places every plan stays exact; screens show only live ones.
   situations: ActiveSituation[];
+  // Day the plan positions (`shown`) were frozen; the replay starts there.
+  since?: string;
   onWidget: boolean;
   inReminders: boolean;
 };
@@ -36,20 +40,17 @@ const isActiveSituation = (value: unknown): value is ActiveSituation => {
   return typeof id === 'string' && !!situationById(id as SituationId) && typeof startedOn === 'string';
 };
 
-/**
- * The stored state, minus short/season plans that already ran out unanswered
- * (they have handed back to the normal daily verse).
- */
-export const loadTenyHoAnao = async (today = new Date()): Promise<TenyHoAnaoState> => {
+export const loadTenyHoAnao = async (): Promise<TenyHoAnaoState> => {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY_STATE;
     const parsed = JSON.parse(raw) as Partial<Record<keyof TenyHoAnaoState, unknown>>;
     const situations = Array.isArray(parsed.situations)
-      ? parsed.situations.filter(isActiveSituation).filter(s => isLive(s, today))
+      ? parsed.situations.filter(isActiveSituation)
       : [];
     return {
       situations,
+      since: typeof parsed.since === 'string' ? parsed.since : undefined,
       onWidget: parsed.onWidget !== false,
       inReminders: parsed.inReminders !== false,
     };
@@ -67,15 +68,15 @@ export const saveTenyHoAnao = async (state: TenyHoAnaoState): Promise<void> => {
   }
 };
 
-export const clearTenyHoAnao = async (): Promise<void> => {
-  try {
-    await AsyncStorage.removeItem(STORAGE_KEY);
-  } catch (error) {
-    warn('clear', error);
-  }
-};
-
 // Pure state transitions, used by the screen's hook.
+
+// Run before any change: freezes every plan's position at today and drops
+// the plans that ended, so the change can't shift the other plans.
+export const rebaseState = (state: TenyHoAnaoState, today = new Date()): TenyHoAnaoState => ({
+  ...state,
+  since: isoDay(today),
+  situations: rebaseSituations(state.situations, state.since, today),
+});
 
 export const addSituation = (state: TenyHoAnaoState, id: SituationId, today = new Date()): TenyHoAnaoState =>
   state.situations.some(s => s.id === id)

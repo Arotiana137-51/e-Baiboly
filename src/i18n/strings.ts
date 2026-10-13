@@ -6,9 +6,7 @@ type TranslationKey =
   | 'menu.search'
   | 'menu.misc'
   | 'menu.about'
-  | 'menu.personalization'
   | 'menu.cultMode'
-  | 'menu.notes'
   | 'notes.title'
   | 'notes.empty'
   | 'notes.removeTitle'
@@ -137,9 +135,7 @@ const translations: Translations = {
     'menu.search': 'Fikarohana',
     'menu.misc': 'Fanekem-pinoana',
     'menu.about': 'Mombamomba',
-    'menu.personalization': 'Loko manokana',
     'menu.cultMode': 'Fotoam-pivavahana',
-    'menu.notes': 'Ireo Naoty',
     'notes.title': 'Ireo Naoty',
     'notes.empty': 'Mbola tsy misy naoty',
     'notes.removeTitle': 'Esorina ny naoty',

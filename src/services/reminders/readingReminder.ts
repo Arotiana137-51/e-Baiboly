@@ -17,7 +17,7 @@ import {getStoredJesusNameVariant, transformJesusName} from '../../utils/jesusNa
 import {PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {enqueueIssueReport} from '../reporting/issueReportQueue';
 import {loadTenyHoAnao} from '../lifeSituations/situationStore';
-import {versesForDate} from '../../utils/lifeSituations';
+import {situationSchedule} from '../../utils/lifeSituations';
 
 /**
  * "Ora famakiana tiana" — optional, on-device reminders to read the Bible,
@@ -247,12 +247,13 @@ const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<voi
   // "Teny ho anao" replaces the calendar verse on the days a plan is live.
   const tenyHoAnao = await loadTenyHoAnao();
   const situations = tenyHoAnao.inReminders ? tenyHoAnao.situations : [];
+  const schedule = situationSchedule(situations, first, VERSE_WINDOW_DAYS, tenyHoAnao.since);
 
   for (let i = 0; i < VERSE_WINDOW_DAYS; i += step) {
     // setDate rather than adding ms so a DST change doesn't shift the hour.
     const when = new Date(first);
     when.setDate(first.getDate() + i);
-    const verse = await verseForDate(when, versesForDate(when, situations)[0]?.ref);
+    const verse = await verseForDate(when, schedule[i][0]?.ref);
     if (!verse) continue;
     const {ref: title, body, bookId, bookName, chapter, verse: verseNumber} = verse;
 
