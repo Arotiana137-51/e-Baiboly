@@ -22,12 +22,13 @@ export type TargetId =
   | 'selBookTab'        // Boky tab inside BibleSelectionModal's SelectionTopBar
   | 'selChapterGrid'    // Toko grid
   | 'selVerseGrid'      // Andininy grid
-  | 'hymnCategoryTabs'  // category strip inside HymnSelectionModal
+  | 'hymnCategoryTabs'  // category buttons (2x2, or one row when wide) inside HymnSelectionModal
   | 'hymnKeypad'        // numeric keypad
-  | 'cultAddButtons'    // Hampio Baiboly / Fihirana row on CultModeScreen
-  | 'cultFlashRow'      // the just-added playlist row (spotlit + blinks post-add)
+  | 'cultAddButtons'    // Ampio Baiboly / Fihirana row on CultModeScreen
+  | 'cultFlashRow'      // the last-added playlist row (spotlit + blinks post-add; stays
+                        // referenced for the whole tutorial, so the delete step uses it too)
   | 'cultList'          // the playlist itself (what-to-read, drag to reorder)
-  | 'cultActivateToggle'// Velomy ny fotoana switch row on CultModeScreen
+  | 'cultActivateToggle'// round Play/Pause button on CultModeScreen
   | 'cultReaderNav'     // ‹ playlist chevron in the reader (Home) once active
   | 'cultReaderNavNext' // › playlist chevron (paired with cultReaderNav)
   | 'cultStopButton'    // ■ stop button in the reader transport bar (Home)
@@ -93,8 +94,8 @@ export type CoachStep = {
   // fingertip emoji (bare glyph, no skin-tone modifier — that flat
   // cartoon-yellow IS Unicode's neutral default) with a native-style motion
   // cue. 'longPress' = press-and-hold in place, with an expanding ring.
-  // 'swipeHorizontal' = slides left-right for a scrollable strip, no ring (a
-  // ring there reads as "hold still", contradicting a swipe). 'dragVertical'
+  // 'swipeHorizontal' = slides left-right, e.g. swipe-to-delete on a row, no
+  // ring (a ring there reads as "hold still", contradicting a swipe). 'dragVertical'
   // = press-and-hold (ring, same as longPress) THEN slides up-down — for
   // grab-and-reorder rows.
   gesture?: 'longPress' | 'swipeHorizontal' | 'dragVertical';
@@ -192,8 +193,7 @@ const ONBOARDING_HYMN_DRILL: CoachStep[] = [
     id: 'pickCategory',
     targetId: 'hymnCategoryTabs',
     scope: 'modal',
-    gesture: 'swipeHorizontal',
-    text: "Akisaho mianavanana na miankavia ny karazana boky fihirana ery ambony, avy eo tsindrio izay tianao hikarohana hira hirana mialohan'ny hanindrinao ny laharan-kira.",
+    text: "Safidio ery ambony ny boky fihirana tianao. Eo ambanin'ireo no hitanao ny laharana misy ao aminy.",
     advanceOn: 'targetEvent',
     awaitProgress: 'category',
   },
@@ -266,7 +266,18 @@ const CULT_AFTER_ADD_STEPS: CoachStep[] = [
     scope: 'cult',
     placement: 'top',
     gesture: 'dragVertical',
-    text: "Hanova ny filaharana: tsindrio ela ny mari-pisintonana ☰ eo anilan'ny anarana, dia sintony miakatra na midina.",
+    text: "Raha hanova ny filaharana: tsindrio ela ny andalana iray (na ny ☰ eo ankaviany), dia sintony miakatra na midina.",
+  },
+  {
+    // Tap-advance on purpose: the user may delete here or just read and move
+    // on. Deleting is safe either way — two entries were added, and
+    // cultActivate only needs one.
+    id: 'cultDelete',
+    targetId: 'cultFlashRow',
+    scope: 'cult',
+    placement: 'bottom',
+    gesture: 'swipeHorizontal',
+    text: "Raha hamafa: tsindrio ny kisary daba-pako eo ankavanana, na akisaho miankavia ilay andalana dia tsindrio \"Esory\".",
   },
   {
     id: 'cultActivate',
@@ -301,7 +312,7 @@ const CULT_AFTER_ADD_STEPS: CoachStep[] = [
     id: 'cultDone',
     targetId: null,
     scope: 'screen',
-    text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
+    text: "Vita! Raha mbola velona ny fotoana, tsindrio ao amin'ny lisitra ny andalana iray dia io avy hatrany no hiseho. Azonao averina foana ao amin'ny Toro-lalana.",
   },
 ];
 
@@ -379,7 +390,7 @@ export const TUTORIALS: Tutorial[] = [
       },
       {
         // Branch point, same pattern as onboarding's modeToggle: the row has
-        // both "Hampio Baiboly" and "Hampio Fihirana", and whichever the user
+        // both "Ampio Baiboly" and "Ampio Fihirana", and whichever the user
         // taps first decides the order — text is neutral (not "tap Baiboly"),
         // so a tap on Fihirana isn't treated as a wrong move. Default
         // (Bible-first) falls through to cultAddHymn below via awaitProgress;
@@ -388,7 +399,7 @@ export const TUTORIALS: Tutorial[] = [
         targetId: 'cultAddButtons',
         scope: 'cult',
         placement: 'bottom',
-        text: "Ampio ao anaty lisitra ny voalohany: tsindrio \"Hampio Baiboly\" na \"Hampio Fihirana\".",
+        text: "Ampio ao anaty lisitra ny voalohany: tsindrio \"Ampio Baiboly\" na \"Ampio Fihirana\".",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultBibleAdded',
         branches: {
@@ -401,7 +412,7 @@ export const TUTORIALS: Tutorial[] = [
               extraTargetIds: ['cultFlashRow'],
               scope: 'cult',
               placement: 'top',
-              text: "Ampio andininy Baiboly izao: tsindrio \"Hampio Baiboly\" dia safidio boky, toko ary andininy.",
+              text: "Ampio andininy Baiboly izao: tsindrio \"Ampio Baiboly\" dia safidio boky, toko ary andininy.",
               advanceOn: 'targetEvent',
               awaitProgress: 'cultBibleAdded',
             },
@@ -419,7 +430,7 @@ export const TUTORIALS: Tutorial[] = [
         extraTargetIds: ['cultFlashRow'],
         scope: 'cult',
         placement: 'top',
-        text: "Ampio hira izao: tsindrio \"Hampio Fihirana\" dia soraty ny laharan-kira.",
+        text: "Ampio hira izao: tsindrio \"Ampio Fihirana\" dia soraty ny laharan-kira.",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultHymnAdded',
       },

@@ -38,6 +38,9 @@ export const generateCultEntryId = (): string =>
 // entries still play back without a range banner.
 export const WHOLE_CHAPTER_VERSE_END = 999;
 
+export const isWholeChapterEntry = (e: CultBibleEntry): boolean =>
+  e.isWholeChapter ?? e.verseEnd >= WHOLE_CHAPTER_VERSE_END;
+
 export const buildBibleLabel = (
   bookName: string,
   chapter: number,

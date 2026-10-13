@@ -18,9 +18,9 @@ type TranslationKey =
   | 'cultMode.emptyState'
   | 'cultMode.addBible'
   | 'cultMode.addHymn'
-  | 'cultMode.deleteTitle'
-  | 'cultMode.deleteMessage'
-  | 'cultMode.cannotActivateEmpty'
+  | 'cultMode.summary'
+  | 'cultMode.wholeChapter'
+  | 'cultMode.verses'
   | 'personalization.title'
   | 'personalization.subtitle'
   | 'personalization.reset'
@@ -145,12 +145,12 @@ const translations: Translations = {
     'cultMode.deactivate': 'Ajanony',
     'cultMode.intro':
       'Ito dia fampidirana ny programam-pivavahana ka rehefa alahatrao mialoha eto ireo tokony ho vakianao mandritra ny fotoana dia tsy mila mikaroka boky/fihirana intsony ianao fa manindry ny teboka (prev, next) ery ambany fotsiny. Alaminao otrany ireny mandamina “Playlist” ireny izy ity mba hanamorana ny fampiasanao ny appli e-Baiboly mandritra ny fotoam-bavaka.',
-    'cultMode.emptyState': "Mbola tsy misy zavatra eto. Ampio Baiboly na Fihirana.",
-    'cultMode.addBible': 'Hampio Baiboly',
-    'cultMode.addHymn': 'Hampio Fihirana',
-    'cultMode.deleteTitle': 'Esorina',
-    'cultMode.deleteMessage': "Tena esorina ao amin'ny lisitra ve ity?",
-    'cultMode.cannotActivateEmpty': 'Ampio aloha ny zavatra ho hirahana.',
+    'cultMode.emptyState': "Ampio andinin'teny na hira",
+    'cultMode.addBible': 'Ampio Baiboly',
+    'cultMode.addHymn': 'Ampio Fihirana',
+    'cultMode.summary': "{{bible}} andinin'teny · {{hymns}} hira",
+    'cultMode.wholeChapter': 'Toko manontolo',
+    'cultMode.verses': 'Andininy {{range}}',
     'personalization.title': 'Loko manokana',
     'personalization.subtitle': "Safidio ny lokon'ny rindrina sy ny bokotra",
     'personalization.reset': 'Avereno tany am-boalohany',

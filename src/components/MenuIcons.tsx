@@ -1,4 +1,4 @@
-// Icons for the hamburger menu, drawn from plain Views like
+// Icons for the hamburger menu (and the Fotoam-pivavahana rows), drawn from plain Views like
 // TutorialIcons and ShareIcon — no icon library, no native rebuild (the
 // heart and the praying hands are tinted images). Each is a single colour
 // with no cut-outs, so it reads on any cell background (except the colour
@@ -15,7 +15,10 @@ export type MenuIconName =
   | 'bubble'
   | 'bell'
   | 'palette'
-  | 'signpost';
+  | 'signpost'
+  | 'note'
+  | 'bible'
+  | 'trash';
 
 // NOTE: geometry is hardcoded to a 24px box (the one size the menu grid
 // uses). Parameterise on size if a second caller ever needs another.
@@ -106,6 +109,36 @@ const Signpost: React.FC<IconProps> = ({color}) => (
   </View>
 );
 
+// An eighth note: tilted filled head, stem, and a flag sloping off the top.
+const Note: React.FC<IconProps> = ({color}) => (
+  <View style={styles.box}>
+    <View style={[styles.noteHead, {backgroundColor: color}]} />
+    <View style={[styles.noteStem, {backgroundColor: color}]} />
+    <View style={[styles.noteFlag, {backgroundColor: color}]} />
+  </View>
+);
+
+// A closed book with a filled spine and a cross on the cover.
+const Bible: React.FC<IconProps> = ({color}) => (
+  <View style={styles.box}>
+    <View style={[styles.bibleCover, {borderColor: color}]} />
+    <View style={[styles.bibleSpine, {backgroundColor: color}]} />
+    <View style={[styles.bibleCrossV, {backgroundColor: color}]} />
+    <View style={[styles.bibleCrossH, {backgroundColor: color}]} />
+  </View>
+);
+
+// Trash can: handle, lid, open-topped body with two ribs.
+const Trash: React.FC<IconProps> = ({color}) => (
+  <View style={styles.box}>
+    <View style={[styles.trashHandle, {borderColor: color}]} />
+    <View style={[styles.trashLid, {backgroundColor: color}]} />
+    <View style={[styles.trashBody, {borderColor: color}]} />
+    <View style={[styles.trashRib, styles.trashRibLeft, {backgroundColor: color}]} />
+    <View style={[styles.trashRib, styles.trashRibRight, {backgroundColor: color}]} />
+  </View>
+);
+
 const ICONS: Record<MenuIconName, React.FC<IconProps>> = {
   heart: Heart,
   history: History,
@@ -116,6 +149,9 @@ const ICONS: Record<MenuIconName, React.FC<IconProps>> = {
   bell: Bell,
   palette: Palette,
   signpost: Signpost,
+  note: Note,
+  bible: Bible,
+  trash: Trash,
 };
 
 export const MenuIcon: React.FC<IconProps & {name: MenuIconName}> = ({name, color}) => {
@@ -219,4 +255,20 @@ const styles = StyleSheet.create({
   sign: {position: 'absolute', width: 10, height: 7, borderWidth: STROKE, borderRadius: 2},
   signRight: {left: SIZE / 2 + 1, top: 3},
   signLeft: {left: SIZE / 2 - 11, top: 11},
+
+  noteHead: {position: 'absolute', left: 4, top: 15, width: 10, height: 7, borderRadius: 5, transform: [{rotate: '-20deg'}]},
+  noteStem: {position: 'absolute', left: 12, top: 3, width: STROKE, height: 16},
+  noteFlag: {position: 'absolute', left: 12, top: 5, width: 8, height: 3, borderRadius: 1, transform: [{rotate: '35deg'}]},
+
+  bibleCover: {position: 'absolute', left: 4, top: 2, width: 17, height: 20, borderWidth: STROKE, borderRadius: 2},
+  bibleSpine: {position: 'absolute', left: 4, top: 2, width: 4, height: 20, borderTopLeftRadius: 2, borderBottomLeftRadius: 2},
+  bibleCrossV: {position: 'absolute', left: 13, top: 6, width: STROKE, height: 10},
+  bibleCrossH: {position: 'absolute', left: 10.5, top: 8.5, width: 7, height: STROKE},
+
+  trashHandle: {position: 'absolute', left: 9, top: 2, width: 6, height: 4, borderWidth: STROKE, borderBottomWidth: 0, borderTopLeftRadius: 1, borderTopRightRadius: 1},
+  trashLid: {position: 'absolute', left: 3, top: 5, width: 18, height: STROKE, borderRadius: 1},
+  trashBody: {position: 'absolute', left: 5, top: 8, width: 14, height: 14, borderWidth: STROKE, borderTopWidth: 0, borderBottomLeftRadius: 2, borderBottomRightRadius: 2},
+  trashRib: {position: 'absolute', top: 10, width: STROKE, height: 8},
+  trashRibLeft: {left: 9},
+  trashRibRight: {left: 13},
 });
