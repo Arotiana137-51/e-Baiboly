@@ -56,7 +56,6 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
   // Curated palettes — single accent hex (the theme engine drives accent only;
   // full background/text theming would need a bigger engine change).
   {id: 'sage_green', name: 'Vert Sauge', hex: '#7A9A82'},
-  {id: 'manga_alina', name: 'Manga Alina', hex: '#66FCF1'},
   {id: 'mofon_tany', name: 'Mofon-tany Maitso', hex: '#8FBC8F'},
   {id: 'tany_mafana', name: 'Tany Mafana', hex: '#C86432'},
   {id: 'fasika', name: 'Fasika', hex: '#C4A484'},

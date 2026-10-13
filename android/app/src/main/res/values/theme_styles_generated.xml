@@ -93,9 +93,6 @@
     <style name="PickerAccent_sage_green" parent="AppTheme">
         <item name="colorAccent">@color/picker_accent_sage_green</item>
     </style>
-    <style name="PickerAccent_manga_alina" parent="AppTheme">
-        <item name="colorAccent">@color/picker_accent_manga_alina</item>
-    </style>
     <style name="PickerAccent_mofon_tany" parent="AppTheme">
         <item name="colorAccent">@color/picker_accent_mofon_tany</item>
     </style>
