@@ -26,9 +26,9 @@ const VARIANT_KNOB_WIDTH = VARIANT_SEGMENT_WIDTH;
 const VARIANT_TRACK_PAD = 3;
 
 // Design sizes at the 375dp baseline, scaled per screen in the component.
-// The width leaves each grid cell (two per row) room for a two-line label.
-const MENU_WIDTH = 252;
-const CELL_MIN_HEIGHT = 62;
+// The width fits the longest row label ("Ora famakiana tiana") on one line.
+const MENU_WIDTH = 260;
+const TILE_MIN_HEIGHT = 60;
 // Must match styles.caret's borderBottomWidth.
 const CARET_HEIGHT = 12;
 // Breathing room kept below the card when it has to scroll.
@@ -44,6 +44,8 @@ export type HamburgerMenuItemKey =
   | 'tenyHoAnao'
   | 'cultMode'
   | 'help';
+
+type MenuEntry = {key: HamburgerMenuItemKey; label: string; icon: MenuIconName};
 
 type Props = {
   visible: boolean;
@@ -180,32 +182,53 @@ const HamburgerMenuPopover: React.FC<Props> = ({
     }
   }, [visible, opacity, scale, isLowEndMode]);
 
-  // One grid of icon buttons, two per row: the reader's own collections and
-  // reading/prayer first, settings last. An odd last item spans the row.
-  const gridItems = useMemo(
+  // Platform menu pattern: a top row of three icon + label tiles for the
+  // most used actions (UIMenu's "medium" element size on iOS), then
+  // full-width rows with a leading icon, grouped by purpose with dividers
+  // (Material's drawer/menu list). Labels stay on one line; help comes last.
+  const quickItems = useMemo(
     () =>
       [
         {key: 'favorites' as const, label: t('menu.favorites'), icon: 'heart' as const},
         {key: 'history' as const, label: t('menu.history'), icon: 'history' as const},
         // Short label here; the Notes screen keeps "Ireo Naoty".
         {key: 'notes' as const, label: 'Naoty', icon: 'notes' as const},
-        {key: 'cultMode' as const, label: t('menu.cultMode'), icon: 'hands' as const},
-        {key: 'help' as const, label: 'Toro-lalana', icon: 'signpost' as const},
-        {key: 'tenyHoAnao' as const, label: 'Teny ho anao', icon: 'bubble' as const},
-        {key: 'readingReminder' as const, label: 'Ora famakiana tiana', icon: 'bell' as const},
-        {key: 'personalization' as const, label: t('menu.personalization'), icon: 'palette' as const},
-        {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
-      ] satisfies Array<{key: HamburgerMenuItemKey; label: string; icon: MenuIconName}>,
+      ] satisfies MenuEntry[],
+    []
+  );
+  const rowGroups = useMemo(
+    () =>
+      [
+        [
+          {key: 'cultMode' as const, label: t('menu.cultMode'), icon: 'hands' as const},
+          {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
+        ],
+        [
+          {key: 'tenyHoAnao' as const, label: 'Teny ho anao', icon: 'bubble' as const},
+          {key: 'readingReminder' as const, label: 'Ora famakiana tiana', icon: 'bell' as const},
+        ],
+        [
+          {key: 'personalization' as const, label: t('menu.personalization'), icon: 'palette' as const},
+          {key: 'help' as const, label: 'Toro-lalana', icon: 'signpost' as const},
+        ],
+      ] satisfies MenuEntry[][],
     []
   );
 
-  // Card and cells follow the screen width like the top and bottom bars
-  // (theme/responsive: Android only, clamped; iOS keeps fixed points), and
-  // labels follow the phone's font size capped at 130%.
+  // Card, tiles and rows follow the screen width like the top and bottom
+  // bars (theme/responsive: Android only, clamped; iOS keeps fixed points),
+  // and labels follow the phone's font size capped at 130%.
   const {scale: rScale, fontFor} = useResponsive();
   const menuWidth = rScale(MENU_WIDTH);
-  const cellMinHeight = rScale(CELL_MIN_HEIGHT);
-  const labelFontSize = fontFor(12);
+  const tileMinHeight = rScale(TILE_MIN_HEIGHT);
+  const tileFontSize = fontFor(12);
+  const rowFontSize = fontFor(16);
+  const cellBackground = (pressed: boolean) =>
+    pressed
+      ? theme.colors.divider
+      : theme.isDark
+        ? theme.colors.backgroundTertiary
+        : theme.colors.backgroundPrimary;
 
   // Small phones can't fit the whole card below the top bar: cap it at the
   // space left and let it scroll instead of cutting the last rows off.
@@ -317,42 +340,56 @@ const HamburgerMenuPopover: React.FC<Props> = ({
               style={{maxHeight: menuMaxHeight}}
               bounces={false}
               showsVerticalScrollIndicator>
-              <View style={styles.grid}>
-                {gridItems.map((item, index) => {
-                  const spansRow = index === gridItems.length - 1 && gridItems.length % 2 === 1;
-                  return (
+              {/* fontFor already applies the phone's font size (capped), so
+                  the labels below opt out of a second system scaling. */}
+              <View style={styles.quickRow}>
+                {quickItems.map(item => (
+                  <Pressable
+                    key={item.key}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    onPress={() => onSelect(item.key)}
+                    style={({pressed}) => [
+                      styles.quickTile,
+                      {minHeight: tileMinHeight, backgroundColor: cellBackground(pressed)},
+                    ]}>
+                    <MenuIcon name={item.icon} color={menuAccent} />
+                    <Text
+                      style={[styles.quickTileText, {color: menuAccent, fontSize: tileFontSize}]}
+                      numberOfLines={1}
+                      allowFontScaling={false}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {rowGroups.map(group => (
+                <View key={group[0].key}>
+                  <View style={[styles.groupDivider, {backgroundColor: theme.colors.divider}]} />
+                  {group.map(item => (
                     <Pressable
                       key={item.key}
-                      // Tutorial spotlights the Fotoam-pivavahana cell via this ref.
+                      // Tutorial spotlights the Fotoam-pivavahana row via this ref.
                       ref={item.key === 'cultMode' ? cultItemRef : undefined}
                       collapsable={false}
                       accessibilityRole="button"
-                      accessibilityLabel={item.label}
                       onPress={() => onSelect(item.key)}
                       style={({pressed}) => [
-                        styles.gridCell,
-                        spansRow ? styles.gridCellWide : null,
-                        {
-                          minHeight: cellMinHeight,
-                          backgroundColor: pressed
-                            ? theme.colors.divider
-                            : theme.isDark
-                              ? theme.colors.backgroundTertiary
-                              : theme.colors.backgroundPrimary,
-                        },
+                        styles.menuRow,
+                        pressed ? {backgroundColor: cellBackground(true)} : null,
                       ]}>
                       <MenuIcon name={item.icon} color={menuAccent} />
-                      {/* fontFor already applies the phone's font size (capped). */}
                       <Text
-                        style={[styles.gridCellText, {color: menuAccent, fontSize: labelFontSize}]}
-                        numberOfLines={2}
+                        style={[styles.menuRowText, {color: menuAccent, fontSize: rowFontSize}]}
+                        numberOfLines={1}
                         allowFontScaling={false}>
                         {item.label}
                       </Text>
                     </Pressable>
-                  );
-                })}
-              </View>
+                  ))}
+                </View>
+              ))}
 
               <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
 
@@ -573,28 +610,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  grid: {
+  quickRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 6,
+    gap: 8,
     padding: 10,
   },
-  gridCell: {
-    width: '48.5%',
+  quickTile: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     borderRadius: 12,
   },
-  gridCellWide: {
-    width: '100%',
-  },
-  gridCellText: {
+  quickTileText: {
     fontWeight: '600',
-    textAlign: 'center',
+  },
+  groupDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+    marginVertical: 4,
+  },
+  // 44pt is Apple's minimum touch target; Material lists use 16dp sides.
+  menuRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+  },
+  menuRowText: {
+    flex: 1,
+    fontWeight: '500',
   },
   menuItemPressed: {
     backgroundColor: '#f2f6fb',

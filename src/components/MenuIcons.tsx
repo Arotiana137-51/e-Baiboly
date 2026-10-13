@@ -1,4 +1,4 @@
-// Icons for the hamburger menu's grid, drawn from plain Views like
+// Icons for the hamburger menu, drawn from plain Views like
 // TutorialIcons and ShareIcon — no icon library, no native rebuild (the
 // praying hands are a tinted image). Each is a single colour with no
 // cut-outs, so it reads on any cell background (except the colour picker,
