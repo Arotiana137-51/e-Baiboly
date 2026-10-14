@@ -1496,10 +1496,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onSearchPress={() => navigation.navigate('GlobalSearch')}
         />
       )}
-      <Pressable
+      {/* A plain View: a Pressable here would take every touch the verses
+          leave, and on Android the view holding a touch keeps it from the
+          list, which then can't scroll. */}
+      <View
         ref={hlReaderAreaRef}
         collapsable={false}
-        android_ripple={null}
         style={styles.readerContainer}
         {...swipeResponder.panHandlers}>
         {mode === 'bible' && bibleSelectionVisible ? (
@@ -1603,7 +1605,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           )
         )}
 
-      </Pressable>
+      </View>
       <CustomBottomNav
         activeMode={mode}
         onTabPress={(m) => {
