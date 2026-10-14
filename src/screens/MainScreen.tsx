@@ -8,6 +8,7 @@ import {
   Dimensions,
   FlatList,
   Platform,
+  Alert,
   AppState,
   PanResponder,
 } from 'react-native';
@@ -16,7 +17,15 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
-import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
+import BibleReaderView, {
+  type SelectedVerseRange,
+  type VerseSelectionAction,
+} from '../components/BibleReaderView';
+import {
+  NATIVE_SELECTION,
+  onSelectionActive,
+  setSelectionMenuItems,
+} from '../services/selectionMenu';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
@@ -292,12 +301,17 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Hymn selection modal state
   const [hymnSelectionVisible, setHymnSelectionVisible] = useState(false);
 
+  // A native text selection is on screen: its handles drag sideways, which
+  // must not switch Baiboly / Fihirana.
+  const selectionActiveRef = useRef(false);
+
   const swipeResponder = useMemo(() => {
     const SWIPE_MIN_DX = 60;
     const SWIPE_ACTIVATION_DX = 18;
     const SWIPE_MAX_DY = 80;
 
     const isSwipeEligible = () => {
+      if (selectionActiveRef.current) return false;
       if (isMenuOpen) return false;
       if (bibleSelectionVisible) return false;
       if (verseActionVisible) return false;
@@ -1135,6 +1149,56 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   };
 
+  // --- Native text selection: the phone's own selection menu carries the
+  // verse actions that the double-tap menu had. ---
+  useEffect(() => {
+    if (!NATIVE_SELECTION) return;
+    setSelectionMenuItems([
+      {key: 'highlight', label: t('selection.highlight'), primary: true},
+      {key: 'note', label: t('selection.note'), primary: true},
+      {key: 'favorite', label: t('selection.favorite'), primary: true},
+      {key: 'share', label: t('selection.share'), primary: true},
+      {key: 'concordance', label: t('selection.concordance')},
+      {key: 'report', label: t('selection.report')},
+    ]);
+    return onSelectionActive(active => {
+      selectionActiveRef.current = active;
+      // The notes tutorial waits for the verse's menu to open.
+      if (active) tutorial.notifyProgress('verseActionOpened');
+    });
+    // Set once; tutorial.notifyProgress is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleVerseSelectionAction = ({verse, key, range, text}: VerseSelectionAction) => {
+    switch (key) {
+      case 'note':
+        openBibleNote(verse);
+        return;
+      case 'favorite':
+        handleAddToFavorites(verse);
+        return;
+      case 'share':
+        openBibleShare(verse);
+        return;
+      case 'concordance':
+        handleViewCorrespondence(verse);
+        return;
+      case 'report':
+        openBibleReportModal(verse);
+        return;
+      case 'highlight':
+        // TEMP(spike): shows what Surligner would colour, to check the
+        // selection maps onto the right words; the highlights store is next.
+        Alert.alert(
+          t('selection.highlight'),
+          `${currentBook?.name ?? ''} ${verse.chapter}:${verse.verse_number} ` +
+            `[${range?.start ?? '-'}–${range?.end ?? '-'}] «${text}»`,
+        );
+        return;
+    }
+  };
+
   const closeVerseAction = () => {
     setVerseActionVisible(false);
     setSelectedVerseForAction(null);
@@ -1510,6 +1574,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               onNoteMarkPress={openNoteById}
               noteBubbleVerse={noteBubbleVerse}
               renderNoteBubble={renderNoteBubble}
+              onSelectionAction={handleVerseSelectionAction}
               selectedVerseNumber={selectedVerseNumber}
               selectedVerseRange={selectedVerseRange}
               onInlineRefPress={handleInlineBibleRefPress}

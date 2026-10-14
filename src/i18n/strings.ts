@@ -21,6 +21,12 @@ type TranslationKey =
   | 'notes.noResults'
   | 'notes.exportAll'
   | 'notes.exportTitle'
+  | 'selection.highlight'
+  | 'selection.note'
+  | 'selection.favorite'
+  | 'selection.share'
+  | 'selection.concordance'
+  | 'selection.report'
   | 'actions.noteAdd'
   | 'actions.noteOpen'
   | 'actions.hymnNoteAdd'
@@ -164,6 +170,14 @@ const translations: Translations = {
     'notes.noResults': 'Tsy misy naoty mifanaraka amin\'izany',
     'notes.exportAll': 'Zarao daholo',
     'notes.exportTitle': 'Ny naotiko — e-Baiboly',
+    // Items of the phone's text-selection menu, in front of Copy / Translate:
+    // short, so the first ones fit in its bar.
+    'selection.highlight': 'Surligner',
+    'selection.note': 'Naoty',
+    'selection.favorite': 'Ankafizina',
+    'selection.share': 'Zarao',
+    'selection.concordance': 'Concordance',
+    'selection.report': 'Tatero',
     'actions.noteAdd': 'Hanoratra naoty',
     'actions.noteOpen': 'Jereo ny naoty',
     'actions.hymnNoteAdd': "Naoty momba ny hira",

@@ -21,6 +21,7 @@
     "generate:theme-colors": "node scripts/generateAndroidThemeColors.js"
   },
   "dependencies": {
+    "@bsky.app/react-native-uitextview": "^2.7.1",
     "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "^1.17.11",
     "@react-native-community/datetimepicker": "^9.1.0",
