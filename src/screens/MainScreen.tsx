@@ -301,6 +301,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     const SWIPE_MIN_DX = 60;
     const SWIPE_ACTIVATION_DX = 18;
     const SWIPE_MAX_DY = 80;
+    // A swipe moves at once. A finger held still first is a long-press: the
+    // phone's text selection, whose drag to extend it would read as a swipe.
+    const SWIPE_MAX_HOLD_MS = 300;
+    let touchStartedAt = 0;
 
     const isSwipeEligible = () => {
       if (selectionActiveRef.current) return false;
@@ -316,8 +320,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     };
 
     return PanResponder.create({
+      onStartShouldSetPanResponderCapture: () => {
+        touchStartedAt = Date.now();
+        return false;
+      },
       onMoveShouldSetPanResponderCapture: (_, gestureState) => {
         if (!isSwipeEligible()) return false;
+        if (Date.now() - touchStartedAt > SWIPE_MAX_HOLD_MS) return false;
 
         const dx = gestureState.dx;
         const dy = gestureState.dy;
