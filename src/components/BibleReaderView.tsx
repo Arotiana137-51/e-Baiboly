@@ -1,5 +1,5 @@
-import React, {useCallback, useMemo, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform, ListRenderItemInfo, ViewToken } from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform, ListRenderItemInfo, ViewToken, useWindowDimensions } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
@@ -13,6 +13,7 @@ import {
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
   buildChapterDisplay,
+  buildVerseDisplay,
   buildLineSegments,
   buildVerseLineOffsets,
   intersectMarksWithSpan,
@@ -21,10 +22,37 @@ import {
   type VerseSpan,
 } from '../utils/chapterMarks';
 import {useJesusName} from '../contexts/JesusNameContext';
+import {useTutorialTarget} from '../contexts/TutorialContext';
+import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
 import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
+import {
+  noteMarksForVerses,
+  noteSnippetBudget,
+  type Note,
+  type VerseNoteMarks,
+} from '../types/notes';
+import {t} from '../i18n/strings';
+import {NoteGlyph} from './NoteGlyph';
+import {UITextView} from '@bsky.app/react-native-uitextview';
+import {
+  NATIVE_SELECTION,
+  attachSelectionMenu,
+  onSelectionMenuAction,
+  onTextSelectionChange,
+  reportSelection,
+} from '../services/selectionMenu';
+import {
+  SPAN_LONG_PRESS,
+  selectionToVerseRange,
+  verseNumberLabel,
+  verseTextPrefixLength,
+} from '../utils/verseSelection';
 
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
+// Width of the margin a noted verse reaches into for its bracket: the whole
+// left padding of the list (16), so the text itself never moves.
+const NOTE_GUTTER = 16;
 const BIBLE_BASE_BOTTOM_PADDING = 28;
 const DOUBLE_TAP_DELAY_MS = 280;
 
@@ -41,7 +69,22 @@ const FLOATING_BOTTOM_NAV_SPACER = {
 
 const EMPTY_MARKS: ChapterMark[] = [];
 
+// A verse's text. On iOS, when selectable, a UITextView: a React Native
+// <Text> there can only copy its whole text, not select words. Its spans
+// must then be UITextView too (elsewhere it's a plain <Text>). The lib hands
+// `ref` on to the native view, but its props type leaves it out.
+const VerseText = UITextView as React.ComponentType<
+  React.ComponentProps<typeof UITextView> & {ref?: React.Ref<unknown>}
+>;
+
 export type SelectedVerseRange = {start: number; end: number} | null;
+
+export type VerseSelectionAction = {
+  verse: BibleVerse;
+  key: string;
+  range: {start: number; end: number} | null;
+  text: string;
+};
 
 const styleToTextStyle = (
   marks: ChapterMark[],
@@ -68,7 +111,12 @@ const VerseItem = React.memo(
     onVerseDoubleTap,
     onVerseLongPress,
     onInlineRefPress,
-    onNotePress,
+    noteMarks,
+    noteMarkerRef,
+    onNoteMarkPress,
+    noteBubble,
+    nativeSelection,
+    onSelectableRef,
   }: {
     item: BibleVerse;
     theme: any;
@@ -82,7 +130,16 @@ const VerseItem = React.memo(
     onVerseDoubleTap?: (verse: BibleVerse) => void;
     onVerseLongPress?: (verse: BibleVerse) => void;
     onInlineRefPress?: (ref: InlineBibleRef) => void;
-    onNotePress?: (verse: BibleVerse) => void;
+    noteMarks: VerseNoteMarks | null;
+    // Notes tutorial spotlight, set on one verse only.
+    noteMarkerRef?: React.RefObject<View | null>;
+    onNoteMarkPress?: (noteId: string) => void;
+    // The open note bubble, given only to the verse it points at.
+    noteBubble?: React.ReactNode;
+    // The phone's own selection (double-tap / long-press a word, then its
+    // menu) replaces the app's double-tap and long-press on the verse.
+    nativeSelection: boolean;
+    onSelectableRef?: (verseNumber: number, instance: unknown) => void;
   }) => {
     const isPsalmsOrProverbs = item.book_id === PSALMS_BOOK_ID || item.book_id === PROVERBS_BOOK_ID;
     const hasTitle = typeof item.title === 'string' && item.title.trim().length > 0;
@@ -94,7 +151,6 @@ const VerseItem = React.memo(
 
     const lineOffsets = useMemo(() => buildVerseLineOffsets(lines), [lines]);
     const hasMarks = verseMarks.length > 0;
-    const hasNote = verseMarks.some(m => m.style === 'note');
 
     // A range selection already filters the reader down to just those verses,
     // so the filtered view itself is the emphasis — no per-verse highlight.
@@ -107,6 +163,11 @@ const VerseItem = React.memo(
     const verseLineHeight = Math.round(verseFontSize * BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER) + 3;
 
     const lastTapRef = useRef(0);
+
+    const selectableRef = useCallback(
+      (instance: unknown) => onSelectableRef?.(item.verse_number, instance),
+      [onSelectableRef, item.verse_number],
+    );
 
     const handleInlineRefPress = useCallback(
       (ref: InlineBibleRef) => {
@@ -133,15 +194,48 @@ const VerseItem = React.memo(
       onVerseLongPress?.(item);
     };
 
-    return (
+    const bracket = noteMarks?.bracket ?? null;
+    const startNoteId = noteMarks?.startNoteId ?? null;
+    const previews = noteMarks?.previews ?? [];
+
+    const verseBlock = (
       <Pressable
-        style={[styles.bibleVerseBlock, isSelected && styles.selectedVerseBlock]}
-        onPress={handlePress}
-        onLongPress={handleLongPress}
+        ref={noteMarkerRef}
+        collapsable={noteMarkerRef ? false : undefined}
+        style={[
+          styles.bibleVerseBlock,
+          bracket && styles.notedVerseBlock,
+          isSelected && styles.selectedVerseBlock,
+        ]}
+        onPress={nativeSelection ? undefined : handlePress}
+        onLongPress={nativeSelection ? undefined : handleLongPress}
         delayLongPress={400}
-        disabled={!onVerseDoubleTap && !onVerseLongPress}
+        disabled={nativeSelection || (!onVerseDoubleTap && !onVerseLongPress)}
       >
-        <Text
+        {/* A note's bracket in the margin, like a pen line beside the verses
+            on paper, from its first verse down to its last. */}
+        {bracket ? (
+          <Pressable
+            onPress={() => onNoteMarkPress?.(bracket.noteId)}
+            style={styles.noteGutter}
+            accessibilityRole="button"
+            accessibilityLabel={t('notes.open')}
+          >
+            <View
+              style={[
+                styles.noteBar,
+                {backgroundColor: theme.colors.accentBlue},
+                bracket.isStart && styles.noteBarStart,
+                !bracket.isEnd && styles.noteBarContinues,
+              ]}
+            />
+          </Pressable>
+        ) : null}
+        <VerseText
+          ref={nativeSelection ? selectableRef : undefined}
+          selectable={nativeSelection}
+          uiTextView
+          onSelectionChange={onTextSelectionChange}
           maxFontSizeMultiplier={1.3}
           style={[
             TEXT_STYLES.body,
@@ -158,7 +252,7 @@ const VerseItem = React.memo(
           ]}
         >
           {hasTitle ? (
-            <Text
+            <UITextView
               style={{
                 fontStyle: 'italic',
                 fontWeight: '200',
@@ -175,10 +269,26 @@ const VerseItem = React.memo(
             >
               {transformText(item.title!.trim())}
               {'\n'}
-            </Text>
+            </UITextView>
           ) : null}
 
-          <Text
+          {/* A note starting here turns the number into its button, as
+              YouVersion does: white on the accent colour, tap to open. */}
+          <UITextView
+            onPress={
+              startNoteId
+                ? e => {
+                    e.stopPropagation?.();
+                    onNoteMarkPress?.(startNoteId);
+                  }
+                : undefined
+            }
+            // Without it, a long-press that selects the number would also
+            // open the note on release.
+            onLongPress={startNoteId ? SPAN_LONG_PRESS : undefined}
+            suppressHighlighting
+            accessibilityRole={startNoteId ? 'button' : undefined}
+            accessibilityLabel={startNoteId ? t('notes.open') : undefined}
             style={[
               TEXT_STYLES.verseNumber,
               {
@@ -191,25 +301,12 @@ const VerseItem = React.memo(
                   },
                 ],
               },
+              startNoteId ? [styles.verseNumberOnNote, {backgroundColor: theme.colors.accentBlue}] : null,
             ]}
           >
-            {item.verse_number}
-            {hasNote ? (
-              <Text
-                onPress={(e) => {
-                  e.stopPropagation?.();
-                  onNotePress?.(item);
-                }}
-                suppressHighlighting
-                style={{
-                  fontSize: scaleFontSize(TEXT_STYLES.verseNumber.fontSize * 0.85, fontScale),
-                  color: theme.colors.verseNumber,
-                }}>
-                {' ✎'}
-              </Text>
-            ) : null}
-            {' '}
-          </Text>
+            {verseNumberLabel(item.verse_number, !!startNoteId)}
+          </UITextView>
+          {' '}
 
           {lines.map((line, idx) => {
             const isBlockItalic = italicLines.has(idx);
@@ -224,7 +321,7 @@ const VerseItem = React.memo(
             if (hasMarks) {
               const segments = buildLineSegments(line, lineOffsets[idx], verseMarks);
               return (
-                <Text key={`bible-line-${item.id}-${idx}`} style={lineStyle}>
+                <UITextView key={`bible-line-${item.id}-${idx}`} style={lineStyle}>
                   {idx === 0 ? '' : '\n'}
                   {segments.map((seg, segIdx) => {
                     const markStyles = styleToTextStyle(
@@ -238,7 +335,7 @@ const VerseItem = React.memo(
                     );
                     const hasHighlight = seg.marks.includes('highlight' as MarkStyle);
                     return (
-                      <Text
+                      <UITextView
                         key={`seg-${segIdx}`}
                         style={[
                           seg.italic ? {fontStyle: 'italic'} : null,
@@ -253,15 +350,15 @@ const VerseItem = React.memo(
                         ]}
                       >
                         {seg.text}
-                      </Text>
+                      </UITextView>
                     );
                   })}
-                </Text>
+                </UITextView>
               );
             }
 
             return (
-              <Text key={`bible-line-${item.id}-${idx}`} style={lineStyle}>
+              <UITextView key={`bible-line-${item.id}-${idx}`} style={lineStyle}>
                 {idx === 0 ? '' : '\n'}
                 {renderBibleLineForReader(line, {
                   baseTextStyle: { lineHeight: verseLineHeight },
@@ -278,12 +375,12 @@ const VerseItem = React.memo(
                     : undefined,
                   onRefPress: handleInlineRefPress,
                 })}
-              </Text>
+              </UITextView>
             );
           })}
 
           {footnotes.map((footnote, idx) => (
-            <Text
+            <UITextView
               key={`bible-footnote-${item.id}-${idx}`}
               style={{
                 color: theme.colors.textWatermark,
@@ -293,10 +390,47 @@ const VerseItem = React.memo(
             >
               {'\n'}
               {footnote}
-            </Text>
+            </UITextView>
           ))}
-        </Text>
+        </VerseText>
+        {/* The start of the note under the verses it covers, a few words and
+            "…", like a pencilled line in the margin. Tap to read it all. */}
+        {previews.map(p => (
+          <Pressable
+            key={p.noteId}
+            onPress={() => onNoteMarkPress?.(p.noteId)}
+            style={styles.notePreview}
+            accessibilityRole="button"
+            accessibilityLabel={t('notes.open')}
+          >
+            <NoteGlyph color={theme.colors.accentBlue} size={14} />
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              maxFontSizeMultiplier={1.3}
+              style={[
+                styles.notePreviewText,
+                {
+                  color: theme.colors.accentBlue,
+                  fontSize: scaleFontSize(TEXT_STYLES.body.fontSize * 0.88, fontScale),
+                },
+              ]}
+            >
+              {p.snippet}
+            </Text>
+          </Pressable>
+        ))}
       </Pressable>
+    );
+
+    // The bubble sits right above the verse it belongs to.
+    return noteBubble ? (
+      <View>
+        {noteBubble}
+        {verseBlock}
+      </View>
+    ) : (
+      verseBlock
     );
   },
   (prev, next) =>
@@ -309,7 +443,12 @@ const VerseItem = React.memo(
     prev.selectedVerseRange?.start === next.selectedVerseRange?.start &&
     prev.selectedVerseRange?.end === next.selectedVerseRange?.end &&
     prev.onInlineRefPress === next.onInlineRefPress &&
-    prev.onNotePress === next.onNotePress &&
+    prev.noteMarks === next.noteMarks &&
+    prev.noteMarkerRef === next.noteMarkerRef &&
+    prev.onNoteMarkPress === next.onNoteMarkPress &&
+    prev.noteBubble === next.noteBubble &&
+    prev.nativeSelection === next.nativeSelection &&
+    prev.onSelectableRef === next.onSelectableRef &&
     prev.verseMarks === next.verseMarks &&
     prev.theme.colors.textPrimary === next.theme.colors.textPrimary &&
     prev.theme.colors.verseNumber === next.theme.colors.verseNumber &&
@@ -325,7 +464,17 @@ interface BibleReaderViewProps {
   selectedVerseNumber?: number | null;
   selectedVerseRange?: SelectedVerseRange;
   onInlineRefPress?: (ref: InlineBibleRef) => void;
-  onNotePress?: (verse: BibleVerse) => void;
+  // This chapter's notes, drawn as brackets in the margin.
+  notes?: Note[];
+  onNoteMarkPress?: (noteId: string) => void;
+  // The open note bubble: drawn above this verse, scrolled clear of the
+  // keyboard. `onFocus` is for the bubble's text field.
+  noteBubbleVerse?: number | null;
+  renderNoteBubble?: (onFocus: () => void) => React.ReactNode;
+  // An item of the phone's selection menu was chosen on a verse. `range` is
+  // the selection within the verse text, null when only the number or title
+  // was selected.
+  onSelectionAction?: (action: VerseSelectionAction) => void;
   flatListRef?: React.RefObject<FlatList<any> | null>;
   headerText?: string | null;
   chapterMarks?: ChapterMark[];
@@ -344,7 +493,11 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   selectedVerseNumber,
   selectedVerseRange,
   onInlineRefPress,
-  onNotePress,
+  notes,
+  onNoteMarkPress,
+  noteBubbleVerse,
+  renderNoteBubble,
+  onSelectionAction,
   flatListRef,
   headerText,
   chapterMarks,
@@ -353,6 +506,8 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   onTopVerseChange,
 }) => {
   const { theme } = useTheme();
+  const noteMarkerRef = useTutorialTarget('noteMarker');
+  const keyboardHeight = useKeyboardHeight();
   const { isLowEndMode } = useLowEndMode();
   const {variant: jesusNameVariant, transformText} = useJesusName();
   const insets = useSafeAreaInsets();
@@ -408,6 +563,101 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     return map;
   }, [chapterMarks, verseSpans]);
 
+  // verse_number -> its bracket, coloured number and previews (stable objects,
+  // so untouched verses skip re-rendering). The preview's length follows the
+  // window width, read once here so a rotation recomputes it once.
+  const {width: windowWidth} = useWindowDimensions();
+  const snippetBudget = useMemo(() => noteSnippetBudget(windowWidth), [windowWidth]);
+  const noteMarksByVerse = useMemo(
+    () => noteMarksForVerses(notes ?? [], snippetBudget),
+    [notes, snippetBudget],
+  );
+
+  // Native selection: which verse each selectable <Text> (by its React tag)
+  // shows, so a menu action can be traced back to its verse.
+  const selectableTags = useRef(new Map<number, number>());
+  const onSelectableRef = useCallback((verseNumber: number, instance: unknown) => {
+    const tags = selectableTags.current;
+    if (!instance) {
+      for (const [tag, v] of tags) {
+        if (v === verseNumber) {
+          tags.delete(tag);
+          reportSelection(tag, false);
+        }
+      }
+      return;
+    }
+    const tag = attachSelectionMenu(instance);
+    if (tag != null) tags.set(tag, verseNumber);
+  }, []);
+
+  // Read at event time, so the subscription below stays put.
+  const selectionContext = useRef({verses, transformText, noteMarksByVerse, onSelectionAction});
+  selectionContext.current = {verses, transformText, noteMarksByVerse, onSelectionAction};
+
+  useEffect(() => {
+    if (!NATIVE_SELECTION) return;
+    const sub = onSelectionMenuAction(({tag, key, start, end}) => {
+      const now = selectionContext.current;
+      const verseNumber = selectableTags.current.get(tag);
+      const verse = now.verses.find(v => v.verse_number === verseNumber);
+      if (!verse) return;
+      // Rebuild exactly what the verse's <Text> shows, to take the title and
+      // the number off the selection.
+      const display = buildVerseDisplay(verse, now.transformText);
+      const label = verseNumberLabel(
+        verse.verse_number,
+        !!now.noteMarksByVerse[verse.verse_number]?.startNoteId,
+      );
+      const range = selectionToVerseRange(
+        start,
+        end,
+        verseTextPrefixLength(display.title, label),
+        display.displayText.length,
+      );
+      now.onSelectionAction?.({
+        verse,
+        key,
+        range,
+        text: range ? display.displayText.slice(range.start, range.end) : '',
+      });
+    });
+    return () => sub?.remove();
+  }, []);
+
+  // Brings the bubble's verse to the top of the reader, above where the
+  // keyboard rises (the window doesn't shrink for it on edge-to-edge Android).
+  const scrollBubbleToTop = useCallback(() => {
+    if (noteBubbleVerse == null) return;
+    const index = visibleVerses.findIndex(v => v.verse_number === noteBubbleVerse);
+    if (index < 0) return;
+    setTimeout(
+      () => flatListRef?.current?.scrollToIndex({index, viewPosition: 0, animated: true}),
+      120,
+    );
+  }, [noteBubbleVerse, visibleVerses, flatListRef]);
+
+  // When the bubble opens, and again once the keyboard is up (the extra
+  // bottom room below lets even the last verse rise that far).
+  useEffect(() => {
+    scrollBubbleToTop();
+  }, [scrollBubbleToTop]);
+  useEffect(() => {
+    if (keyboardHeight > 0) scrollBubbleToTop();
+  }, [keyboardHeight, scrollBubbleToTop]);
+
+  const noteBubbleElement =
+    noteBubbleVerse != null && renderNoteBubble ? renderNoteBubble(scrollBubbleToTop) : null;
+
+  // The tutorial points at the bracket of the note edited last.
+  const markerVerse = useMemo(() => {
+    let latest: Note | null = null;
+    for (const n of notes ?? []) {
+      if (n.anchor.kind === 'bible' && (!latest || n.updatedAt > latest.updatedAt)) latest = n;
+    }
+    return latest?.anchor.kind === 'bible' ? latest.anchor.verseStart : null;
+  }, [notes]);
+
   // Low-end mode: fewer items rendered, lighter batching
   const listProps = isLowEndMode
     ? {
@@ -458,11 +708,19 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
           onVerseDoubleTap={onVerseDoubleTap}
           onVerseLongPress={onVerseLongPress}
           onInlineRefPress={onInlineRefPress}
-          onNotePress={onNotePress}
+          noteMarks={noteMarksByVerse[item.verse_number] ?? null}
+          noteMarkerRef={item.verse_number === markerVerse ? noteMarkerRef : undefined}
+          onNoteMarkPress={onNoteMarkPress}
+          noteBubble={item.verse_number === noteBubbleVerse ? noteBubbleElement : undefined}
+          nativeSelection={NATIVE_SELECTION}
+          onSelectableRef={onSelectableRef}
         />
       );
     },
     [
+      onSelectableRef,
+      noteBubbleVerse,
+      noteBubbleElement,
       theme,
       fontScale,
       jesusNameVariant,
@@ -473,7 +731,10 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       onVerseDoubleTap,
       onVerseLongPress,
       onInlineRefPress,
-      onNotePress,
+      noteMarksByVerse,
+      markerVerse,
+      noteMarkerRef,
+      onNoteMarkPress,
     ],
   );
 
@@ -522,7 +783,12 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       keyExtractor={keyExtractor}
       contentContainerStyle={[
         styles.contentContainer,
-        {paddingBottom: BIBLE_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted},
+        {
+          paddingBottom:
+            BIBLE_BASE_BOTTOM_PADDING +
+            bottomScrollSpacerAdjusted +
+            (noteBubbleVerse != null ? keyboardHeight : 0),
+        },
       ]}
       ListHeaderComponent={
         <View>
@@ -610,6 +876,58 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 132, 255, 0.16)',
     borderRadius: 12,
     padding: 12,
+  },
+  // A noted verse reaches into the list's left padding for its bracket, so
+  // the bracket stays inside the verse's own bounds and stays tappable (a
+  // child outside its parent's bounds gets no touches on Android).
+  notedVerseBlock: {
+    marginLeft: -NOTE_GUTTER,
+    paddingLeft: NOTE_GUTTER,
+  },
+  noteGutter: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: NOTE_GUTTER,
+  },
+  noteBar: {
+    position: 'absolute',
+    left: 6,
+    width: 3,
+    top: 0,
+    bottom: 4,
+    borderRadius: 1.5,
+    opacity: 0.55,
+  },
+  noteBarStart: {
+    top: 4,
+  },
+  // Runs through the gap to the next verse so the bracket reads as one line.
+  noteBarContinues: {
+    bottom: -BIBLE_VERSE_BLOCK_MARGIN,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  // White number on the accent colour: the verse starts a note.
+  verseNumberOnNote: {
+    color: '#FFFFFF',
+  },
+  // Quieter than the verse (0.7) and only as wide as its few words, so it
+  // reads as a margin note, not as text of the chapter.
+  notePreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    gap: 6,
+    marginTop: 4,
+    paddingVertical: 4,
+    opacity: 0.7,
+  },
+  notePreviewText: {
+    flexShrink: 1,
+    fontStyle: 'italic',
   },
   rangeBanner: {
     alignItems: 'center',

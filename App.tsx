@@ -13,6 +13,7 @@ import {FavoritesProvider} from './src/hooks/useFavorites';
 import {HymnFavoritesProvider} from './src/hooks/useHymnFavorites';
 import {BibleHistoryProvider} from './src/hooks/useBibleHistory';
 import {HymnHistoryProvider} from './src/hooks/useHymnHistory';
+import {NotesProvider} from './src/contexts/NotesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {STORAGE_KEY_PRIVACY_POLICY_ACCEPTED} from './src/screens/PrivacyPolicyScreen';
 import {isOnboardingDone} from './src/contexts/TutorialContext';
@@ -22,7 +23,7 @@ import {
   drainFatalErrorToQueue,
 } from './src/services/reporting/crashReporter';
 import {ensureRemindersScheduled} from './src/services/reminders/readingReminder';
-import {syncDailyVerseWidget} from './src/services/widget/dailyVerseWidget';
+import {syncDailyVerseWidget, TENY_HO_ANAO_URL} from './src/services/widget/dailyVerseWidget';
 import notifee, {EventType, type Notification} from '@notifee/react-native';
 
 // Capture uncaught JS errors (async, timers, event handlers) before RN's
@@ -59,6 +60,11 @@ const openVerseFromUrl = (url: string | null) => {
   // the app again on "Vita" so the user lands back on the widget.
   if (url?.startsWith('ebaiboly://widget-look')) {
     if (navigationRef.isReady()) navigationRef.navigate('WidgetLook', {fromWidget: true});
+    return;
+  }
+  // The widget's "Teny ho anao" check-in card.
+  if (url?.startsWith(TENY_HO_ANAO_URL)) {
+    if (navigationRef.isReady()) navigationRef.navigate('TenyHoAnao');
     return;
   }
   if (!url?.startsWith('ebaiboly://verse')) return;
@@ -187,18 +193,20 @@ const App = () => {
                       <HymnFavoritesProvider>
                         <BibleHistoryProvider>
                           <HymnHistoryProvider>
-                            <NavigationContainer
-                              ref={navigationRef}
-                              onReady={() => {
-                                // Cold start from a notification or widget tap.
-                                notifee
-                                  .getInitialNotification()
-                                  .then(initial => openVerseFromNotification(initial?.notification))
-                                  .catch(() => {});
-                                Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
-                              }}>
-                              <AppContent />
-                            </NavigationContainer>
+                            <NotesProvider>
+                              <NavigationContainer
+                                ref={navigationRef}
+                                onReady={() => {
+                                  // Cold start from a notification or widget tap.
+                                  notifee
+                                    .getInitialNotification()
+                                    .then(initial => openVerseFromNotification(initial?.notification))
+                                    .catch(() => {});
+                                  Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
+                                }}>
+                                <AppContent />
+                              </NavigationContainer>
+                            </NotesProvider>
                           </HymnHistoryProvider>
                         </BibleHistoryProvider>
                       </HymnFavoritesProvider>

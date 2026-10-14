@@ -59,4 +59,31 @@ describe('dailyVerses', () => {
     db.close();
     expect(missing).toEqual([]);
   });
+
+  // Psalm headings sit inside verse 1 ("Ho an'ny mpiventy hira. Nataon'ny
+  // Koraita; At-alamoth…") and read as gibberish on a notification or widget.
+  it('no ref carries a Psalm heading', async () => {
+    const sqlite3 = require('sqlite3');
+    const db = new sqlite3.Database(
+      path.join(__dirname, '../assets/data/dev/BibleMG65.db'),
+      sqlite3.OPEN_READONLY,
+    );
+    const text = (r: VerseRef) =>
+      new Promise<string>((resolve, reject) =>
+        db.all(
+          'SELECT text FROM Verses WHERE book_id = ? AND chapter = ? AND verse_number BETWEEN ? AND ?',
+          [r.b, r.c, r.v, r.to ?? r.v],
+          (err: Error | null, rows: {text: string}[]) =>
+            err ? reject(err) : resolve(rows.map(row => row.text).join(' ')),
+        ),
+      );
+    const headed: string[] = [];
+    for (const r of all) {
+      if (/mpiventy hira|Tonon-kira|Miktama|Maskila|Fihirana fiakarana/.test(await text(r))) {
+        headed.push(key(r));
+      }
+    }
+    db.close();
+    expect(headed).toEqual([]);
+  });
 });

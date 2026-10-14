@@ -5,7 +5,6 @@ import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {maybeRequestReview} from '../utils/appReview';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {t} from '../i18n/strings';
-import {PRIVACY_POLICY_URL} from '../constants/legal';
 import {useTheme, useLowEndMode} from '../contexts/ThemeContext';
 import {getKeepScreenOn, setKeepScreenOn} from '../hooks/useKeepAwake';
 import packageJson from '../../package.json';
@@ -289,7 +288,7 @@ const AboutScreen = () => {
             <View style={styles.toggleTextContainer}>
               <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
                 {/* TODO(copy): MG title, e.g. keep the screen on while reading */}
-                Tsy maty ny efijery rehefa mamaky
+                Tsy maty ny écran rehefa mamaky
               </Text>
               <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
                 {/* TODO(copy): MG hint, e.g. like an open book; turn off to save battery */}
@@ -349,17 +348,6 @@ const AboutScreen = () => {
               {t('about.open')}
             </Text>
           </Pressable>
-
-          {canOpenUrl(PRIVACY_POLICY_URL) ? (
-            <Pressable style={styles.linkRow} onPress={() => openUrlSafe(PRIVACY_POLICY_URL)}>
-              <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
-                {t('about.privacyPolicy')}
-              </Text>
-              <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
-                {t('about.open')}
-              </Text>
-            </Pressable>
-          ) : null}
 
           {!contactEmail.trim() && !phoneNumber.trim() && !canOpenUrl(linkedInUrl) && !canOpenUrl(websiteUrl) ? (
             <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}

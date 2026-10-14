@@ -71,6 +71,11 @@ jest.mock('react-native-in-app-review', () => ({
 
 jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
 
+// Untranspiled TSX; off iOS it renders a plain Text anyway.
+jest.mock('@bsky.app/react-native-uitextview', () => ({
+  UITextView: require('react-native').Text,
+}));
+
 jest.mock('react-native-view-shot', () => ({
   captureRef: jest.fn(async () => 'file:///mock/card.png'),
   releaseCapture: jest.fn(),

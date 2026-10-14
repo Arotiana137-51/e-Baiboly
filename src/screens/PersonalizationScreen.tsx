@@ -163,7 +163,7 @@ const PersonalizationScreen = () => {
                 Sakafom-panahy (widget)
               </Text>
               <Text style={[styles.widgetHint, {color: theme.colors.textSecondary}]}>
-                Ny lokon'ny andinin-teny eo amin'ny efijery fandraisana.
+                Ny lokon'ny andinin-teny eo amin'ny écran fandraisana.
               </Text>
             </View>
             <Text style={[styles.widgetChevron, {color: accent}]}>›</Text>

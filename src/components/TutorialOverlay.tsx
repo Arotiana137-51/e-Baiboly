@@ -18,6 +18,7 @@ import Animated, {
 import {useTheme} from '../contexts/ThemeContext';
 import {useTutorial, useTutorialTargets} from '../contexts/TutorialContext';
 import {useAdaptiveInsets} from '../hooks/useAdaptiveInsets';
+import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
 import {hexToRgba} from '../utils/colorUtils';
 import type {TargetScope} from '../tutorials/registry';
 
@@ -45,6 +46,9 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   const {activeTutorial, step, stepIndex, stepCount, next, skip} = useTutorial();
   const targets = useTutorialTargets();
   const insets = useAdaptiveInsets();
+  // A keyboard opening or closing moves what's above it (the note sheet lifts
+  // itself onto it), so the hole is measured again when it does.
+  const keyboardHeight = useKeyboardHeight();
 
   // Root ref: we measure the overlay's OWN window origin and subtract it from
   // the target's window coords. That cancels any status-bar / safe-area offset
@@ -152,8 +156,9 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
       if (tries >= 6) clearInterval(iv);
     }, 100);
     return () => clearInterval(iv);
-    // `screen` re-runs measurement on rotation.
-  }, [isMine, stepIndex, measure, screen]);
+    // `screen` re-runs measurement on rotation, `keyboardHeight` when the
+    // keyboard moves things.
+  }, [isMine, stepIndex, measure, screen, keyboardHeight]);
 
   const glowStyle = useAnimatedStyle(() => {
     const w = 2 + pulse.value * 2; // 2 → 4

@@ -8,6 +8,7 @@ import {
   Dimensions,
   FlatList,
   Platform,
+  Alert,
   AppState,
   PanResponder,
 } from 'react-native';
@@ -16,7 +17,15 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
-import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
+import BibleReaderView, {
+  type SelectedVerseRange,
+  type VerseSelectionAction,
+} from '../components/BibleReaderView';
+import {
+  NATIVE_SELECTION,
+  onSelectionActive,
+  setSelectionMenuItems,
+} from '../services/selectionMenu';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
@@ -26,6 +35,8 @@ import SelectionTopBar from '../components/SelectionTopBar';
 import VerseActionPopover from '../components/VerseActionPopover';
 import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
+import NoteBubble, {type NoteBubbleTarget} from '../components/NoteBubble';
+import {UndoBar} from '../components/UndoBar';
 import {ShareCardModal} from '../components/ShareCardModal';
 import {
   buildBibleShareItems,
@@ -53,7 +64,16 @@ import HamburgerMenuPopover, {
 } from '../components/HamburgerMenuPopover';
 import {useTheme} from '../contexts/ThemeContext';
 import {useCultMode} from '../contexts/CultModeContext';
-import {WHOLE_CHAPTER_VERSE_END} from '../types/cultMode';
+import {isWholeChapterEntry} from '../types/cultMode';
+import {useNotes} from '../contexts/NotesContext';
+import {
+  anchorStartKey,
+  chapterNotes,
+  hymnNotes,
+  sameAnchorStart,
+  type Note,
+  type NoteAnchor,
+} from '../types/notes';
 import {useTutorial, useTutorialTarget, isOnboardingDone} from '../contexts/TutorialContext';
 import {ONBOARDING_ID, CULT_TUTORIAL_ID, HIGHLIGHT_TUTORIAL_ID} from '../tutorials/registry';
 import TutorialOverlay from '../components/TutorialOverlay';
@@ -128,6 +148,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // resurrects) whatever history entry the user deleted for the last-read
   // item, since restoring position and logging a visit shared one effect.
   const skipNextHistoryLogRef = useRef(false);
+  // Set once a route param (deep link, notification, favorites…) picks the
+  // Bible position, so the last-read restore never overwrites it.
+  const explicitBibleTargetRef = useRef(false);
 
   const appState = useRef(AppState.currentState);
 
@@ -192,6 +215,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     // caller actually meant to set.
     if (params.mode !== 'hymnal') {
       if (params.selectedBook) {
+        // Wins over the async last-read restore below if that read is
+        // still in flight (cold start from the widget or a notification).
+        explicitBibleTargetRef.current = true;
         setMode('bible');
         setCurrentBook(params.selectedBook);
       }
@@ -275,12 +301,17 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Hymn selection modal state
   const [hymnSelectionVisible, setHymnSelectionVisible] = useState(false);
 
+  // A native text selection is on screen: its handles drag sideways, which
+  // must not switch Baiboly / Fihirana.
+  const selectionActiveRef = useRef(false);
+
   const swipeResponder = useMemo(() => {
     const SWIPE_MIN_DX = 60;
     const SWIPE_ACTIVATION_DX = 18;
     const SWIPE_MAX_DY = 80;
 
     const isSwipeEligible = () => {
+      if (selectionActiveRef.current) return false;
       if (isMenuOpen) return false;
       if (bibleSelectionVisible) return false;
       if (verseActionVisible) return false;
@@ -386,6 +417,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     (async () => {
       try {
         const stored = await AsyncStorage.getItem(LAST_READ_BIBLE_KEY);
+        if (explicitBibleTargetRef.current) return;
         if (stored) {
           const {bookId, bookName, chapter, verse} = JSON.parse(stored);
           if (books.find(b => b.id === bookId)) {
@@ -400,6 +432,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       } catch (error) {
         console.error('Error restoring last-read Bible position:', error);
       }
+      if (explicitBibleTargetRef.current) return;
       const defaultBook = books.find(b => b.name === 'Marka') ?? books[0];
       skipNextHistoryLogRef.current = true;
       setCurrentBook({id: defaultBook.id, name: defaultBook.name});
@@ -488,6 +521,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     if (shouldScrollToVerse === null || verses.length === 0) {
       return;
     }
+    // The target chapter's verses may not have loaded yet (book/chapter and
+    // the scroll target change together, loadVerses lands a render later).
+    // Matching against the previous chapter would scroll to the wrong verse
+    // and consume the request, so wait for the right chapter.
+    if (verses[0].book_id !== currentBook?.id || verses[0].chapter !== currentChapter) {
+      return;
+    }
 
     // When a range is active, the reader filters its FlatList down to just
     // the range, so the target verse is at index 0 — no scroll needed, and
@@ -521,7 +561,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [verses, shouldScrollToVerse, selectedVerseRange]);
+  }, [verses, shouldScrollToVerse, selectedVerseRange, currentBook?.id, currentChapter]);
 
   // Chevron-driven scroll-to-top: wait until the new chapter's verses have
   // loaded before scrolling, otherwise the call lands on the previous
@@ -654,8 +694,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Cult mode propagator: when the active entry changes, drive the reader
   // (mode + book/chapter/range or hymn id/number/category) from it.
   // Whole-chapter Bible entries translate back to a null range so no banner
-  // shows. The verseEnd>=WHOLE_CHAPTER_VERSE_END fallback covers entries
-  // saved before isWholeChapter existed.
+  // shows. isWholeChapterEntry also covers entries saved before
+  // isWholeChapter existed.
   useEffect(() => {
     if (!cultMode.isActive || !cultMode.currentEntry) return;
     const entry = cultMode.currentEntry;
@@ -664,9 +704,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       setCurrentBook({id: entry.bookId, name: entry.bookName});
       setCurrentChapter(entry.chapter);
       setSelectedVerseNumber(null);
-      const isWholeChapter =
-        entry.isWholeChapter ?? entry.verseEnd >= WHOLE_CHAPTER_VERSE_END;
-      if (isWholeChapter) {
+      if (isWholeChapterEntry(entry)) {
         setSelectedVerseRange(null);
         setShouldScrollToVerse(null);
       } else {
@@ -779,6 +817,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       case 'readingReminder':
         navigation.navigate('ReadingReminder');
         return;
+      case 'tenyHoAnao':
+        navigation.navigate('TenyHoAnao');
+        return;
       default: {
         const _exhaustiveCheck: never = key;
         return _exhaustiveCheck;
@@ -834,7 +875,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const openHymnReportModal = (payload: { stanzaNumber: number; stanzaText: string }) => {
     const hymn = getCurrentHymn();
     const titleRef = `Fihirana ${hymn?.number ?? ''}${hymn?.category ? ` (${hymn.category.toUpperCase()})` : ''}`.trim();
-    const ref = `${titleRef} - Couplet ${payload.stanzaNumber}`.trim();
+    const part = payload.stanzaNumber === 0 ? HYMN_CHORUS_LABEL : `Couplet ${payload.stanzaNumber}`;
+    const ref = `${titleRef} - ${part}`.trim();
 
     setReportType('hymn');
     setReportReference(ref);
@@ -910,6 +952,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const handleVerseLongPress = (verse: BibleVerse) => {
     setSelectedVerseForAction(verse);
     setVerseActionVisible(true);
+    tutorial.notifyProgress('verseActionOpened');
   };
 
   const chapterDisplay = useMemo(() => {
@@ -934,6 +977,174 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       : currentBook
       ? bibleShareReference(currentChapter)
       : undefined;
+
+  // --- Notes: anchored to verses / stanzas, shown in a bubble above them ---
+  const {notes, saveNote} = useNotes();
+  const [noteBubble, setNoteBubble] = useState<NoteBubbleTarget | null>(null);
+  const [deletedNote, setDeletedNote] = useState<Note | null>(null);
+  const clearDeletedNote = useCallback(() => setDeletedNote(null), []);
+
+  // Leaving the chapter or hymn closes the bubble (its unmount saves it).
+  useEffect(() => {
+    setNoteBubble(null);
+  }, [mode, currentBook?.id, currentChapter, currentHymnId]);
+
+  const currentChapterNotes = useMemo(
+    () => (currentBook ? chapterNotes(notes, currentBook.id, currentChapter) : []),
+    [notes, currentBook, currentChapter],
+  );
+  const currentHymnNotes = useMemo(
+    () => (mode === 'hymnal' && currentHymnId ? hymnNotes(notes, currentHymnId) : []),
+    [notes, mode, currentHymnId],
+  );
+
+  const bibleNoteTarget = useCallback(
+    (anchor: NoteAnchor, existing: Note | null): NoteBubbleTarget => ({
+      anchor,
+      existing,
+      maxVerse: verses.length > 0 ? verses[verses.length - 1].verse_number : undefined,
+      reference: a =>
+        a.kind === 'bible'
+          ? `${currentBook?.name ?? ''} ${a.chapter}:${a.verseStart}${a.verseEnd > a.verseStart ? `-${a.verseEnd}` : ''}`.trim()
+          : '',
+      quote: a =>
+        a.kind === 'bible'
+          ? verses
+              .filter(v => v.verse_number >= a.verseStart && v.verse_number <= a.verseEnd)
+              .map(v => transformText(v.text))
+              .join(' ')
+          : '',
+    }),
+    [verses, currentBook, transformText],
+  );
+
+  const hymnNoteTarget = useCallback(
+    (anchor: NoteAnchor, existing: Note | null): NoteBubbleTarget => {
+      const hymn = currentHymnId ? hymns.find(h => h.id === currentHymnId) ?? null : null;
+      const label = hymn
+        ? `${hymn.category ? `${hymn.category.toUpperCase()} ` : ''}${hymn.number}`
+        : '';
+      return {
+        anchor,
+        existing,
+        reference: a => {
+          if (a.kind !== 'hymn') return '';
+          if (a.stanza === null) return hymn?.title ? `${label} · ${hymn.title}` : label;
+          return `${label} · ${a.stanza === 0 ? HYMN_CHORUS_LABEL : a.stanza}`;
+        },
+        quote: a => {
+          if (a.kind !== 'hymn' || a.stanza === null) return '';
+          return hymnVerses
+            .filter(v => v.verse_number === a.stanza)
+            .map(v => v.text.trim())
+            .join(' / ');
+        },
+      };
+    },
+    [currentHymnId, hymns, hymnVerses],
+  );
+
+  // A verse that already starts a note opens it; otherwise a new one-verse note.
+  const openBibleNote = (verse: BibleVerse) => {
+    if (!currentBook) return;
+    const anchor: NoteAnchor = {
+      kind: 'bible',
+      bookId: currentBook.id,
+      chapter: currentChapter,
+      verseStart: verse.verse_number,
+      verseEnd: verse.verse_number,
+    };
+    const existing = currentChapterNotes.find(n => sameAnchorStart(n.anchor, anchor)) ?? null;
+    setNoteBubble(bibleNoteTarget(anchor, existing));
+  };
+
+  const openHymnNote = (stanza: number | null) => {
+    if (!currentHymnId) return;
+    const anchor: NoteAnchor = {kind: 'hymn', hymnId: currentHymnId, stanza};
+    const existing = currentHymnNotes.find(n => sameAnchorStart(n.anchor, anchor)) ?? null;
+    setNoteBubble(hymnNoteTarget(anchor, existing));
+  };
+
+  // From a margin bracket or the hymn header chip.
+  const openNoteById = useCallback(
+    (noteId: string) => {
+      const note = notes.find(n => n.id === noteId);
+      if (!note) return;
+      setNoteBubble(
+        note.anchor.kind === 'bible'
+          ? bibleNoteTarget(note.anchor, note)
+          : hymnNoteTarget(note.anchor, note),
+      );
+    },
+    [notes, bibleNoteTarget, hymnNoteTarget],
+  );
+
+  // From the notes list: open the note once its chapter or hymn is on screen.
+  const [pendingNoteId, setPendingNoteId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!route.params?.openNoteId) return;
+    setPendingNoteId(route.params.openNoteId);
+    // Params are merged on later visits; clear it so it can't fire again.
+    navigation.setParams({openNoteId: undefined});
+  }, [route.params?.openNoteId, navigation]);
+  useEffect(() => {
+    if (!pendingNoteId) return;
+    const note = notes.find(n => n.id === pendingNoteId);
+    if (!note) return;
+    const a = note.anchor;
+    const onScreen =
+      a.kind === 'bible'
+        ? mode === 'bible' &&
+          verses.length > 0 &&
+          verses[0].book_id === a.bookId &&
+          verses[0].chapter === a.chapter
+        : mode === 'hymnal' && hymnVerses.length > 0 && hymnVerses[0].hymn_id === a.hymnId;
+    if (!onScreen) return;
+    setPendingNoteId(null);
+    openNoteById(note.id);
+  }, [pendingNoteId, notes, mode, verses, hymnVerses, openNoteById]);
+
+  // Stable while the end verse changes or the note gets saved, so the bubble
+  // keeps its draft; another note (another start) gets a fresh bubble.
+  const bubbleKey = noteBubble ? anchorStartKey(noteBubble.anchor) : '';
+  const renderNoteBubble = useCallback(
+    (onFocus: () => void) =>
+      noteBubble ? (
+        <NoteBubble
+          key={bubbleKey}
+          target={noteBubble}
+          onFocus={onFocus}
+          onClose={() => setNoteBubble(null)}
+          // Keep the target on the stored note, so a bubble that remounts
+          // edits it instead of creating a second one.
+          onSaved={note =>
+            setNoteBubble(prev => (prev ? {...prev, anchor: note.anchor, existing: note} : prev))
+          }
+          onDeleted={setDeletedNote}
+        />
+      ) : null,
+    [noteBubble, bubbleKey],
+  );
+  const noteBubbleVerse =
+    noteBubble?.anchor.kind === 'bible' ? noteBubble.anchor.verseStart : null;
+  const noteBubbleStanza =
+    noteBubble?.anchor.kind === 'hymn'
+      ? noteBubble.anchor.stanza === null
+        ? 'whole'
+        : noteBubble.anchor.stanza
+      : null;
+
+  const selectedVerseHasNote =
+    !!selectedVerseForAction &&
+    currentChapterNotes.some(
+      n => n.anchor.kind === 'bible' && n.anchor.verseStart === selectedVerseForAction.verse_number,
+    );
+  const stanzaHasNote = currentHymnNotes.some(
+    n => n.anchor.kind === 'hymn' && n.anchor.stanza === selectedHymnStanzaNumber,
+  );
+  const hymnHasNote = currentHymnNotes.some(
+    n => n.anchor.kind === 'hymn' && n.anchor.stanza === null,
+  );
 
   const handleChapterMarksSave = (next: ChapterMark[]) => {
     if (mode === 'hymnal') {
@@ -961,6 +1172,56 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const handleAddToFavorites = (verse: BibleVerse) => {
     if (currentBook) {
       addToBibleFavorites(verse, currentBook.name);
+    }
+  };
+
+  // --- Native text selection: the phone's own selection menu carries the
+  // verse actions that the double-tap menu had. ---
+  useEffect(() => {
+    if (!NATIVE_SELECTION) return;
+    setSelectionMenuItems([
+      {key: 'highlight', label: t('selection.highlight'), primary: true},
+      {key: 'note', label: t('selection.note'), primary: true},
+      {key: 'favorite', label: t('selection.favorite'), primary: true},
+      {key: 'share', label: t('selection.share'), primary: true},
+      {key: 'concordance', label: t('selection.concordance')},
+      {key: 'report', label: t('selection.report')},
+    ]);
+    return onSelectionActive(active => {
+      selectionActiveRef.current = active;
+      // The notes tutorial waits for the verse's menu to open.
+      if (active) tutorial.notifyProgress('verseActionOpened');
+    });
+    // Set once; tutorial.notifyProgress is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleVerseSelectionAction = ({verse, key, range, text}: VerseSelectionAction) => {
+    switch (key) {
+      case 'note':
+        openBibleNote(verse);
+        return;
+      case 'favorite':
+        handleAddToFavorites(verse);
+        return;
+      case 'share':
+        openBibleShare(verse);
+        return;
+      case 'concordance':
+        handleViewCorrespondence(verse);
+        return;
+      case 'report':
+        openBibleReportModal(verse);
+        return;
+      case 'highlight':
+        // TEMP(spike): shows what Surligner would colour, to check the
+        // selection maps onto the right words; the highlights store is next.
+        Alert.alert(
+          t('selection.highlight'),
+          `${currentBook?.name ?? ''} ${verse.chapter}:${verse.verse_number} ` +
+            `[${range?.start ?? '-'}–${range?.end ?? '-'}] «${text}»`,
+        );
+        return;
     }
   };
 
@@ -1335,13 +1596,11 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                 setChapterEditorScrollVerseNumber(verse.verse_number);
                 setChapterEditorVisible(true);
               }}
-              onNotePress={(verse) => {
-                // Tapping the ✎ glyph opens the chapter editor scrolled to the
-                // verse, where the note span is visible (dotted underline) and
-                // tappable to read/edit. Same open path as long-press.
-                setChapterEditorScrollVerseNumber(verse.verse_number);
-                setChapterEditorVisible(true);
-              }}
+              notes={currentChapterNotes}
+              onNoteMarkPress={openNoteById}
+              noteBubbleVerse={noteBubbleVerse}
+              renderNoteBubble={renderNoteBubble}
+              onSelectionAction={handleVerseSelectionAction}
               selectedVerseNumber={selectedVerseNumber}
               selectedVerseRange={selectedVerseRange}
               onInlineRefPress={handleInlineBibleRefPress}
@@ -1363,7 +1622,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               marks={hymnMarks}
               onHymnLongPress={handleHymnStanzaLongPress}
               onHymnDoubleTap={handleHymnStanzaDoubleTap}
-              onNotePress={handleHymnStanzaLongPress}
+              notes={currentHymnNotes}
+              onNoteMarkPress={openNoteById}
+              noteBubbleStanza={noteBubbleStanza}
+              renderNoteBubble={renderNoteBubble}
             />
           )
         )}
@@ -1558,7 +1820,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         visible={verseActionVisible}
         verse={selectedVerseForAction}
         verseBookName={currentBook?.name}
+        hasNote={selectedVerseHasNote}
         onClose={closeVerseAction}
+        onNote={openBibleNote}
         onViewCorrespondence={handleViewCorrespondence}
         onAddToFavorites={handleAddToFavorites}
         onShare={openBibleShare}
@@ -1587,10 +1851,25 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         hymn={getCurrentHymn()}
         stanzaNumber={selectedHymnStanzaNumber}
         stanzaText={selectedHymnStanzaText}
+        stanzaHasNote={stanzaHasNote}
+        hymnHasNote={hymnHasNote}
         onClose={closeHymnAction}
+        onNote={openHymnNote}
         onAddToFavorites={handleAddHymnToFavorites}
         onShare={openHymnShare}
         onReportIssue={openHymnReportModal}
+      />
+
+      {/* Clear of the floating Baiboly / Fihirana switch at the bottom. */}
+      <UndoBar
+        item={deletedNote}
+        message={t('notes.deleted')}
+        onUndo={note => {
+          saveNote(note);
+          setDeletedNote(null);
+        }}
+        onDismiss={clearDeletedNote}
+        bottomOffset={72}
       />
 
       {shareCard ? (

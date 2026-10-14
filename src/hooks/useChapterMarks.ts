@@ -11,6 +11,11 @@ const isMark = (m: any): m is ChapterMark =>
   m.end > m.start &&
   (m.note === undefined || typeof m.note === 'string');
 
+// Notes now live in NotesContext. Old 'note' marks still in this storage are
+// hidden here and kept on every write, so only the one-shot migration
+// (utils/legacyNotes.ts) ever removes them.
+const isLegacyNoteMark = (m: any): boolean => !!m && m.style === 'note';
+
 // Marks for one Bible chapter or one hymn, keyed by storage key. The two
 // exported hooks below only differ in how they derive that key.
 const useMarksForKey = (key: string | null) => {
@@ -28,7 +33,9 @@ const useMarksForKey = (key: string | null) => {
       const raw = await AsyncStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw);
-        const validMarks = Array.isArray(parsed) ? parsed.filter(isMark) : [];
+        const validMarks = Array.isArray(parsed)
+          ? parsed.filter(m => isMark(m) && !isLegacyNoteMark(m))
+          : [];
         setMarks(validMarks);
       } else {
         setMarks([]);
@@ -49,10 +56,14 @@ const useMarksForKey = (key: string | null) => {
     async (next: ChapterMark[]) => {
       if (key == null) return;
       try {
-        if (next.length === 0) {
+        const raw = await AsyncStorage.getItem(key);
+        const parsed: unknown = raw ? JSON.parse(raw) : [];
+        const legacyNotes = Array.isArray(parsed) ? parsed.filter(isLegacyNoteMark) : [];
+        const toStore = [...next.filter(m => !isLegacyNoteMark(m)), ...legacyNotes];
+        if (toStore.length === 0) {
           await AsyncStorage.removeItem(key);
         } else {
-          await AsyncStorage.setItem(key, JSON.stringify(next));
+          await AsyncStorage.setItem(key, JSON.stringify(toStore));
         }
       } catch (error) {
         console.error('Error saving chapter marks:', error);

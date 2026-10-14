@@ -94,7 +94,7 @@ const WidgetLookScreen = () => {
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Placeholder MG copy — user-owned. */}
         <Text style={[styles.hint, {color: theme.colors.textSecondary}]}>
-          Safidio ny lokon'ny andinin-teny eo amin'ny efijery fandraisana.
+          Safidio ny lokon'ny andinin-teny eo amin'ny écran fandraisana.
         </Text>
 
         {look ? (

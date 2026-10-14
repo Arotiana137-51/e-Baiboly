@@ -2,13 +2,18 @@ import React from 'react';
 import { Pressable, Text, View, StyleSheet, Modal } from 'react-native';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTutorialTarget } from '../contexts/TutorialContext';
+import TutorialOverlay from './TutorialOverlay';
 import {t} from '../i18n/strings';
 
 interface VerseActionPopoverProps {
   visible: boolean;
   verse: BibleVerse | null;
   verseBookName?: string;
+  // The verse already starts a note: the item opens it instead of a new one.
+  hasNote?: boolean;
   onClose: () => void;
+  onNote: (verse: BibleVerse) => void;
   onViewCorrespondence: (verse: BibleVerse) => void;
   onAddToFavorites: (verse: BibleVerse) => void;
   onShare: (verse: BibleVerse) => void;
@@ -19,15 +24,23 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
   visible,
   verse,
   verseBookName,
+  hasNote,
   onClose,
+  onNote,
   onViewCorrespondence,
   onAddToFavorites,
   onShare,
   onReportIssue,
 }) => {
   const { theme } = useTheme();
+  const noteItemRef = useTutorialTarget('noteActionItem');
 
   if (!verse) return null;
+
+  const handleNote = () => {
+    onClose();
+    onNote(verse);
+  };
 
   const handleViewCorrespondence = () => {
     onViewCorrespondence(verse);
@@ -69,6 +82,17 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
           
           <View style={styles.menuItems}>
             <Pressable
+              ref={noteItemRef}
+              collapsable={false}
+              style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
+              onPress={handleNote}
+            >
+              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
+                {hasNote ? t('actions.noteOpen') : t('actions.noteAdd')}
+              </Text>
+            </Pressable>
+
+            <Pressable
               style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
               onPress={handleViewCorrespondence}
             >
@@ -106,6 +130,8 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
           </View>
         </Pressable>
       </Pressable>
+      {/* Notes tutorial spotlights the Naoty item from inside this modal. */}
+      <TutorialOverlay scope="modal" />
     </Modal>
   );
 };

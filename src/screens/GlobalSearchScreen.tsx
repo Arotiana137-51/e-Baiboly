@@ -2,8 +2,6 @@ import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback } fro
 import {
   ActivityIndicator,
   FlatList,
-  Keyboard,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -14,6 +12,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGlobalSearch } from '../hooks/useGlobalSearch';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { BibleSearchResult } from '../hooks/useBibleSearch';
 import { HymnSearchResult } from '../hooks/useHymnSearch';
 import { useTheme } from '../contexts/ThemeContext';
@@ -153,17 +152,7 @@ const GlobalSearchScreen = () => {
   // The search box auto-focuses, so the keyboard is very often up while
   // these tiles are visible — track its height so tile sizing responds to
   // the space actually left over, not just the device's full screen height.
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, e => setKeyboardHeight(e.endCoordinates.height));
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+  const keyboardHeight = useKeyboardHeight();
 
   const { search, isLoading } = useGlobalSearch();
   const [query, setQuery] = useState('');

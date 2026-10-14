@@ -6,13 +6,31 @@ type TranslationKey =
   | 'menu.search'
   | 'menu.misc'
   | 'menu.about'
-  | 'menu.personalization'
   | 'menu.cultMode'
-  | 'menu.notes'
   | 'notes.title'
   | 'notes.empty'
-  | 'notes.removeTitle'
-  | 'notes.removeMessage'
+  | 'notes.open'
+  | 'notes.save'
+  | 'notes.edit'
+  | 'notes.placeholder'
+  | 'notes.untilVerse'
+  | 'notes.editedOn'
+  | 'notes.deleted'
+  | 'notes.undo'
+  | 'notes.search'
+  | 'notes.noResults'
+  | 'notes.exportAll'
+  | 'notes.exportTitle'
+  | 'selection.highlight'
+  | 'selection.note'
+  | 'selection.favorite'
+  | 'selection.share'
+  | 'selection.concordance'
+  | 'selection.report'
+  | 'actions.noteAdd'
+  | 'actions.noteOpen'
+  | 'actions.hymnNoteAdd'
+  | 'actions.hymnNoteOpen'
   | 'cultMode.title'
   | 'cultMode.activate'
   | 'cultMode.deactivate'
@@ -20,9 +38,9 @@ type TranslationKey =
   | 'cultMode.emptyState'
   | 'cultMode.addBible'
   | 'cultMode.addHymn'
-  | 'cultMode.deleteTitle'
-  | 'cultMode.deleteMessage'
-  | 'cultMode.cannotActivateEmpty'
+  | 'cultMode.summary'
+  | 'cultMode.wholeChapter'
+  | 'cultMode.verses'
   | 'personalization.title'
   | 'personalization.subtitle'
   | 'personalization.reset'
@@ -137,24 +155,44 @@ const translations: Translations = {
     'menu.search': 'Fikarohana',
     'menu.misc': 'Fanekem-pinoana',
     'menu.about': 'Mombamomba',
-    'menu.personalization': 'Loko manokana',
     'menu.cultMode': 'Fotoam-pivavahana',
-    'menu.notes': 'Ireo Naoty',
     'notes.title': 'Ireo Naoty',
     'notes.empty': 'Mbola tsy misy naoty',
-    'notes.removeTitle': 'Esorina ny naoty',
-    'notes.removeMessage': 'Tena esorina ve ity naoty ity?',
+    'notes.open': 'Vakio ny naoty',
+    'notes.save': 'Tahirizo',
+    'notes.edit': 'Ovay',
+    'notes.placeholder': 'Soraty eto ny naotinao…',
+    'notes.untilVerse': "Hatramin'ny andininy",
+    'notes.editedOn': 'Novaina {{date}}',
+    'notes.deleted': 'Voafafa ny naoty',
+    'notes.undo': 'Averina',
+    'notes.search': "Hitady ao amin'ny naoty",
+    'notes.noResults': 'Tsy misy naoty mifanaraka amin\'izany',
+    'notes.exportAll': 'Zarao daholo',
+    'notes.exportTitle': 'Ny naotiko — e-Baiboly',
+    // Items of the phone's text-selection menu, in front of Copy / Translate:
+    // short, so the first ones fit in its bar.
+    'selection.highlight': 'Surligner',
+    'selection.note': 'Naoty',
+    'selection.favorite': 'Ankafizina',
+    'selection.share': 'Zarao',
+    'selection.concordance': 'Concordance',
+    'selection.report': 'Tatero',
+    'actions.noteAdd': 'Hanoratra naoty',
+    'actions.noteOpen': 'Jereo ny naoty',
+    'actions.hymnNoteAdd': "Naoty momba ny hira",
+    'actions.hymnNoteOpen': "Jereo ny naoty momba ny hira",
     'cultMode.title': 'Fotoam-pivavahana',
     'cultMode.activate': 'Velomy ny fotoana',
     'cultMode.deactivate': 'Ajanony',
     'cultMode.intro':
       'Ito dia fampidirana ny programam-pivavahana ka rehefa alahatrao mialoha eto ireo tokony ho vakianao mandritra ny fotoana dia tsy mila mikaroka boky/fihirana intsony ianao fa manindry ny teboka (prev, next) ery ambany fotsiny. Alaminao otrany ireny mandamina “Playlist” ireny izy ity mba hanamorana ny fampiasanao ny appli e-Baiboly mandritra ny fotoam-bavaka.',
-    'cultMode.emptyState': "Mbola tsy misy zavatra eto. Ampio Baiboly na Fihirana.",
-    'cultMode.addBible': 'Hampio Baiboly',
-    'cultMode.addHymn': 'Hampio Fihirana',
-    'cultMode.deleteTitle': 'Esorina',
-    'cultMode.deleteMessage': "Tena esorina ao amin'ny lisitra ve ity?",
-    'cultMode.cannotActivateEmpty': 'Ampio aloha ny zavatra ho hirahana.',
+    'cultMode.emptyState': "Ampio andinin'teny na hira",
+    'cultMode.addBible': 'Ampio Baiboly',
+    'cultMode.addHymn': 'Ampio Fihirana',
+    'cultMode.summary': "{{bible}} andinin'teny · {{hymns}} hira",
+    'cultMode.wholeChapter': 'Toko manontolo',
+    'cultMode.verses': 'Andininy {{range}}',
     'personalization.title': 'Loko manokana',
     'personalization.subtitle': "Safidio ny lokon'ny rindrina sy ny bokotra",
     'personalization.reset': 'Avereno tany am-boalohany',

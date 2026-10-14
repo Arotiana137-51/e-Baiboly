@@ -1,6 +1,10 @@
 import React from 'react';
 import { Text } from 'react-native';
+// The reader's spans: inside a selectable iOS verse they must be the lib's
+// own; anywhere else it renders a plain <Text>.
+import { UITextView } from '@bsky.app/react-native-uitextview';
 import { parseInlineBibleRefs, type InlineBibleRef } from './bibleRefs';
+import { SPAN_LONG_PRESS } from './verseSelection';
 
 const INLINE_ITALIC_START = '\u0002';
 const INLINE_ITALIC_END = '\u0003';
@@ -312,12 +316,12 @@ const renderInlineItalicSegments = (text: string, baseTextStyle?: any) => {
       return;
     }
     children.push(
-      <Text
+      <UITextView
         key={key}
         style={italic ? [baseTextStyle, { fontStyle: 'italic' }] : baseTextStyle}
       >
         {buffer}
-      </Text>
+      </UITextView>
     );
     buffer = '';
   };
@@ -376,9 +380,9 @@ const renderPlainWithRefs = (
   // so skip the regex split entirely.
   if (!text.includes('(')) {
     return [
-      <Text key={`${keyPrefix}-nr`} style={baseTextStyle}>
+      <UITextView key={`${keyPrefix}-nr`} style={baseTextStyle}>
         {renderInlineItalicSegments(text, undefined)}
-      </Text>,
+      </UITextView>,
     ];
   }
 
@@ -386,21 +390,24 @@ const renderPlainWithRefs = (
   return segments.map((seg, idx) => {
     if (seg.kind === 'ref') {
       return (
-        <Text
+        <UITextView
           key={`${keyPrefix}-ref-${idx}`}
           // We attach onPress here so React Native treats the segment as a
           // tap target without disrupting the surrounding inline flow.
           onPress={onRefPress ? () => onRefPress(seg) : undefined}
+          // A long-press on a selectable verse selects the reference instead
+          // of following it on release.
+          onLongPress={onRefPress ? SPAN_LONG_PRESS : undefined}
           suppressHighlighting={!onRefPress}
           style={[baseTextStyle, refTextStyle]}>
           {seg.text}
-        </Text>
+        </UITextView>
       );
     }
     return (
-      <Text key={`${keyPrefix}-tx-${idx}`} style={baseTextStyle}>
+      <UITextView key={`${keyPrefix}-tx-${idx}`} style={baseTextStyle}>
         {renderInlineItalicSegments(seg.text, undefined)}
-      </Text>
+      </UITextView>
     );
   });
 };
@@ -427,9 +434,9 @@ const renderInlineFootnoteSegments = (
     const isFootnote = part.startsWith('[*') && part.endsWith(']');
     if (isFootnote) {
       children.push(
-        <Text key={`fn-${idx}`} style={[options.baseTextStyle, options.footnoteTextStyle]}>
+        <UITextView key={`fn-${idx}`} style={[options.baseTextStyle, options.footnoteTextStyle]}>
           {renderInlineItalicSegments(part, undefined)}
-        </Text>
+        </UITextView>
       );
       return;
     }

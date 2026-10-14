@@ -9,6 +9,11 @@
  * MG1865 numbering, which is Hebrew-style in Joel, Malachi, Hosea 14, Isaiah 9
  * and 64, Micah 5 and Jonah 2 (English numbering differs there) but
  * English-style in the Psalms.
+ *
+ * Each verse is read on its own (notification, widget), so pick ones that
+ * stand alone: no Psalm with a heading in verse 1 ("Ho an'ny mpiventy hira…"),
+ * no mid-sentence fragment that needs the verse before it, no obscure names
+ * or imagery, and keep it short enough for a small widget.
  */
 export type VerseRef = {b: number; c: number; v: number; to?: number}; // to = end verse of a pair
 
@@ -17,7 +22,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 19, c: 23, v: 4}, // Salamo 23:4
   {b: 19, c: 23, v: 6}, // Salamo 23:6
   {b: 23, c: 41, v: 10}, // Isaia 41:10
-  {b: 29, c: 2, v: 12, to: 13}, // Joela 2:12-13 c
+  {b: 48, c: 5, v: 16}, // Galatiana 5:16 c
   {b: 24, c: 29, v: 11}, // Jeremia 29:11
   {b: 5, c: 31, v: 6}, // Deotoronomia 31:6
   {b: 20, c: 3, v: 5, to: 6}, // Ohabolana 3:5-6
@@ -34,10 +39,10 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 60, c: 5, v: 7}, // 1 Petera 5:7
   {b: 48, c: 6, v: 7}, // Galatiana 6:7 c
   {b: 62, c: 4, v: 4}, // 1 Jaona 4:4
-  {b: 19, c: 46, v: 1}, // Salamo 46:1
+  {b: 19, c: 28, v: 7}, // Salamo 28:7
   {b: 19, c: 46, v: 10}, // Salamo 46:10
   {b: 19, c: 46, v: 7}, // Salamo 46:7
-  {b: 23, c: 55, v: 6, to: 7}, // Isaia 55:6-7 c
+  {b: 23, c: 55, v: 6}, // Isaia 55:6 c
   {b: 23, c: 40, v: 31}, // Isaia 40:31
   {b: 24, c: 33, v: 3}, // Jeremia 33:3
   {b: 6, c: 1, v: 9}, // Josoa 1:9
@@ -77,7 +82,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 60, c: 2, v: 9}, // 1 Petera 2:9
   {b: 62, c: 4, v: 18}, // 1 Jaona 4:18
   {b: 19, c: 27, v: 1}, // Salamo 27:1
-  {b: 26, c: 18, v: 30}, // Ezekiela 18:30 c
+  {b: 51, c: 3, v: 2}, // Kolosiana 3:2 c
   {b: 19, c: 27, v: 14}, // Salamo 27:14
   {b: 19, c: 27, v: 4}, // Salamo 27:4
   {b: 23, c: 43, v: 2}, // Isaia 43:2
@@ -85,8 +90,8 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 20, c: 16, v: 18}, // Ohabolana 16:18 c
   {b: 4, c: 6, v: 24, to: 26}, // Nomery 6:24-26
   {b: 20, c: 3, v: 26}, // Ohabolana 3:26
-  {b: 35, c: 3, v: 18, to: 19}, // Habakoka 3:18-19
-  {b: 40, c: 28, v: 20}, // Matio 28:20
+  {b: 19, c: 147, v: 3}, // Salamo 147:3
+  {b: 40, c: 14, v: 27}, // Matio 14:27
   {b: 41, c: 1, v: 15}, // Marka 1:15 c
   {b: 42, c: 11, v: 9}, // Lioka 11:9
   {b: 43, c: 10, v: 10}, // Jaona 10:10
@@ -97,7 +102,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 55, c: 1, v: 7}, // 2 Timoty 1:7
   {b: 59, c: 1, v: 12}, // Jakoba 1:12
   {b: 66, c: 1, v: 8}, // Apokalypsy 1:8
-  {b: 26, c: 33, v: 11}, // Ezekiela 33:11 c
+  {b: 19, c: 119, v: 11}, // Salamo 119:11 c
   {b: 19, c: 34, v: 18}, // Salamo 34:18
   {b: 19, c: 34, v: 4}, // Salamo 34:4
   {b: 19, c: 34, v: 19}, // Salamo 34:19
@@ -106,7 +111,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 24, c: 32, v: 27}, // Jeremia 32:27
   {b: 5, c: 31, v: 8}, // Deotoronomia 31:8
   {b: 20, c: 10, v: 22}, // Ohabolana 10:22
-  {b: 35, c: 2, v: 4}, // Habakoka 2:4
+  {b: 19, c: 9, v: 10}, // Salamo 9:10
   {b: 40, c: 7, v: 1, to: 2}, // Matio 7:1-2 c
   {b: 40, c: 19, v: 26}, // Matio 19:26
   {b: 42, c: 12, v: 7}, // Lioka 12:7
@@ -128,7 +133,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 1, c: 28, v: 15}, // Genesisy 28:15
   {b: 20, c: 16, v: 9}, // Ohabolana 16:9
   {b: 42, c: 6, v: 46}, // Lioka 6:46 c
-  {b: 38, c: 4, v: 6}, // Zakaria 4:6
+  {b: 19, c: 145, v: 18}, // Salamo 145:18
   {b: 40, c: 6, v: 34}, // Matio 6:34
   {b: 42, c: 18, v: 27}, // Lioka 18:27
   {b: 43, c: 14, v: 6}, // Jaona 14:6
@@ -137,19 +142,19 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 47, c: 4, v: 16}, // 2 Korintiana 4:16
   {b: 48, c: 5, v: 22, to: 23}, // Galatiana 5:22-23
   {b: 56, c: 2, v: 11}, // Titosy 2:11
-  {b: 28, c: 10, v: 12}, // Hosea 10:12 c
+  {b: 20, c: 4, v: 23}, // Ohabolana 4:23 c
   {b: 59, c: 1, v: 17}, // Jakoba 1:17
   {b: 66, c: 21, v: 5}, // Apokalypsy 21:5
   {b: 19, c: 55, v: 22}, // Salamo 55:22
   {b: 19, c: 56, v: 3}, // Salamo 56:3
   {b: 19, c: 34, v: 14}, // Salamo 34:14 c
-  {b: 19, c: 57, v: 1}, // Salamo 57:1
-  {b: 23, c: 43, v: 1}, // Isaia 43:1
+  {b: 19, c: 63, v: 3}, // Salamo 63:3
+  {b: 23, c: 40, v: 8}, // Isaia 40:8
   {b: 24, c: 29, v: 13}, // Jeremia 29:13
-  {b: 5, c: 33, v: 27}, // Deotoronomia 33:27
-  {b: 40, c: 6, v: 24}, // Matio 6:24 c
+  {b: 19, c: 138, v: 8}, // Salamo 138:8
+  {b: 46, c: 15, v: 33}, // 1 Korintiana 15:33 c
   {b: 20, c: 17, v: 17}, // Ohabolana 17:17
-  {b: 39, c: 3, v: 6}, // Malakia 3:6
+  {b: 43, c: 6, v: 47}, // Jaona 6:47
   {b: 40, c: 5, v: 16}, // Matio 5:16
   {b: 42, c: 1, v: 45}, // Lioka 1:45
   {b: 45, c: 12, v: 21}, // Romana 12:21 c
@@ -158,8 +163,8 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 46, c: 13, v: 4}, // 1 Korintiana 13:4
   {b: 49, c: 3, v: 20}, // Efesiana 3:20
   {b: 30, c: 5, v: 14}, // Amosa 5:14 c
-  {b: 58, c: 12, v: 2}, // Hebreo 12:2
-  {b: 60, c: 2, v: 24}, // 1 Petera 2:24
+  {b: 43, c: 15, v: 13}, // Jaona 15:13
+  {b: 40, c: 5, v: 4}, // Matio 5:4
   {b: 62, c: 4, v: 19}, // 1 Jaona 4:19
   {b: 19, c: 103, v: 2}, // Salamo 103:2
   {b: 20, c: 14, v: 12}, // Ohabolana 14:12 c
@@ -177,13 +182,13 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 43, c: 1, v: 12}, // Jaona 1:12
   {b: 45, c: 15, v: 13}, // Romana 15:13
   {b: 47, c: 5, v: 7}, // 2 Korintiana 5:7
-  {b: 30, c: 5, v: 15}, // Amosa 5:15 c
+  {b: 49, c: 4, v: 32}, // Efesiana 4:32 c
   {b: 51, c: 3, v: 15}, // Kolosiana 3:15
   {b: 52, c: 5, v: 24}, // 1 Tesaloniana 5:24
   {b: 59, c: 5, v: 16}, // Jakoba 5:16
   {b: 66, c: 7, v: 17}, // Apokalypsy 7:17
   {b: 19, c: 51, v: 17}, // Salamo 51:17 c
-  {b: 19, c: 121, v: 1, to: 2}, // Salamo 121:1-2
+  {b: 19, c: 121, v: 2}, // Salamo 121:2
   {b: 19, c: 121, v: 7}, // Salamo 121:7
   {b: 19, c: 121, v: 8}, // Salamo 121:8
   {b: 23, c: 55, v: 11}, // Isaia 55:11
@@ -191,9 +196,9 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 24, c: 1, v: 5}, // Jeremia 1:5
   {b: 2, c: 33, v: 14}, // Eksodosy 33:14
   {b: 20, c: 23, v: 18}, // Ohabolana 23:18
-  {b: 29, c: 3, v: 5}, // Joela 3:5
+  {b: 62, c: 4, v: 7}, // 1 Jaona 4:7
   {b: 51, c: 3, v: 5}, // Kolosiana 3:5 c
-  {b: 40, c: 17, v: 20}, // Matio 17:20
+  {b: 41, c: 11, v: 24}, // Marka 11:24
   {b: 42, c: 1, v: 50}, // Lioka 1:50
   {b: 43, c: 14, v: 1}, // Jaona 14:1
   {b: 45, c: 12, v: 12}, // Romana 12:12
@@ -224,36 +229,36 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 55, c: 1, v: 12}, // 2 Timoty 1:12
   {b: 19, c: 37, v: 8}, // Salamo 37:8 c
   {b: 59, c: 1, v: 2, to: 3}, // Jakoba 1:2-3
-  {b: 66, c: 2, v: 10}, // Apokalypsy 2:10
+  {b: 43, c: 20, v: 29}, // Jaona 20:29
   {b: 19, c: 16, v: 11}, // Salamo 16:11
   {b: 19, c: 16, v: 8}, // Salamo 16:8
   {b: 40, c: 7, v: 21}, // Matio 7:21 c
   {b: 19, c: 17, v: 8}, // Salamo 17:8
   {b: 23, c: 12, v: 2}, // Isaia 12:2
   {b: 24, c: 32, v: 17}, // Jeremia 32:17
-  {b: 16, c: 8, v: 10}, // Nehemia 8:10
+  {b: 50, c: 4, v: 4}, // Filipiana 4:4
   {b: 46, c: 10, v: 12}, // 1 Korintiana 10:12 c
   {b: 20, c: 30, v: 5}, // Ohabolana 30:5
   {b: 27, c: 12, v: 3}, // Daniela 12:3
   {b: 40, c: 18, v: 20}, // Matio 18:20
   {b: 42, c: 6, v: 21}, // Lioka 6:21
-  {b: 39, c: 3, v: 7}, // Malakia 3:7 c
+  {b: 59, c: 4, v: 17}, // Jakoba 4:17 c
   {b: 43, c: 6, v: 35}, // Jaona 6:35
   {b: 45, c: 6, v: 23}, // Romana 6:23
   {b: 46, c: 15, v: 58}, // 1 Korintiana 15:58
   {b: 49, c: 2, v: 10}, // Efesiana 2:10
   {b: 20, c: 11, v: 2}, // Ohabolana 11:2 c
-  {b: 58, c: 10, v: 23}, // Hebreo 10:23
+  {b: 53, c: 3, v: 16}, // 2 Tesaloniana 3:16
   {b: 60, c: 3, v: 12}, // 1 Petera 3:12
   {b: 62, c: 4, v: 10}, // 1 Jaona 4:10
   {b: 19, c: 30, v: 5}, // Salamo 30:5
-  {b: 44, c: 3, v: 19}, // undefined 3:19 c
+  {b: 44, c: 3, v: 19}, // Asan'ny Apostoly 3:19 c
   {b: 19, c: 31, v: 24}, // Salamo 31:24
   {b: 19, c: 32, v: 7}, // Salamo 32:7
   {b: 23, c: 30, v: 21}, // Isaia 30:21
   {b: 24, c: 15, v: 16}, // Jeremia 15:16
   {b: 62, c: 2, v: 15}, // 1 Jaona 2:15 c
-  {b: 14, c: 20, v: 15}, // 2 Tantara 20:15
+  {b: 19, c: 4, v: 8}, // Salamo 4:8
   {b: 20, c: 3, v: 24}, // Ohabolana 3:24
   {b: 26, c: 36, v: 26}, // Ezekiela 36:26
   {b: 40, c: 6, v: 26}, // Matio 6:26
@@ -263,7 +268,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 45, c: 5, v: 1}, // Romana 5:1
   {b: 47, c: 4, v: 17}, // 2 Korintiana 4:17
   {b: 19, c: 90, v: 12}, // Salamo 90:12 c
-  {b: 51, c: 1, v: 13}, // Kolosiana 1:13
+  {b: 40, c: 5, v: 6}, // Matio 5:6
   {b: 53, c: 3, v: 3}, // 2 Tesaloniana 3:3
   {b: 59, c: 1, v: 4}, // Jakoba 1:4
   {b: 66, c: 21, v: 7}, // Apokalypsy 21:7
@@ -277,7 +282,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 5, c: 7, v: 9}, // Deotoronomia 7:9
   {b: 20, c: 3, v: 33}, // Ohabolana 3:33
   {b: 33, c: 7, v: 8}, // Mika 7:8
-  {b: 24, c: 6, v: 16}, // Jeremia 6:16 c
+  {b: 40, c: 26, v: 41}, // Matio 26:41 c
   {b: 40, c: 7, v: 11}, // Matio 7:11
   {b: 42, c: 8, v: 50}, // Lioka 8:50
   {b: 43, c: 6, v: 37}, // Jaona 6:37
@@ -289,7 +294,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 60, c: 4, v: 8}, // 1 Petera 4:8
   {b: 42, c: 12, v: 15}, // Lioka 12:15 c
   {b: 62, c: 4, v: 16}, // 1 Jaona 4:16
-  {b: 19, c: 62, v: 1}, // Salamo 62:1
+  {b: 19, c: 118, v: 29}, // Salamo 118:29
   {b: 19, c: 62, v: 5}, // Salamo 62:5
   {b: 19, c: 62, v: 8}, // Salamo 62:8
   {b: 59, c: 4, v: 10}, // Jakoba 4:10 c
@@ -299,7 +304,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 20, c: 10, v: 28}, // Ohabolana 10:28
   {b: 25, c: 3, v: 40}, // Fitomaniana 3:40 c
   {b: 33, c: 7, v: 18}, // Mika 7:18
-  {b: 40, c: 10, v: 31}, // Matio 10:31
+  {b: 19, c: 42, v: 11}, // Salamo 42:11
   {b: 42, c: 10, v: 20}, // Lioka 10:20
   {b: 43, c: 8, v: 36}, // Jaona 8:36
   {b: 19, c: 119, v: 9}, // Salamo 119:9 c
@@ -309,15 +314,15 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 54, c: 1, v: 15}, // 1 Timoty 1:15
   {b: 40, c: 5, v: 44}, // Matio 5:44 c
   {b: 59, c: 1, v: 18}, // Jakoba 1:18
-  {b: 66, c: 3, v: 8}, // Apokalypsy 3:8
+  {b: 19, c: 145, v: 9}, // Salamo 145:9
   {b: 19, c: 73, v: 26}, // Salamo 73:26
   {b: 19, c: 84, v: 11}, // Salamo 84:11
   {b: 45, c: 2, v: 4}, // Romana 2:4 c
   {b: 19, c: 90, v: 14}, // Salamo 90:14
   {b: 23, c: 60, v: 1}, // Isaia 60:1
   {b: 24, c: 33, v: 6}, // Jeremia 33:6
-  {b: 9, c: 16, v: 7}, // 1 Samoela 16:7
-  {b: 6, c: 24, v: 15}, // Josoa 24:15 c
+  {b: 40, c: 5, v: 8}, // Matio 5:8
+  {b: 45, c: 13, v: 14}, // Romana 13:14 c
   {b: 20, c: 11, v: 25}, // Ohabolana 11:25
   {b: 33, c: 7, v: 19}, // Mika 7:19
   {b: 40, c: 5, v: 14}, // Matio 5:14
@@ -328,8 +333,8 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 46, c: 13, v: 7}, // 1 Korintiana 13:7
   {b: 49, c: 6, v: 10}, // Efesiana 6:10
   {b: 43, c: 3, v: 3}, // Jaona 3:3 c
-  {b: 58, c: 6, v: 19}, // Hebreo 6:19
-  {b: 60, c: 1, v: 8, to: 9}, // 1 Petera 1:8-9
+  {b: 19, c: 62, v: 2}, // Salamo 62:2
+  {b: 23, c: 40, v: 28}, // Isaia 40:28
   {b: 62, c: 5, v: 14}, // 1 Jaona 5:14
   {b: 19, c: 86, v: 5}, // Salamo 86:5
   {b: 66, c: 3, v: 19}, // Apokalypsy 3:19 c
@@ -337,13 +342,13 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 19, c: 103, v: 13}, // Salamo 103:13
   {b: 23, c: 65, v: 24}, // Isaia 65:24
   {b: 25, c: 3, v: 22, to: 23}, // Fitomaniana 3:22-23
-  {b: 9, c: 15, v: 22}, // 1 Samoela 15:22 c
+  {b: 20, c: 27, v: 1}, // Ohabolana 27:1 c
   {b: 2, c: 15, v: 2}, // Eksodosy 15:2
   {b: 20, c: 12, v: 25}, // Ohabolana 12:25
   {b: 35, c: 2, v: 3}, // Habakoka 2:3
   {b: 40, c: 11, v: 30}, // Matio 11:30
   {b: 19, c: 141, v: 3}, // Salamo 141:3 c
-  {b: 42, c: 12, v: 6}, // Lioka 12:6
+  {b: 19, c: 145, v: 8}, // Salamo 145:8
   {b: 43, c: 10, v: 27, to: 28}, // Jaona 10:27-28
   {b: 45, c: 8, v: 32}, // Romana 8:32
   {b: 47, c: 12, v: 10}, // 2 Korintiana 12:10
@@ -351,7 +356,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 51, c: 2, v: 6, to: 7}, // Kolosiana 2:6-7
   {b: 55, c: 2, v: 13}, // 2 Timoty 2:13
   {b: 59, c: 1, v: 25}, // Jakoba 1:25
-  {b: 66, c: 22, v: 13}, // Apokalypsy 22:13
+  {b: 43, c: 14, v: 18}, // Jaona 14:18
   {b: 52, c: 5, v: 22}, // 1 Tesaloniana 5:22 c
   {b: 19, c: 94, v: 19}, // Salamo 94:19
   {b: 19, c: 100, v: 5}, // Salamo 100:5
@@ -361,7 +366,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 25, c: 3, v: 24}, // Fitomaniana 3:24
   {b: 14, c: 16, v: 9}, // 2 Tantara 16:9
   {b: 20, c: 13, v: 12}, // Ohabolana 13:12
-  {b: 36, c: 3, v: 15}, // Zefania 3:15
+  {b: 45, c: 8, v: 35}, // Romana 8:35
   {b: 20, c: 19, v: 20}, // Ohabolana 19:20 c
   {b: 40, c: 28, v: 18}, // Matio 28:18
   {b: 42, c: 12, v: 24}, // Lioka 12:24
@@ -371,7 +376,7 @@ export const DAILY_VERSES: ReadonlyArray<VerseRef> = [
   {b: 46, c: 13, v: 8}, // 1 Korintiana 13:8
   {b: 50, c: 4, v: 19}, // Filipiana 4:19
   {b: 58, c: 13, v: 6}, // Hebreo 13:6
-  {b: 60, c: 1, v: 6, to: 7}, // 1 Petera 1:6-7
+  {b: 19, c: 31, v: 15}, // Salamo 31:15
   {b: 59, c: 1, v: 19, to: 20}, // Jakoba 1:19-20 c
   {b: 62, c: 5, v: 13}, // 1 Jaona 5:13
   {b: 19, c: 119, v: 105}, // Salamo 119:105

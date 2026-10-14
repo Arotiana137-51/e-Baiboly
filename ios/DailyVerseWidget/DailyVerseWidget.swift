@@ -302,7 +302,7 @@ struct DailyVerseWidget: Widget {
     }
     // Placeholder MG copy — user-owned.
     .configurationDisplayName("Sakafom-panahy")
-    .description("Andinin-teny iray isan'andro eo amin'ny efijery.")
+    .description("Andinin-teny iray isan'andro eo amin'ny écran.")
     .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     .ownContentMargins()
   }

@@ -3,7 +3,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -49,7 +48,27 @@ const lightenColor = (hex: string, percent: number): string => {
   return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB).toString(16).slice(1)}`;
 };
 
-const TAB_ROW_BASE_HEIGHT = 60;
+const CHIP_HEIGHT = 44;
+const CHIP_GAP = 8;
+const CATEGORY_BAR_PADDING = 10;
+// Extra room under the status bar on every phone, so the pills never crowd
+// the Dynamic Island / notch / camera hole.
+const CATEGORY_BAR_TOP_GAP = 10;
+// Fixed line height (and no font scaling) on the range line so the bar's
+// height stays predictable for the keypad offset below it.
+const RANGE_LINE_HEIGHT = 18;
+const RANGE_GAP = 6;
+// On tablets the single row of pills stops growing past this width.
+const CATEGORY_CHIPS_MAX_WIDTH = 840;
+
+const categoryBarHeight = (rows: number) =>
+  CATEGORY_BAR_TOP_GAP +
+  CATEGORY_BAR_PADDING +
+  CHIP_HEIGHT * rows +
+  CHIP_GAP * (rows - 1) +
+  RANGE_GAP +
+  RANGE_LINE_HEIGHT +
+  CATEGORY_BAR_PADDING;
 
 const CATEGORY_MAX: Record<string, number> = {
   ffpm: 827,
@@ -72,11 +91,19 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   const keypadRef = useTutorialTarget('hymnKeypad');
   const insets = useAdaptiveInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const { verticalScale, fontFor, isSmall } = useResponsive();
+  const { verticalScale, fontFor, isSmall, isTablet, height: windowHeight } = useResponsive();
   const tabsTopInset = insets.top;
-  const tabRowHeight = Math.max(TAB_ROW_BASE_HEIGHT - (isSmall ? 8 : 0), verticalScale(TAB_ROW_BASE_HEIGHT));
+  // 600+ wide (tablets, and phones in landscape): the four pills fit one row.
+  const singleRowChips = isTablet;
+  const barHeight = categoryBarHeight(singleRowChips ? 1 : 2);
+  // Landscape phones are short: tighten the keypad's gaps so it fits under
+  // the bar instead of spilling over it.
+  const isShort = windowHeight < 500;
+  const keypadRowGap = isShort ? 6 : 12;
+  const inputMarginTop = isShort ? 6 : 24;
+  const inputMarginBottom = isShort ? 6 : 12;
   const inputFieldHeight = Math.max(44, verticalScale(56));
-  const tabFontSize = fontFor(isSmall ? 15 : 18);
+  const tabFontSize = fontFor(isSmall ? 15 : 17);
   const inputFontSize = fontFor(isSmall ? 20 : 22);
   const keypadFontSize = fontFor(22);
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory || 'ffpm');
@@ -89,10 +116,27 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     return Math.min(320, Math.floor(windowWidth * 0.75));
   }, [windowWidth]);
 
+  // Width picks the comfortable size; height caps it so the input row plus the
+  // four keypad rows (five rows of this size) always fit under the bar. Only
+  // landscape phones ever hit the cap.
   const keypadButtonSize = useMemo(() => {
     const base = Math.min(80, Math.floor(windowWidth * 0.22));
-    return Math.max(52, Math.floor(base * 0.8));
-  }, [windowWidth]);
+    const byWidth = Math.max(52, Math.floor(base * 0.8));
+    const available = windowHeight - tabsTopInset - barHeight - insets.bottom - 16;
+    const byHeight = Math.floor(
+      (available - inputMarginTop - inputMarginBottom - 4 * keypadRowGap) / 5,
+    );
+    return Math.max(36, Math.min(byWidth, byHeight));
+  }, [
+    windowWidth,
+    windowHeight,
+    tabsTopInset,
+    barHeight,
+    insets.bottom,
+    inputMarginTop,
+    inputMarginBottom,
+    keypadRowGap,
+  ]);
 
   const actionButtonColor = useMemo(
     () => lightenColor(theme.colors.accentBlue, 15),
@@ -178,7 +222,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     return (
       <View style={[styles.keypadContainer, { width: keypadWidth }]}>
         {buttons.map((row, rowIndex) => (
-          <View key={rowIndex} style={styles.keypadRow}>
+          <View key={rowIndex} style={[styles.keypadRow, { marginBottom: keypadRowGap }]}>
             {row.map((button) => (
               <Pressable
                 key={button}
@@ -223,72 +267,104 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
+      // iOS modals default to portrait only, which swung a landscape iPhone
+      // back upright whenever the picker opened.
+      supportedOrientations={['portrait', 'landscape']}
       onRequestClose={handleClose}
     >
       <Pressable style={[styles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.15)' }]} onPress={handleClose}>
         <View style={styles.modalContent} pointerEvents="box-none">
-          <View ref={categoryTabsRef} collapsable={false} style={[styles.categoryTabsSafeArea, { paddingTop: tabsTopInset, backgroundColor: theme.colors.navBackground }]}>
+          <View
+            ref={categoryTabsRef}
+            collapsable={false}
+            style={[
+              styles.categoryTabsSafeArea,
+              {
+                paddingTop: tabsTopInset,
+                // Landscape iPhones put the Dynamic Island / notch on a side.
+                paddingLeft: insets.left,
+                paddingRight: insets.right,
+                backgroundColor: theme.colors.navBackground,
+              },
+            ]}
+          >
             {/*
-              4 categories no longer fit comfortably as flex:1 on narrow
-              phones (each tab would shrink to ~90px and clip the longer
-              labels). Wrap in a horizontal ScrollView and give each tab a
-              fixed min-width so ~3 fit per page and the 4th peeks in,
-              signaling that the strip scrolls.
+              4 categories don't fit one row on narrow phones without
+              clipping the longer labels, so there they sit in a 2x2 grid of
+              pills; tablets and landscape phones get one row. Every category
+              visible and one tap away, no scrolling. The selected one takes
+              the reader's page colour, like a segmented control.
             */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{height: tabRowHeight}}
-              contentContainerStyle={styles.categoryTabsRow}
-            >
-              {CATEGORIES.map((category) => (
-                <Pressable
-                  key={category.key}
-                  style={({pressed}) => [
-                    styles.categoryTab,
-                    {
-                      borderRightColor: 'rgba(255,255,255,0.4)',
-                      minWidth: Math.max(110, Math.floor(windowWidth / 3.5)),
-                      height: tabRowHeight,
-                    },
-                    selectedCategory === category.key && { backgroundColor: lightenColor(theme.colors.accentBlue, 25) },
-                    pressed && { opacity: 0.9 },
-                  ]}
-                  android_ripple={{
-                    color: lightenColor(theme.colors.accentBlue, 40) + '60',
-                    borderless: true,
-                  }}
-                  onPress={() => handleCategoryChange(category.key)}
-                >
-                  <Text
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.8}
-                    style={[
-                      styles.categoryTabText,
-                      { color: '#FFFFFF', fontSize: tabFontSize },
+            <View style={styles.categoryChips}>
+              {CATEGORIES.map((category) => {
+                const selected = selectedCategory === category.key;
+                return (
+                  <Pressable
+                    key={category.key}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    style={({pressed}) => [
+                      styles.categoryChip,
+                      singleRowChips && styles.categoryChipSingleRow,
+                      selected
+                        ? [
+                            styles.categoryChipSelected,
+                            {
+                              backgroundColor: theme.colors.readerBackground,
+                              borderColor: theme.colors.readerBackground,
+                            },
+                          ]
+                        : styles.categoryChipIdle,
+                      pressed && !selected && styles.categoryChipPressed,
                     ]}
+                    onPress={() => handleCategoryChange(category.key)}
                   >
-                    {category.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+                    <Text
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                      style={[
+                        styles.categoryChipText,
+                        selected ? { color: theme.colors.readerText } : styles.categoryChipTextIdle,
+                        { fontSize: tabFontSize },
+                      ]}
+                    >
+                      {category.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {/* The selected book's valid numbers, so it's clear why a
+                bigger number can't be typed. */}
+            <Text
+              numberOfLines={1}
+              allowFontScaling={false}
+              style={styles.categoryRange}
+            >
+              {`Hira 1 – ${maxNumber}`}
+            </Text>
           </View>
 
           <View
             style={[
               styles.keypadPanel,
-              { top: tabsTopInset + tabRowHeight },
+              { top: tabsTopInset + barHeight },
             ]}
             pointerEvents="box-none"
           >
             <Pressable ref={keypadRef} collapsable={false} style={styles.keypadCard} onPress={() => {}}>
-              <View style={[styles.inputContainer, { width: keypadWidth }]}>
+              <View
+                style={[
+                  styles.inputContainer,
+                  { width: keypadWidth, marginTop: inputMarginTop, marginBottom: inputMarginBottom },
+                ]}
+              >
                 <View style={[
                   styles.inputField,
                   {
-                    height: inputFieldHeight,
+                    // Never taller than the keypad keys, which shrink in landscape.
+                    height: Math.min(inputFieldHeight, keypadButtonSize),
                     marginRight: Math.max(8, Math.floor(keypadButtonSize * 0.12)),
                     backgroundColor: theme.colors.backgroundPrimary,
                     borderColor: theme.colors.divider,
@@ -339,32 +415,61 @@ const styles = StyleSheet.create({
   categoryTabsSafeArea: {
     // backgroundColor set dynamically via theme
   },
-  categoryTabsRow: {
+  categoryChips: {
     flexDirection: 'row',
-    height: TAB_ROW_BASE_HEIGHT,
+    flexWrap: 'wrap',
+    gap: CHIP_GAP,
+    width: '100%',
+    maxWidth: CATEGORY_CHIPS_MAX_WIDTH,
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingTop: CATEGORY_BAR_TOP_GAP + CATEGORY_BAR_PADDING,
+    paddingBottom: RANGE_GAP,
   },
-  categoryTab: {
-    // No flex: 1 — sized by minWidth at render time so the horizontal
-    // ScrollView can scroll. justifyContent/alignItems still center the
-    // label text inside whatever width the tab ends up at.
+  categoryChip: {
+    flexGrow: 1,
+    flexBasis: '40%',
+    height: CHIP_HEIGHT,
+    borderRadius: CHIP_HEIGHT / 4,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    // borderRightColor and backgroundColor set dynamically
+    paddingHorizontal: 12,
   },
-  categoryTabText: {
-    fontSize: 18,
+  categoryChipSingleRow: {flexBasis: '20%'},
+  // Translucent white reads on any personalised bar colour.
+  categoryChipIdle: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  categoryChipPressed: {backgroundColor: 'rgba(255,255,255,0.25)'},
+  // Background and border come from the reader's page colour at render time.
+  categoryChipSelected: {
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+  },
+  categoryChipText: {
     fontWeight: '700',
     textAlign: 'center',
-    textAlignVertical: 'center',
+  },
+  categoryChipTextIdle: {color: '#FFFFFF'},
+  categoryRange: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    lineHeight: RANGE_LINE_HEIGHT,
+    height: RANGE_LINE_HEIGHT,
+    textAlign: 'center',
+    marginBottom: CATEGORY_BAR_PADDING,
   },
   keypadPanel: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    top: TAB_ROW_BASE_HEIGHT,
+    // top set at render time, under the category bar
     alignItems: 'center',
     justifyContent: 'center',
   },

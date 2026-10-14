@@ -1,10 +1,9 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   StyleSheet,
   Text,
   View,
   Pressable,
-  Alert,
   Modal,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -14,11 +13,13 @@ import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from 'react-native-draggable-flatlist';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {useCultMode} from '../contexts/CultModeContext';
 import {
   CultEntry,
   buildBibleLabel,
   buildHymnLabel,
+  isWholeChapterEntry,
 } from '../types/cultMode';
 import {useTheme} from '../contexts/ThemeContext';
 import {RootStackParamList} from '../navigation/RootNavigator';
@@ -28,6 +29,7 @@ import BibleSelectionModal, {
   VerseSelection,
 } from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
+import {MenuIcon} from '../components/MenuIcons';
 import {useHymnsData} from '../hooks/useHymnsData';
 import {useTutorial, useTutorialTarget} from '../contexts/TutorialContext';
 import TutorialOverlay from '../components/TutorialOverlay';
@@ -36,6 +38,28 @@ type CultModeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'CultMode'
 >;
+
+const DELETE_RED = '#D32F2F';
+
+// Two-line row text, music-app style: what it is, then where it comes from.
+// A hymn whose title lookup failed falls back to its reference alone.
+const describeEntry = (entry: CultEntry) => {
+  if (entry.type === 'hymn') {
+    const ref = `${entry.category} ${entry.hymnNumber}`;
+    return entry.title
+      ? {title: entry.title, subtitle: ref}
+      : {title: ref, subtitle: ''};
+  }
+  let subtitle = t('cultMode.wholeChapter');
+  if (!isWholeChapterEntry(entry)) {
+    const range =
+      entry.verseStart === entry.verseEnd
+        ? `${entry.verseStart}`
+        : `${entry.verseStart}-${entry.verseEnd}`;
+    subtitle = t('cultMode.verses', {range});
+  }
+  return {title: `${entry.bookName} ${entry.chapter}`, subtitle};
+};
 
 const CultModeScreen = () => {
   const navigation = useNavigation<CultModeScreenNavigationProp>();
@@ -47,6 +71,8 @@ const CultModeScreen = () => {
     reorderEntries,
     isActive,
     toggleActive,
+    currentIndex,
+    goTo,
   } = useCultMode();
   const {hymns} = useHymnsData();
   const tutorial = useTutorial();
@@ -80,6 +106,16 @@ const CultModeScreen = () => {
     },
     [],
   );
+
+  // Empty list: no summary line, the empty state below already says what to do.
+  const bibleCount = entries.filter(e => e.type === 'bible').length;
+  const summary =
+    entries.length === 0
+      ? ''
+      : t('cultMode.summary', {
+          bible: bibleCount,
+          hymns: entries.length - bibleCount,
+        });
 
   const handleBibleSelect = useCallback(
     (
@@ -141,104 +177,146 @@ const CultModeScreen = () => {
     [addEntry, flashEntry, hymns, tutorial],
   );
 
-  const handleRemove = useCallback(
-    (entry: CultEntry) => {
-      Alert.alert(t('cultMode.deleteTitle'), t('cultMode.deleteMessage'), [
-        {text: t('common.cancel'), style: 'cancel'},
-        {
-          text: t('common.remove'),
-          style: 'destructive',
-          onPress: () => removeEntry(entry.id),
-        },
-      ]);
+  // Play → jump to the reader; Pause → stay put. Stopping happens here or on
+  // the reader's ■, never through a stray reader tap.
+  const handlePlayPause = () => {
+    if (isActive) {
+      toggleActive(false);
+      return;
+    }
+    toggleActive(true);
+    tutorial.notifyProgress('cultActivated');
+    // Skip the jump during the tutorial: its next step drives Home
+    // itself (showCultReaderNav).
+    if (!tutorial.activeTutorial) navigation.navigate('Home');
+  };
+
+  // Like tapping a track in a music app: during a session, a row tap moves
+  // the session to that entry and shows it in the reader.
+  const jumpTo = useCallback(
+    (index: number) => {
+      goTo(index);
+      navigation.navigate('Home');
     },
-    [removeEntry],
+    [goTo, navigation],
   );
 
   const renderItem = useCallback(
-    ({item, drag, isActive: dragActive}: RenderItemParams<CultEntry>) => (
-      <ScaleDecorator>
-        <Pressable
-          ref={item.id === highlightId ? flashRowRef : undefined}
-          collapsable={false}
-          onLongPress={drag}
-          delayLongPress={200}
-          style={[
-            styles.itemContainer,
-            {backgroundColor: theme.colors.backgroundSecondary},
-            dragActive && styles.itemActive,
-            item.id === highlightId && [
-              styles.itemHighlight,
-              {borderColor: theme.colors.navBackground},
-            ],
-          ]}>
-          <View style={styles.dragHandle}>
-            <Text
+    ({item, drag, getIndex, isActive: dragActive}: RenderItemParams<CultEntry>) => {
+      const index = getIndex() ?? 0;
+      const isCurrent = isActive && index === currentIndex;
+      const {title, subtitle} = describeEntry(item);
+      const isHighlighted = item.id === highlightId;
+      return (
+        <ScaleDecorator>
+          <Swipeable
+            enabled={!dragActive}
+            friction={2}
+            rightThreshold={40}
+            renderRightActions={() => (
+              <Pressable
+                onPress={() => removeEntry(item.id)}
+                accessibilityRole="button"
+                style={styles.deleteAction}>
+                <Text style={styles.deleteActionText}>{t('common.remove')}</Text>
+              </Pressable>
+            )}>
+            <Pressable
+              ref={isHighlighted ? flashRowRef : undefined}
+              collapsable={false}
+              onPress={isActive ? () => jumpTo(index) : undefined}
+              onLongPress={drag}
+              delayLongPress={200}
+              // Swipe-to-delete is invisible to screen readers.
+              accessibilityActions={[{name: 'delete', label: t('common.remove')}]}
+              onAccessibilityAction={e => {
+                if (e.nativeEvent.actionName === 'delete') removeEntry(item.id);
+              }}
               style={[
-                styles.dragHandleText,
-                {color: theme.colors.textSecondary},
+                styles.itemContainer,
+                {backgroundColor: theme.colors.backgroundPrimary},
+                dragActive && [
+                  styles.itemDragging,
+                  {backgroundColor: theme.colors.backgroundSecondary},
+                ],
+                isHighlighted && {
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderColor: theme.colors.navBackground,
+                },
               ]}>
-              ☰
-            </Text>
-          </View>
-          <View style={styles.itemContent}>
-            <Text
-              style={[styles.itemTitle, {color: theme.colors.textPrimary}]}
-              numberOfLines={2}>
-              {item.label}
-            </Text>
-            <Text
-              style={[styles.itemType, {color: theme.colors.textSecondary}]}>
-              {item.type === 'bible' ? 'Baiboly' : 'Fihirana'}
-            </Text>
-          </View>
-          <Pressable
-            style={styles.removeButton}
-            onPress={() => handleRemove(item)}
-            hitSlop={8}>
-            <Text
-              style={[
-                styles.removeButtonText,
-                {color: theme.colors.textSecondary},
-              ]}>
-              ×
-            </Text>
-          </Pressable>
-        </Pressable>
-      </ScaleDecorator>
-    ),
-    [theme.colors, handleRemove, highlightId, flashRowRef],
+              <Text
+                style={[styles.dragHandleText, {color: theme.colors.textSecondary}]}>
+                ☰
+              </Text>
+              {/* The current entry gets a solid tile, the rest a light tint. */}
+              <View style={styles.itemIcon}>
+                <View
+                  style={[
+                    styles.itemIconTint,
+                    isCurrent ? styles.tintSolid : styles.tintLight,
+                    {backgroundColor: theme.colors.navBackground},
+                  ]}
+                />
+                <MenuIcon
+                  name={item.type === 'bible' ? 'bible' : 'note'}
+                  color={isCurrent ? '#FFFFFF' : theme.colors.accentBlue}
+                />
+                <Text
+                  style={[styles.itemIndexText, {color: theme.colors.textSecondary}]}>
+                  {index + 1}
+                </Text>
+              </View>
+              <View style={styles.itemContent}>
+                <Text
+                  style={[
+                    styles.itemTitle,
+                    {
+                      color: isCurrent
+                        ? theme.colors.accentBlue
+                        : theme.colors.textPrimary,
+                    },
+                  ]}
+                  numberOfLines={1}>
+                  {title}
+                </Text>
+                {subtitle ? (
+                  <Text
+                    style={[
+                      styles.itemSubtitle,
+                      {color: theme.colors.textSecondary},
+                    ]}
+                    numberOfLines={1}>
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+              {/* No confirmation: an entry only points at bundled Bible or
+                  hymn text, so re-adding it restores it exactly. */}
+              <Pressable
+                onPress={() => removeEntry(item.id)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.remove')}
+                style={styles.trashButton}>
+                <MenuIcon name="trash" color={theme.colors.textSecondary} />
+              </Pressable>
+            </Pressable>
+          </Swipeable>
+        </ScaleDecorator>
+      );
+    },
+    [
+      theme.colors,
+      highlightId,
+      flashRowRef,
+      isActive,
+      currentIndex,
+      jumpTo,
+      removeEntry,
+    ],
   );
 
-  const headerComponent = useMemo(
-    () => (
-      <View style={styles.addSection}>
-        <View ref={addButtonsRef} collapsable={false} style={styles.addButtonsRow}>
-          <Pressable
-            onPress={() => setBibleModalVisible(true)}
-            style={[
-              styles.addButton,
-              {backgroundColor: theme.colors.navBackground},
-            ]}>
-            <Text style={styles.addButtonText}>
-              {t('cultMode.addBible')}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setHymnModalVisible(true)}
-            style={[
-              styles.addButton,
-              {backgroundColor: theme.colors.navBackground},
-            ]}>
-            <Text style={styles.addButtonText}>
-              {t('cultMode.addHymn')}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-    ),
-    [theme.colors, addButtonsRef],
-  );
+  const playDisabled = entries.length === 0;
 
   return (
     <SafeAreaView
@@ -260,61 +338,64 @@ const CultModeScreen = () => {
       </View>
 
       <View
-        ref={activateRowRef}
-        collapsable={false}
-        style={[
-          styles.activateRow,
-          {backgroundColor: theme.colors.backgroundSecondary},
-        ]}>
-        <View style={{flex: 1}}>
-          <Text
-            style={[styles.activateLabel, {color: theme.colors.textPrimary}]}>
-            {isActive ? t('cultMode.deactivate') : t('cultMode.activate')}
-          </Text>
-          {entries.length === 0 ? (
+        style={[styles.actions, {borderBottomColor: theme.colors.divider}]}>
+        <View style={styles.sessionRow}>
+          <View style={styles.sessionText}>
             <Text
-              style={[
-                styles.activateHint,
-                {color: theme.colors.textSecondary},
-              ]}>
-              {t('cultMode.cannotActivateEmpty')}
+              style={[styles.sessionLabel, {color: theme.colors.textPrimary}]}>
+              {isActive ? t('cultMode.deactivate') : t('cultMode.activate')}
             </Text>
-          ) : null}
-        </View>
-        <Pressable
-          onPress={() => {
-            // Stopping happens here, in the menu — never in the reader, so the
-            // session can't be killed by a stray reader tap. Play → jump to the
-            // reader; Pause → stay put.
-            if (isActive) {
-              toggleActive(false);
-              return;
+            {summary ? (
+              <Text
+                style={[styles.sessionMeta, {color: theme.colors.textSecondary}]}>
+                {summary}
+              </Text>
+            ) : null}
+          </View>
+          <Pressable
+            ref={activateRowRef}
+            collapsable={false}
+            onPress={handlePlayPause}
+            disabled={playDisabled}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isActive ? t('cultMode.deactivate') : t('cultMode.activate')
             }
-            toggleActive(true);
-            tutorial.notifyProgress('cultActivated');
-            // Skip the jump during the tutorial: its next step drives Home
-            // itself (showCultReaderNav).
-            if (!tutorial.activeTutorial) navigation.navigate('Home');
-          }}
-          disabled={entries.length === 0}
-          accessibilityRole="button"
-          accessibilityLabel={
-            isActive ? t('cultMode.deactivate') : t('cultMode.activate')
-          }
-          style={[
-            styles.playButton,
-            {backgroundColor: theme.colors.navBackground},
-            entries.length === 0 && styles.playButtonDisabled,
-          ]}>
-          {isActive ? (
-            <View style={styles.pauseIcon}>
-              <View style={styles.pauseBar} />
-              <View style={styles.pauseBar} />
-            </View>
-          ) : (
-            <View style={styles.playTriangle} />
-          )}
-        </Pressable>
+            style={[
+              styles.playButton,
+              {backgroundColor: theme.colors.navBackground},
+              playDisabled && styles.playButtonDisabled,
+            ]}>
+            {isActive ? (
+              <View style={styles.pauseIcon}>
+                <View style={styles.pauseBar} />
+                <View style={styles.pauseBar} />
+              </View>
+            ) : (
+              <View style={styles.playTriangle} />
+            )}
+          </Pressable>
+        </View>
+
+        <View ref={addButtonsRef} collapsable={false} style={styles.addButtonsRow}>
+          {[
+            {label: t('cultMode.addBible'), onPress: () => setBibleModalVisible(true)},
+            {label: t('cultMode.addHymn'), onPress: () => setHymnModalVisible(true)},
+          ].map(button => (
+            <Pressable
+              key={button.label}
+              onPress={button.onPress}
+              style={[
+                styles.addButton,
+                {backgroundColor: theme.colors.navBackground},
+              ]}>
+              <Text style={styles.addButtonPlus}>+</Text>
+              <Text style={styles.addButtonText} numberOfLines={1}>
+                {button.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       {/*
@@ -332,9 +413,16 @@ const CultModeScreen = () => {
           onDragEnd={({from, to}) => {
             if (from !== to) reorderEntries(from, to);
           }}
-          ListHeaderComponent={headerComponent}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
+              <View style={styles.emptyIcons}>
+                <MenuIcon name="bible" color={theme.colors.textSecondary} />
+                <MenuIcon name="note" color={theme.colors.textSecondary} />
+              </View>
+              <Text
+                style={[styles.emptyText, {color: theme.colors.textPrimary}]}>
+                {t('cultMode.emptyState')}
+              </Text>
               <Text
                 style={[
                   styles.introText,
@@ -342,26 +430,21 @@ const CultModeScreen = () => {
                 ]}>
                 {t('cultMode.intro')}
               </Text>
-              <Text
-                style={[
-                  styles.emptyText,
-                  {color: theme.colors.textSecondary},
-                ]}>
-                {t('cultMode.emptyState')}
-              </Text>
             </View>
           }
           contentContainerStyle={styles.listContent}
         />
       </View>
 
-
       <Modal
         visible={bibleModalVisible}
         animationType="slide"
         onRequestClose={() => setBibleModalVisible(false)}>
         <SafeAreaView
-          style={{flex: 1, backgroundColor: theme.colors.backgroundPrimary}}>
+          style={[
+            styles.container,
+            {backgroundColor: theme.colors.backgroundPrimary},
+          ]}>
           <BibleSelectionModal
             onClose={() => setBibleModalVisible(false)}
             onBibleSelect={handleBibleSelect}
@@ -388,6 +471,9 @@ const CultModeScreen = () => {
   );
 };
 
+const PLAY_SIZE = 56;
+const ICON_TILE = 40;
+
 const styles = StyleSheet.create({
   container: {flex: 1},
   header: {
@@ -400,89 +486,124 @@ const styles = StyleSheet.create({
   headerTitle: {color: '#FFFFFF', marginLeft: 8},
   backButton: {paddingHorizontal: 4},
   backButtonText: {color: '#FFFFFF', fontSize: 28, lineHeight: 30},
-  activateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  actions: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 16,
+    paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e5e5',
   },
-  activateLabel: {fontSize: 15, fontWeight: '600'},
-  activateHint: {fontSize: 12, marginTop: 2, fontStyle: 'italic'},
+  sessionRow: {flexDirection: 'row', alignItems: 'center'},
+  sessionText: {flex: 1, paddingRight: 12},
+  sessionLabel: {fontSize: 18, fontWeight: '700'},
+  sessionMeta: {fontSize: 13, marginTop: 4},
   playButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: PLAY_SIZE,
+    height: PLAY_SIZE,
+    borderRadius: PLAY_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
   },
-  playButtonDisabled: {opacity: 0.4},
+  playButtonDisabled: {opacity: 0.35, elevation: 0, shadowOpacity: 0},
   // Play triangle drawn with borders: a right-pointing triangle is a box with
-  // transparent top/bottom borders and a solid left border. Nudge right 2px to
+  // transparent top/bottom borders and a solid left border. Nudged right to
   // optically center it in the circle.
   playTriangle: {
     width: 0,
     height: 0,
-    marginLeft: 4,
-    borderTopWidth: 9,
-    borderBottomWidth: 9,
-    borderLeftWidth: 15,
+    marginLeft: 5,
+    borderTopWidth: 11,
+    borderBottomWidth: 11,
+    borderLeftWidth: 18,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
     borderLeftColor: '#FFFFFF',
   },
-  pauseIcon: {flexDirection: 'row', gap: 5},
-  pauseBar: {width: 5, height: 18, borderRadius: 1, backgroundColor: '#FFFFFF'},
-  addSection: {paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8},
-  addButtonsRow: {flexDirection: 'row', gap: 8},
+  pauseIcon: {flexDirection: 'row', gap: 6},
+  pauseBar: {width: 6, height: 22, borderRadius: 1, backgroundColor: '#FFFFFF'},
+  addButtonsRow: {flexDirection: 'row', gap: 8, marginTop: 14},
   addButton: {
     flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
-  addButtonText: {color: '#FFFFFF', fontSize: 14, fontWeight: '600'},
+  addButtonPlus: {color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginRight: 6, lineHeight: 20},
+  addButtonText: {color: '#FFFFFF', fontSize: 14, fontWeight: '600', flexShrink: 1},
   listWrap: {flex: 1},
-  listContent: {paddingBottom: 24},
+  listContent: {paddingVertical: 8, paddingBottom: 24},
   itemContainer: {
     flexDirection: 'row',
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 8,
     alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    marginHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
-  itemActive: {opacity: 0.85},
-  itemHighlight: {borderWidth: 2},
-  dragHandle: {paddingRight: 12},
-  dragHandleText: {fontSize: 18},
+  itemDragging: {
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+  },
+  dragHandleText: {fontSize: 18, paddingLeft: 4, paddingRight: 10, opacity: 0.6},
+  itemIcon: {
+    width: ICON_TILE,
+    height: ICON_TILE,
+    marginRight: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // The theme colour is a plain hex the user may personalise, so the tint is
+  // an opacity layer rather than an alpha suffix on the colour.
+  itemIconTint: {...StyleSheet.absoluteFillObject, borderRadius: 8},
+  tintSolid: {opacity: 1},
+  tintLight: {opacity: 0.12},
+  // Position in the running order, set like a subscript off the tile's
+  // bottom-right corner.
+  itemIndexText: {
+    position: 'absolute',
+    right: -10,
+    bottom: -4,
+    fontSize: 11,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
   itemContent: {flex: 1},
-  itemTitle: {fontSize: 16, fontWeight: '600', marginBottom: 4},
-  itemType: {fontSize: 12, fontStyle: 'italic'},
-  removeButton: {
-    width: 32,
-    height: 32,
+  itemTitle: {fontSize: 16, fontWeight: '600'},
+  itemSubtitle: {fontSize: 13, marginTop: 2},
+  trashButton: {padding: 8, marginLeft: 4},
+  deleteAction: {
+    backgroundColor: DELETE_RED,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 16,
-    marginLeft: 8,
+    width: 96,
+    marginRight: 8,
+    borderRadius: 10,
   },
-  removeButtonText: {fontSize: 22, fontWeight: '300', lineHeight: 24},
+  deleteActionText: {color: '#FFFFFF', fontSize: 14, fontWeight: '700'},
   emptyContainer: {
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingVertical: 40,
   },
+  emptyIcons: {flexDirection: 'row', gap: 12, marginBottom: 16, opacity: 0.7},
+  emptyText: {fontSize: 16, fontWeight: '600', textAlign: 'center', marginBottom: 12},
   introText: {
     fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
-    marginBottom: 20,
   },
-  emptyText: {fontSize: 16, textAlign: 'center'},
 });
 
 export default CultModeScreen;

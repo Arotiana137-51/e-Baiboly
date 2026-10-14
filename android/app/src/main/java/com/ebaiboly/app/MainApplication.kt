@@ -19,6 +19,7 @@ class MainApplication : Application(), ReactApplication {
           add(PickerThemePackage())
           add(DailyVerseWidgetPackage())
           add(KeepAwakePackage())
+          add(SelectionMenuPackage())
         },
     )
   }
