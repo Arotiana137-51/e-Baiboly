@@ -1,8 +1,11 @@
 package com.ebaiboly.app
 
 import android.view.ActionMode
+import android.view.GestureDetector
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.View
 import android.widget.TextView
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.Arguments
@@ -10,44 +13,30 @@ import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.ViewManager
 
 /**
- * Puts the app's own actions (Surligner, Naoty, ...) first in the phone's
- * text-selection menu of a selectable <Text>, and tells JS which one was
- * chosen and exactly which characters were selected.
+ * The phone's own text selection on a selectable <Text> (a real TextView in
+ * React Native): long-press a word, then drag the handles. The system menu
+ * is left empty, so the app shows its own highlight bubble instead; JS hears
+ * where the selection is (SelectionMenuShown) and when it ends
+ * (SelectionMenuHidden).
  *
- * React Native draws <Text selectable> with a real TextView, so the
- * selection itself stays the phone's own: double-tap or long-press, the
- * handles, Copy, Translate. Only the menu gets our items.
+ * A double-tap would also select a word; it is kept for the app's verse menu
+ * instead (SelectionMenuDoubleTap) and never reaches the TextView.
  */
 class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
     override fun getName() = "SelectionMenu"
 
-    private data class Item(val key: String, val label: String, val primary: Boolean)
+    // One selection on screen at a time.
+    private var activeMode: ActionMode? = null
 
-    // Set once from JS, read when a menu opens.
-    @Volatile
-    private var items: List<Item> = emptyList()
-
-    @ReactMethod
-    fun setItems(list: ReadableArray) {
-        items = (0 until list.size()).mapNotNull { i ->
-            val map = list.getMap(i) ?: return@mapNotNull null
-            val key = map.getString("key") ?: return@mapNotNull null
-            val label = map.getString("label") ?: return@mapNotNull null
-            val primary = map.hasKey("primary") && map.getBoolean("primary")
-            Item(key, label, primary)
-        }
-    }
-
-    // Hooks the menu of one selectable <Text>, found by its React tag. Calling
-    // it again on the same view just replaces the callback.
+    // Hooks one selectable <Text>, found by its React tag. Calling it again on
+    // the same view just replaces the hooks.
     @ReactMethod
     fun attach(tag: Int) {
         UiThreadUtil.runOnUiThread {
@@ -57,8 +46,15 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
                 null
             }
             val textView = view as? TextView ?: return@runOnUiThread
-            textView.customSelectionActionModeCallback = MenuCallback(textView, tag)
+            textView.customSelectionActionModeCallback = SelectionCallback(textView, tag)
+            textView.setOnTouchListener(DoubleTapListener(textView, tag))
         }
+    }
+
+    // Ends the selection on screen, e.g. once a colour is applied.
+    @ReactMethod
+    fun clearSelection() {
+        UiThreadUtil.runOnUiThread { activeMode?.finish() }
     }
 
     // NativeEventEmitter on the JS side expects these two.
@@ -68,53 +64,96 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun removeListeners(count: Int) {}
 
-    private inner class MenuCallback(
+    private fun emitTag(event: String, tag: Int) {
+        reactContext.emitDeviceEvent(event, Arguments.createMap().apply { putInt("tag", tag) })
+    }
+
+    private inner class SelectionCallback(
         private val textView: TextView,
         private val tag: Int,
     ) : ActionMode.Callback {
 
-        // The system fills the menu first (Copy, Select all, Translate...),
-        // then calls this. Ours go in front: primary items before Cut (order
-        // 4), the rest after Select all (8) and before the apps' text actions
-        // (100+), so they sit at the top of the overflow. The system Share is
-        // dropped: the app's own sharing does more.
+        // The system fills the menu (Copy, Select all, Translate...) before
+        // each of these; emptying it hides its toolbar but keeps the selection.
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            items.forEachIndexed { index, item ->
-                menu.add(Menu.NONE, FIRST_ID + index, if (item.primary) 1 else 12, item.label)
-            }
-            menu.removeItem(android.R.id.shareText)
-            reactContext.emitDeviceEvent("SelectionMenuShown", Arguments.createMap().apply {
-                putInt("tag", tag)
-            })
+            menu.clear()
+            activeMode = mode
+            emitSelection()
             return true
         }
 
-        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
-
-        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-            val chosen = items.getOrNull(item.itemId - FIRST_ID) ?: return false
-            val start = minOf(textView.selectionStart, textView.selectionEnd)
-            val end = maxOf(textView.selectionStart, textView.selectionEnd)
-            reactContext.emitDeviceEvent("SelectionMenuAction", Arguments.createMap().apply {
-                putInt("tag", tag)
-                putString("key", chosen.key)
-                putInt("start", start)
-                putInt("end", end)
-            })
-            mode.finish()
+        // Called again once a handle is let go, with the new selection.
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+            menu.clear()
+            emitSelection()
             return true
         }
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
 
         override fun onDestroyActionMode(mode: ActionMode) {
-            reactContext.emitDeviceEvent("SelectionMenuHidden", Arguments.createMap().apply {
+            if (activeMode === mode) activeMode = null
+            emitTag("SelectionMenuHidden", tag)
+        }
+
+        // The selected characters, and where they sit in the TextView (dp from
+        // its top-left corner), for the bubble to point at them.
+        private fun emitSelection() {
+            val layout = textView.layout ?: return
+            val start = minOf(textView.selectionStart, textView.selectionEnd)
+            val end = maxOf(textView.selectionStart, textView.selectionEnd)
+            if (start < 0 || end <= start) return
+            val firstLine = layout.getLineForOffset(start)
+            val lastLine = layout.getLineForOffset(end - 1)
+            val left = if (firstLine == lastLine) layout.getPrimaryHorizontal(start) else 0f
+            val right = when {
+                firstLine != lastLine -> layout.width.toFloat()
+                end >= layout.getLineEnd(firstLine) -> layout.getLineRight(firstLine)
+                else -> layout.getPrimaryHorizontal(end)
+            }
+            val density = textView.resources.displayMetrics.density
+            val dx = textView.totalPaddingLeft - textView.scrollX
+            val dy = textView.totalPaddingTop - textView.scrollY
+            reactContext.emitDeviceEvent("SelectionMenuShown", Arguments.createMap().apply {
                 putInt("tag", tag)
+                putInt("start", start)
+                putInt("end", end)
+                putDouble("x", ((dx + (left + right) / 2) / density).toDouble())
+                putDouble("top", ((dy + layout.getLineTop(firstLine)) / density).toDouble())
+                putDouble("bottom", ((dy + layout.getLineBottom(lastLine)) / density).toDouble())
             })
         }
     }
 
-    private companion object {
-        // Our menu item ids; the system's are android.R.id.* (0x0102xxxx).
-        const val FIRST_ID = 1000
+    // Spots a double-tap and keeps its second tap from the TextView, which
+    // would otherwise select the word under it.
+    private inner class DoubleTapListener(textView: TextView, private val tag: Int) :
+        View.OnTouchListener {
+
+        private var swallowing = false
+
+        private val detector = GestureDetector(
+            textView.context,
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onDoubleTap(e: MotionEvent): Boolean {
+                    emitTag("SelectionMenuDoubleTap", tag)
+                    return true
+                }
+            },
+        ).apply { setIsLongpressEnabled(false) }
+
+        override fun onTouch(v: View, event: MotionEvent): Boolean {
+            if (detector.onTouchEvent(event) && event.actionMasked == MotionEvent.ACTION_DOWN) {
+                swallowing = true
+            }
+            val swallow = swallowing
+            if (event.actionMasked == MotionEvent.ACTION_UP ||
+                event.actionMasked == MotionEvent.ACTION_CANCEL
+            ) {
+                swallowing = false
+            }
+            return swallow
+        }
     }
 }
 

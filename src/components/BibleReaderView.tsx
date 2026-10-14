@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform, ListRenderItemInfo, useWindowDimensions } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
@@ -12,12 +12,16 @@ import {
 } from '../utils/bibleTextUtils';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
+  applyMarkToRange,
   buildChapterDisplay,
   buildVerseDisplay,
   buildLineSegments,
   buildVerseLineOffsets,
+  eraseMarksInRange,
   intersectMarksWithSpan,
+  rangeStyles,
   type ChapterMark,
+  type MarkRange,
   type MarkStyle,
   type VerseSpan,
 } from '../utils/chapterMarks';
@@ -33,13 +37,22 @@ import {
 } from '../types/notes';
 import {t} from '../i18n/strings';
 import {NoteGlyph} from './NoteGlyph';
+import {
+  BUBBLE_ARROW,
+  BUBBLE_HEIGHT,
+  BUBBLE_WIDTH,
+  HighlightBubble,
+} from './HighlightBubble';
 import {UITextView} from '@bsky.app/react-native-uitextview';
 import {
   NATIVE_SELECTION,
   attachSelectionMenu,
-  onSelectionMenuAction,
+  clearSelection,
+  onSelectionChange,
   onTextSelectionChange,
+  onVerseDoubleTap as onNativeDoubleTap,
   reportSelection,
+  type NativeSelection,
 } from '../services/selectionMenu';
 import {
   SPAN_LONG_PRESS,
@@ -79,11 +92,22 @@ const VerseText = UITextView as React.ComponentType<
 
 export type SelectedVerseRange = {start: number; end: number} | null;
 
-export type VerseSelectionAction = {
-  verse: BibleVerse;
-  key: string;
-  range: {start: number; end: number} | null;
-  text: string;
+// Room under a selection for Android's handles, when the bubble goes below.
+const HANDLE_ROOM = 30;
+const BUBBLE_MARGIN = 8;
+
+// The words selected in one verse, and where the highlight bubble sits.
+type BubbleState = {
+  verseId: number;
+  range: MarkRange;
+  left: number;
+  top: number;
+  arrowX: number;
+  below: boolean;
+};
+
+type Measurable = {
+  measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void;
 };
 
 const styleToTextStyle = (
@@ -471,10 +495,8 @@ interface BibleReaderViewProps {
   // keyboard. `onFocus` is for the bubble's text field.
   noteBubbleVerse?: number | null;
   renderNoteBubble?: (onFocus: () => void) => React.ReactNode;
-  // An item of the phone's selection menu was chosen on a verse. `range` is
-  // the selection within the verse text, null when only the number or title
-  // was selected.
-  onSelectionAction?: (action: VerseSelectionAction) => void;
+  // The chapter's marks after a colour or style from the highlight bubble.
+  onChapterMarksChange?: (next: ChapterMark[]) => void;
   flatListRef?: React.RefObject<FlatList<any> | null>;
   headerText?: string | null;
   chapterMarks?: ChapterMark[];
@@ -495,7 +517,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   onNoteMarkPress,
   noteBubbleVerse,
   renderNoteBubble,
-  onSelectionAction,
+  onChapterMarksChange,
   flatListRef,
   headerText,
   chapterMarks,
@@ -553,57 +575,127 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     [notes, snippetBudget],
   );
 
-  // Native selection: which verse each selectable <Text> (by its React tag)
-  // shows, so a menu action can be traced back to its verse.
-  const selectableTags = useRef(new Map<number, number>());
+  // Native selection: each selectable verse <Text> by its React tag, so an
+  // event can be traced back to its verse, and the bubble placed by it.
+  const selectableTexts = useRef(new Map<number, {verseNumber: number; instance: unknown}>());
   const onSelectableRef = useCallback((verseNumber: number, instance: unknown) => {
-    const tags = selectableTags.current;
+    const texts = selectableTexts.current;
     if (!instance) {
-      for (const [tag, v] of tags) {
-        if (v === verseNumber) {
-          tags.delete(tag);
+      for (const [tag, text] of texts) {
+        if (text.verseNumber === verseNumber) {
+          texts.delete(tag);
           reportSelection(tag, false);
         }
       }
       return;
     }
     const tag = attachSelectionMenu(instance);
-    if (tag != null) tags.set(tag, verseNumber);
+    if (tag != null) texts.set(tag, {verseNumber, instance});
   }, []);
 
-  // Read at event time, so the subscription below stays put.
-  const selectionContext = useRef({verses, transformText, noteMarksByVerse, onSelectionAction});
-  selectionContext.current = {verses, transformText, noteMarksByVerse, onSelectionAction};
+  const rootRef = useRef<View>(null);
+  const [bubble, setBubble] = useState<BubbleState | null>(null);
+  // Bumped by every selection event, so a measurement that comes back after a
+  // newer event, or after the selection ended, is dropped.
+  const selectionSeq = useRef(0);
+
+  // Read at event time, so the subscriptions below stay put.
+  const selectionContext = useRef({verses, transformText, noteMarksByVerse, onVerseDoubleTap});
+  selectionContext.current = {verses, transformText, noteMarksByVerse, onVerseDoubleTap};
 
   useEffect(() => {
     if (!NATIVE_SELECTION) return;
-    const sub = onSelectionMenuAction(({tag, key, start, end}) => {
-      const now = selectionContext.current;
-      const verseNumber = selectableTags.current.get(tag);
-      const verse = now.verses.find(v => v.verse_number === verseNumber);
-      if (!verse) return;
+    const findVerse = (tag: number) => {
+      const text = selectableTexts.current.get(tag);
+      const verse = text && selectionContext.current.verses.find(v => v.verse_number === text.verseNumber);
+      return text && verse ? {verse, instance: text.instance as Measurable} : null;
+    };
+
+    const placeBubble = (selection: NativeSelection | null) => {
+      const seq = ++selectionSeq.current;
+      const found = selection && findVerse(selection.tag);
+      if (!selection || !found) {
+        setBubble(null);
+        return;
+      }
+      const {verse, instance} = found;
       // Rebuild exactly what the verse's <Text> shows, to take the title and
       // the number off the selection.
+      const now = selectionContext.current;
       const display = buildVerseDisplay(verse, now.transformText);
       const label = verseNumberLabel(
         verse.verse_number,
         !!now.noteMarksByVerse[verse.verse_number]?.startNoteId,
       );
       const range = selectionToVerseRange(
-        start,
-        end,
+        selection.start,
+        selection.end,
         verseTextPrefixLength(display.title, label),
         display.displayText.length,
       );
-      now.onSelectionAction?.({
-        verse,
-        key,
-        range,
-        text: range ? display.displayText.slice(range.start, range.end) : '',
+      if (!range) {
+        setBubble(null);
+        return;
+      }
+      instance.measureInWindow((textX, textY) => {
+        rootRef.current?.measureInWindow((rootX, rootY, rootWidth, rootHeight) => {
+          if (seq !== selectionSeq.current) return;
+          const x = textX - rootX + selection.x;
+          // Above the words when it fits, else under them, clear of the handles.
+          const above = textY - rootY + selection.top - BUBBLE_ARROW / 2 - 4 - BUBBLE_HEIGHT;
+          const below = above < BUBBLE_MARGIN;
+          const top = below ? textY - rootY + selection.bottom + HANDLE_ROOM : above;
+          const left = Math.min(
+            Math.max(x - BUBBLE_WIDTH / 2, BUBBLE_MARGIN),
+            rootWidth - BUBBLE_WIDTH - BUBBLE_MARGIN,
+          );
+          setBubble({
+            verseId: verse.id,
+            range,
+            left,
+            top: Math.min(top, rootHeight - BUBBLE_HEIGHT - BUBBLE_MARGIN),
+            arrowX: Math.min(Math.max(x - left, 18), BUBBLE_WIDTH - 18),
+            below,
+          });
+        });
       });
+    };
+
+    const stopSelection = onSelectionChange(placeBubble);
+    // A double-tap opens the verse's menu, as it always has.
+    const doubleTaps = onNativeDoubleTap(tag => {
+      const found = findVerse(tag);
+      if (!found) return;
+      clearSelection();
+      selectionContext.current.onVerseDoubleTap?.(found.verse);
     });
-    return () => sub?.remove();
+    return () => {
+      stopSelection();
+      doubleTaps?.remove();
+    };
   }, []);
+
+  // The bubble's words as chapter offsets, which the marks use.
+  const bubbleRange = useMemo(() => {
+    if (!bubble) return null;
+    const span = verseSpans.find(s => s.verseId === bubble.verseId);
+    return span
+      ? {start: span.start + bubble.range.start, end: span.start + bubble.range.end}
+      : null;
+  }, [bubble, verseSpans]);
+
+  const bubbleStyles = useMemo(
+    () => (bubbleRange ? rangeStyles(chapterMarks ?? [], bubbleRange) : null),
+    [bubbleRange, chapterMarks],
+  );
+
+  // A colour or style lands on the words at once; the selection then ends.
+  const editBubbleRange = (edit: (marks: ChapterMark[], range: MarkRange) => ChapterMark[]) => {
+    if (!bubbleRange) return;
+    onChapterMarksChange?.(edit(chapterMarks ?? [], bubbleRange));
+    clearSelection();
+    setBubble(null);
+  };
 
   // Brings the bubble's verse to the top of the reader, above where the
   // keyboard rises (the window doesn't shrink for it on edge-to-edge Android).
@@ -738,6 +830,8 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
 
   const onScrollBeginDrag = useCallback(() => {
     isScrollingRef.current = true;
+    // The bubble stays where it was drawn, so scrolling ends the selection.
+    if (NATIVE_SELECTION) clearSelection();
   }, []);
   const onMomentumScrollEnd = useCallback(() => {
     isScrollingRef.current = false;
@@ -757,65 +851,82 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   }
 
   return (
-    <FlatList
-      ref={flatListRef}
-      data={visibleVerses}
-      keyExtractor={keyExtractor}
-      contentContainerStyle={[
-        styles.contentContainer,
-        {
-          paddingBottom:
-            BIBLE_BASE_BOTTOM_PADDING +
-            bottomScrollSpacerAdjusted +
-            (noteBubbleVerse != null ? keyboardHeight : 0),
-        },
-      ]}
-      ListHeaderComponent={
-        <View>
-          {headerText ? (
-            <View style={styles.headerContainer}>
-              <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>
-                {headerText}
-                {rangeSuffix ? (
-                  <Text style={{color: theme.colors.accentBlue}}>
-                    {' '}
-                    {rangeSuffix}
-                  </Text>
-                ) : null}
-              </Text>
-            </View>
-          ) : null}
-          {rangeSuffix && onClearRange ? (
-            <View
-              style={[
-                styles.rangeBanner,
-                {backgroundColor: 'rgba(10, 132, 255, 0.10)'},
-              ]}>
-              <Pressable onPress={onClearRange} style={styles.rangeClearButton}>
-                <Text
-                  style={[
-                    styles.rangeClearText,
-                    {color: theme.colors.accentBlue},
-                  ]}>
-                  Asehoy ny toko manontolo
+    <View ref={rootRef} collapsable={false} style={styles.root}>
+      <FlatList
+        ref={flatListRef}
+        data={visibleVerses}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={[
+          styles.contentContainer,
+          {
+            paddingBottom:
+              BIBLE_BASE_BOTTOM_PADDING +
+              bottomScrollSpacerAdjusted +
+              (noteBubbleVerse != null ? keyboardHeight : 0),
+          },
+        ]}
+        ListHeaderComponent={
+          <View>
+            {headerText ? (
+              <View style={styles.headerContainer}>
+                <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>
+                  {headerText}
+                  {rangeSuffix ? (
+                    <Text style={{color: theme.colors.accentBlue}}>
+                      {' '}
+                      {rangeSuffix}
+                    </Text>
+                  ) : null}
                 </Text>
-              </Pressable>
-            </View>
-          ) : null}
-        </View>
-      }
-      onScrollToIndexFailed={onScrollToIndexFailed}
-      onScrollBeginDrag={onScrollBeginDrag}
-      onScrollEndDrag={onScrollEndDrag}
-      onMomentumScrollEnd={onMomentumScrollEnd}
-      renderItem={renderItem}
-      {...listProps}
-      style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
-    />
+              </View>
+            ) : null}
+            {rangeSuffix && onClearRange ? (
+              <View
+                style={[
+                  styles.rangeBanner,
+                  {backgroundColor: 'rgba(10, 132, 255, 0.10)'},
+                ]}>
+                <Pressable onPress={onClearRange} style={styles.rangeClearButton}>
+                  <Text
+                    style={[
+                      styles.rangeClearText,
+                      {color: theme.colors.accentBlue},
+                    ]}>
+                    Asehoy ny toko manontolo
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        }
+        onScrollToIndexFailed={onScrollToIndexFailed}
+        onScrollBeginDrag={onScrollBeginDrag}
+        onScrollEndDrag={onScrollEndDrag}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        renderItem={renderItem}
+        {...listProps}
+        style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
+      />
+      {bubble && bubbleStyles ? (
+        <HighlightBubble
+          left={bubble.left}
+          top={bubble.top}
+          arrowX={bubble.arrowX}
+          below={bubble.below}
+          current={bubbleStyles}
+          onColor={color =>
+            editBubbleRange((marks, range) => applyMarkToRange(marks, range, 'highlight', color))
+          }
+          onStyle={style => editBubbleRange((marks, range) => applyMarkToRange(marks, range, style))}
+          onErase={() => editBubbleRange(eraseMarksInRange)}
+        />
+      ) : null}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  root: {flex: 1},
   container: {
     flex: 1,
     paddingHorizontal: 16,

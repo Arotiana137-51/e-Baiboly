@@ -1,4 +1,5 @@
 import type {TutorialIconName} from '../components/TutorialIcons';
+import {NATIVE_SELECTION} from '../services/selectionMenu';
 
 // Tutorial data — pure, append-only. To add a mini-tutorial later: append a
 // Tutorial object here (+ its steps). No engine change needed.
@@ -37,11 +38,12 @@ export type TargetId =
   | 'noteInput'         // the text field of the note bubble above the verse
   | 'noteMarker'        // first verse of the chapter's most recently edited note
   // Highlight tutorial — targets inside the ChapterEditorModal (a native RN
-  // Modal; the verse text is a WebView, everything else is native RN Views).
+  // Modal; the verse text is a WebView, everything else is native RN Views),
+  // or, with native selection, in the highlight bubble over the reader.
   | 'hlReaderArea'      // the normal Bible reader (hole = real long-press to open the menu)
   | 'hlVerseText'       // the WebView chapter body (hole = real press-drag selection)
-  | 'hlColorPicker'     // the highlight-color swatch row
-  | 'hlEraseBtn'        // "Fafao" footer button (erase the selected highlight)
+  | 'hlColorPicker'     // the highlight-color swatch row (editor or bubble)
+  | 'hlEraseBtn'        // "Fafao" button, editor footer or bubble (erase the selected highlight)
   | 'hlSaveBtn';        // "Tahirizo" footer button (commit)
 
 // A side-effect the engine performs when the step becomes active — it drives
@@ -321,6 +323,72 @@ const CULT_AFTER_ADD_STEPS: CoachStep[] = [
   },
 ];
 
+// Highlight tutorial where the reader uses the phone's own selection
+// (NATIVE_SELECTION): a long-press selects a word and the highlight bubble
+// shows over it, with no editor to open or save. Same wording as the editor's
+// steps further down, where it still fits.
+const SELECTION_HIGHLIGHT_STEPS: CoachStep[] = [
+  {
+    id: 'hlIntro',
+    targetId: null,
+    scope: 'screen',
+    text: "Azonao asongadinana loko ny teny, andianteny na ampahany amin'ny toko iray.",
+  },
+  {
+    // Real gesture through the hole: the user's own long-press selects a word
+    // and brings the bubble (MainScreen emits highlightMenuOpened).
+    id: 'hlOpenMenu',
+    targetId: 'hlReaderArea',
+    scope: 'screen',
+    drive: 'showBibleReader',
+    gesture: 'longPress',
+    text: 'Tsindrio ela (long press) andininy iray eto amin\'ny famakiana mba hisokafan\'ny fitaovana fanasongadinana.',
+    advanceOn: 'targetEvent',
+    awaitProgress: 'highlightMenuOpened',
+  },
+  {
+    // The bubble's colours: a tap colours the words at once and closes it
+    // (MainScreen emits editorSaved).
+    id: 'hlPickColor',
+    targetId: 'hlColorPicker',
+    scope: 'screen',
+    text: 'Rehefa voafidy ny teny, tsindrio ny loko iray eto.',
+    advanceOn: 'targetEvent',
+    awaitProgress: 'editorSaved',
+  },
+  {
+    id: 'hlDeleteIntro',
+    targetId: null,
+    scope: 'screen',
+    text: "Tsara! Voatahiry ny fanasongadinana. Ankehitriny hianarantsika ny fomba hamafana azy raha diso na tsy ilaina intsony.",
+  },
+  {
+    id: 'hlDeleteReopen',
+    targetId: 'hlReaderArea',
+    scope: 'screen',
+    drive: 'showBibleReader',
+    gesture: 'longPress',
+    text: "Hidiro indray ny fitaovana: tsindrio ela ilay andininy nasongadinao teo.",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'highlightMenuOpened',
+  },
+  {
+    // Fafao in the bubble applies at once, like a colour.
+    id: 'hlDeleteErase',
+    targetId: 'hlEraseBtn',
+    scope: 'screen',
+    text: 'Tsindrio "Fafao" hanesorana ny loko tamin\'ny teny voafidy.',
+    advanceOn: 'targetEvent',
+    awaitProgress: 'editorSaved',
+  },
+  {
+    id: 'hlDone',
+    targetId: null,
+    scope: 'screen',
+    text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
+  },
+];
+
 export const TUTORIALS: Tutorial[] = [
   {
     id: ONBOARDING_ID,
@@ -448,7 +516,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'highlighter',
     order: 2,
     launchRoute: 'Home',
-    steps: [
+    steps: NATIVE_SELECTION ? SELECTION_HIGHLIGHT_STEPS : [
       {
         id: 'hlIntro',
         targetId: null,

@@ -266,6 +266,84 @@ export const buildVerseLineOffsets = (lines: string[]): number[] => {
   return offsets;
 };
 
+// --- Editing a range of the chapter text, as the highlight bubble does. ---
+
+export type MarkRange = {start: number; end: number};
+export type EditableMarkStyle = 'highlight' | 'bold' | 'italic' | 'underline';
+
+const newMarkId = (): string => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+// Whether `marks` together cover every character of `range`.
+const coversRange = (marks: ChapterMark[], range: MarkRange): boolean => {
+  let cursor = range.start;
+  for (const m of [...marks].sort((a, b) => a.start - b.start)) {
+    if (m.start > cursor) break;
+    cursor = Math.max(cursor, m.end);
+  }
+  return cursor >= range.end;
+};
+
+// Takes `range` out of the marks `cut` picks; one running past it on both
+// sides is split in two.
+const cutRange = (
+  marks: ChapterMark[],
+  range: MarkRange,
+  cut: (m: ChapterMark) => boolean,
+): ChapterMark[] =>
+  marks.flatMap(m => {
+    if (!cut(m) || m.end <= range.start || m.start >= range.end) return [m];
+    const parts: ChapterMark[] = [];
+    if (m.start < range.start) parts.push({...m, end: range.start});
+    if (m.end > range.end) {
+      parts.push({...m, id: parts.length ? newMarkId() : m.id, start: range.end});
+    }
+    return parts;
+  });
+
+// What `range` already has: the one colour covering all of it, if any, and
+// whether it is all bold / italic / underlined.
+export const rangeStyles = (marks: ChapterMark[], range: MarkRange) => {
+  const has = (style: MarkStyle) =>
+    coversRange(marks.filter(m => m.style === style), range);
+  const color = marks.find(
+    m =>
+      m.style === 'highlight' &&
+      coversRange(marks.filter(o => o.style === 'highlight' && o.color === m.color), range),
+  )?.color;
+  return {color, bold: has('bold'), italic: has('italic'), underline: has('underline')};
+};
+
+// One style on `range`, like a pen on paper: a colour replaces the colour
+// underneath, and the colour (or bold / italic / underline) already covering
+// the whole range comes off instead.
+export const applyMarkToRange = (
+  marks: ChapterMark[],
+  range: MarkRange,
+  style: EditableMarkStyle,
+  color?: string,
+): ChapterMark[] => {
+  const same = (m: ChapterMark) =>
+    m.style === style && (style !== 'highlight' || m.color === color);
+  const alreadyThere = coversRange(marks.filter(same), range);
+  const rest = cutRange(marks, range, m => m.style === style);
+  if (alreadyThere) return rest;
+  return [
+    ...rest,
+    {
+      id: newMarkId(),
+      start: range.start,
+      end: range.end,
+      style,
+      ...(style === 'highlight' ? {color} : null),
+      createdAt: new Date().toISOString(),
+    },
+  ];
+};
+
+// Takes every colour, bold, italic and underline off `range`.
+export const eraseMarksInRange = (marks: ChapterMark[], range: MarkRange): ChapterMark[] =>
+  cutRange(marks, range, m => m.style !== 'note');
+
 export const chapterMarksKey = (bookId: number, chapter: number): string =>
   `chapterMarks:${bookId}:${chapter}`;
 

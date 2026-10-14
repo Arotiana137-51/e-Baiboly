@@ -7,37 +7,31 @@ import {
   findNodeHandle,
 } from 'react-native';
 
-// The phone's own text-selection menu, with the app's actions added in front
-// (native module SelectionMenu). The selection itself, its handles and
-// Copy / Translate stay the system's. On iOS the selectable text is the
-// UITextView of @bsky.app/react-native-uitextview: a React Native <Text>
-// there can only copy its whole text.
-
-export type SelectionMenuItem = {
-  key: string;
-  label: string;
-  // Shown in the menu bar itself; the others go to the top of its overflow.
-  primary?: boolean;
-};
-
-// `start`/`end` index the whole <Text> the selection is in, not just the
-// verse text: callers subtract what comes before it (title, number).
-export type SelectionMenuAction = {tag: number; key: string; start: number; end: number};
+// The phone's own text selection on the reader's verses (native module
+// SelectionMenu): long-press a word, then drag the handles. The system menu
+// stays empty and the app shows its own highlight bubble instead; a double-tap
+// is kept for the app's verse menu.
 
 const {SelectionMenu} = NativeModules;
 const emitter = SelectionMenu ? new NativeEventEmitter(SelectionMenu) : null;
 
-// True where the reader uses native selection instead of the app's own
-// double-tap / long-press handlers.
-export const NATIVE_SELECTION = !!SelectionMenu?.attach;
+// True where the reader uses native selection. Android only for now: iOS
+// keeps the app's own double-tap / long-press menus.
+export const NATIVE_SELECTION = Platform.OS === 'android' && !!SelectionMenu?.attach;
 
-export const setSelectionMenuItems = (items: SelectionMenuItem[]): void => {
-  SelectionMenu?.setItems?.(items);
+// A selection on screen. `start`/`end` index the verse's whole <Text> (title
+// and number included); x / top / bottom are dp from that Text's top-left.
+export type NativeSelection = {
+  tag: number;
+  start: number;
+  end: number;
+  x: number;
+  top: number;
+  bottom: number;
 };
 
-// Hooks one selectable text (on iOS every one already is); returns its tag so
-// the caller can tell which text an action came from. Missing module (Jest,
-// stale build): no-op.
+// Hooks one selectable text; returns its tag so the caller can tell which text
+// an event came from. Missing module (Jest, stale build): no-op.
 export const attachSelectionMenu = (instance: unknown): number | null => {
   if (!NATIVE_SELECTION || instance == null) return null;
   const tag = findNodeHandle(instance as Parameters<typeof findNodeHandle>[0]);
@@ -46,9 +40,25 @@ export const attachSelectionMenu = (instance: unknown): number | null => {
   return tag;
 };
 
-export const onSelectionMenuAction = (
-  listener: (action: SelectionMenuAction) => void,
-): EmitterSubscription | null => emitter?.addListener('SelectionMenuAction', listener) ?? null;
+// Ends the selection on screen, if any.
+export const clearSelection = (): void => {
+  SelectionMenu?.clearSelection?.();
+};
+
+// Each change of the selection on screen, and null once it ends.
+export const onSelectionChange = (
+  listener: (selection: NativeSelection | null) => void,
+): (() => void) => {
+  const shown = emitter?.addListener('SelectionMenuShown', listener);
+  const hidden = emitter?.addListener('SelectionMenuHidden', () => listener(null));
+  return () => {
+    shown?.remove();
+    hidden?.remove();
+  };
+};
+
+export const onVerseDoubleTap = (listener: (tag: number) => void): EmitterSubscription | null =>
+  emitter?.addListener('SelectionMenuDoubleTap', ({tag}) => listener(tag)) ?? null;
 
 const selectedTags = new Set<number>();
 const selectionListeners = new Set<(active: boolean) => void>();
