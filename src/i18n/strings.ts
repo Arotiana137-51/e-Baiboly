@@ -9,8 +9,22 @@ type TranslationKey =
   | 'menu.cultMode'
   | 'notes.title'
   | 'notes.empty'
-  | 'notes.removeTitle'
-  | 'notes.removeMessage'
+  | 'notes.open'
+  | 'notes.save'
+  | 'notes.edit'
+  | 'notes.placeholder'
+  | 'notes.untilVerse'
+  | 'notes.editedOn'
+  | 'notes.deleted'
+  | 'notes.undo'
+  | 'notes.search'
+  | 'notes.noResults'
+  | 'notes.exportAll'
+  | 'notes.exportTitle'
+  | 'actions.noteAdd'
+  | 'actions.noteOpen'
+  | 'actions.hymnNoteAdd'
+  | 'actions.hymnNoteOpen'
   | 'cultMode.title'
   | 'cultMode.activate'
   | 'cultMode.deactivate'
@@ -138,8 +152,22 @@ const translations: Translations = {
     'menu.cultMode': 'Fotoam-pivavahana',
     'notes.title': 'Ireo Naoty',
     'notes.empty': 'Mbola tsy misy naoty',
-    'notes.removeTitle': 'Esorina ny naoty',
-    'notes.removeMessage': 'Tena esorina ve ity naoty ity?',
+    'notes.open': 'Vakio ny naoty',
+    'notes.save': 'Tahirizo',
+    'notes.edit': 'Ovay',
+    'notes.placeholder': 'Soraty eto ny naotinao…',
+    'notes.untilVerse': "Hatramin'ny andininy",
+    'notes.editedOn': 'Novaina {{date}}',
+    'notes.deleted': 'Voafafa ny naoty',
+    'notes.undo': 'Averina',
+    'notes.search': "Hitady ao amin'ny naoty",
+    'notes.noResults': 'Tsy misy naoty mifanaraka amin\'izany',
+    'notes.exportAll': 'Zarao daholo',
+    'notes.exportTitle': 'Ny naotiko — e-Baiboly',
+    'actions.noteAdd': 'Hanoratra naoty',
+    'actions.noteOpen': 'Jereo ny naoty',
+    'actions.hymnNoteAdd': "Naoty momba ny hira",
+    'actions.hymnNoteOpen': "Jereo ny naoty momba ny hira",
     'cultMode.title': 'Fotoam-pivavahana',
     'cultMode.activate': 'Velomy ny fotoana',
     'cultMode.deactivate': 'Ajanony',

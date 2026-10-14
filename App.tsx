@@ -13,6 +13,7 @@ import {FavoritesProvider} from './src/hooks/useFavorites';
 import {HymnFavoritesProvider} from './src/hooks/useHymnFavorites';
 import {BibleHistoryProvider} from './src/hooks/useBibleHistory';
 import {HymnHistoryProvider} from './src/hooks/useHymnHistory';
+import {NotesProvider} from './src/contexts/NotesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {STORAGE_KEY_PRIVACY_POLICY_ACCEPTED} from './src/screens/PrivacyPolicyScreen';
 import {isOnboardingDone} from './src/contexts/TutorialContext';
@@ -192,18 +193,20 @@ const App = () => {
                       <HymnFavoritesProvider>
                         <BibleHistoryProvider>
                           <HymnHistoryProvider>
-                            <NavigationContainer
-                              ref={navigationRef}
-                              onReady={() => {
-                                // Cold start from a notification or widget tap.
-                                notifee
-                                  .getInitialNotification()
-                                  .then(initial => openVerseFromNotification(initial?.notification))
-                                  .catch(() => {});
-                                Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
-                              }}>
-                              <AppContent />
-                            </NavigationContainer>
+                            <NotesProvider>
+                              <NavigationContainer
+                                ref={navigationRef}
+                                onReady={() => {
+                                  // Cold start from a notification or widget tap.
+                                  notifee
+                                    .getInitialNotification()
+                                    .then(initial => openVerseFromNotification(initial?.notification))
+                                    .catch(() => {});
+                                  Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
+                                }}>
+                                <AppContent />
+                              </NavigationContainer>
+                            </NotesProvider>
                           </HymnHistoryProvider>
                         </BibleHistoryProvider>
                       </HymnFavoritesProvider>

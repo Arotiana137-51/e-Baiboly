@@ -9,7 +9,12 @@ interface HymnActionPopoverProps {
   hymn: Hymn | null;
   stanzaNumber?: number | null;
   stanzaText?: string | null;
+  // The stanza / the whole hymn already has a note: open it instead.
+  stanzaHasNote?: boolean;
+  hymnHasNote?: boolean;
   onClose: () => void;
+  // stanza null = a note on the whole hymn.
+  onNote: (stanza: number | null) => void;
   onAddToFavorites: (hymn: Hymn) => void;
   onShare: (stanzaNumber: number) => void;
   onReportIssue: (payload: { stanzaNumber: number; stanzaText: string }) => void;
@@ -20,7 +25,10 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
   hymn,
   stanzaNumber,
   stanzaText,
+  stanzaHasNote,
+  hymnHasNote,
   onClose,
+  onNote,
   onAddToFavorites,
   onShare,
   onReportIssue,
@@ -30,6 +38,11 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
   if (!hymn) return null;
 
   const hasStanza = typeof stanzaNumber === 'number' && !!stanzaText;
+
+  const handleNote = (stanza: number | null) => {
+    onClose();
+    onNote(stanza);
+  };
 
   const handleAddToFavorites = () => {
     onAddToFavorites(hymn);
@@ -75,6 +88,26 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
           </View>
           
           <View style={styles.menuItems}>
+            {hasStanza ? (
+              <Pressable
+                style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
+                onPress={() => handleNote(stanzaNumber ?? null)}
+              >
+                <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
+                  {stanzaHasNote ? t('actions.noteOpen') : t('actions.noteAdd')}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
+              onPress={() => handleNote(null)}
+            >
+              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
+                {hymnHasNote ? t('actions.hymnNoteOpen') : t('actions.hymnNoteAdd')}
+              </Text>
+            </Pressable>
+
             <Pressable
               style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
               onPress={handleAddToFavorites}

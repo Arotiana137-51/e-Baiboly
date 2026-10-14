@@ -10,7 +10,7 @@ import {View} from 'react-native';
 import {TutorialIcon, type TutorialIconName} from '../src/components/TutorialIcons';
 import {TUTORIALS} from '../src/tutorials/registry';
 
-const NAMES: TutorialIconName[] = ['rocket', 'church', 'highlighter'];
+const NAMES: TutorialIconName[] = ['rocket', 'church', 'highlighter', 'note'];
 
 // Flatten every View's resolved style into one list.
 const stylesOf = (name: TutorialIconName) => {

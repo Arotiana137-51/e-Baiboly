@@ -30,6 +30,8 @@ export type RootStackParamList = {
         selectedChapter?: number;
         selectedVerse?: number;
         selectedHymnId?: string;
+        // From the notes list: open this note's bubble once its text is shown.
+        openNoteId?: string;
       }
     | undefined;
   Favorites: { mode: 'bible' | 'hymnal' };

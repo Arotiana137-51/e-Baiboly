@@ -32,6 +32,10 @@ export type TargetId =
   | 'cultReaderNav'     // ‹ playlist chevron in the reader (Home) once active
   | 'cultReaderNavNext' // › playlist chevron (paired with cultReaderNav)
   | 'cultStopButton'    // ■ stop button in the reader transport bar (Home)
+  // Notes tutorial.
+  | 'noteActionItem'    // "Hanoratra naoty" in the verse action popover (double-tap)
+  | 'noteInput'         // the text field of the note bubble above the verse
+  | 'noteMarker'        // first verse of the chapter's most recently edited note
   // Highlight tutorial — targets inside the ChapterEditorModal (a native RN
   // Modal; the verse text is a WebView, everything else is native RN Views).
   | 'hlReaderArea'      // the normal Bible reader (hole = real long-press to open the menu)
@@ -121,6 +125,7 @@ export type Tutorial = {
 export const ONBOARDING_ID = 'onboarding';
 export const CULT_TUTORIAL_ID = 'cultMode';
 export const HIGHLIGHT_TUTORIAL_ID = 'highlight';
+export const NOTES_TUTORIAL_ID = 'notes';
 
 // Onboarding's two mid-tutorial drills. Defined once, reused in whichever
 // order the user actually picks at `modeToggle` below — never assumed.
@@ -561,6 +566,69 @@ export const TUTORIALS: Tutorial[] = [
         targetId: null,
         scope: 'screen',
         text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
+      },
+    ],
+  },
+  {
+    // The note written here is a real one: the last card says how to remove it.
+    id: NOTES_TUTORIAL_ID,
+    title: 'Naoty', // Notes
+    icon: 'note',
+    order: 3,
+    launchRoute: 'Home',
+    steps: [
+      {
+        id: 'noteIntro',
+        targetId: null,
+        scope: 'screen',
+        drive: 'showBibleReader',
+        text: "Azonao asiana naoty ny andininy na ny hira, toy ny manoratra eo amin'ny sisin'ny Baiboly taratasy.",
+      },
+      {
+        // Real gesture through the hole: the user's own double-tap opens the
+        // verse menu (MainScreen emits verseActionOpened).
+        id: 'noteOpenActions',
+        targetId: 'hlReaderArea',
+        scope: 'screen',
+        drive: 'showBibleReader',
+        text: 'Tsindrio indroa haingana (double tap) ny andininy iray.',
+        advanceOn: 'targetEvent',
+        awaitProgress: 'verseActionOpened',
+      },
+      {
+        id: 'notePickAction',
+        targetId: 'noteActionItem',
+        scope: 'modal',
+        text: 'Tsindrio "Hanoratra naoty".',
+        advanceOn: 'targetEvent',
+        awaitProgress: 'noteOpened',
+      },
+      {
+        // The bubble opens in the reader itself (screen scope), scrolled to
+        // the top; the card goes below it, above the keyboard. Advances on any
+        // close, saved or not (NoteBubble emits noteClosed for Tahirizo, back
+        // and delete), so closing an empty bubble can't strand the tutorial.
+        id: 'noteWrite',
+        targetId: 'noteInput',
+        scope: 'screen',
+        text: "Soraty eto ny naotinao. Raha andininy maromaro no resahiny, ampitomboy amin'ny + ny \"Hatramin'ny andininy\". Rehefa vita, tsindrio \"Tahirizo\" eo ambony.",
+        advanceOn: 'targetEvent',
+        awaitProgress: 'noteClosed',
+      },
+      {
+        // The hole frames the whole first noted verse: coloured number,
+        // margin bracket and (for a one-verse note) the preview line.
+        id: 'noteMarker',
+        targetId: 'noteMarker',
+        scope: 'screen',
+        peekCard: true,
+        text: "Ny laharan'ny andininy misy loko, ny tsipika eo amin'ny sisiny ary ny andalana voalohany amin'ny naotinao no mampahafantatra fa misy naoty eo. Tsindrio ny iray amin'ireo hamaky azy.",
+      },
+      {
+        id: 'noteDone',
+        targetId: null,
+        scope: 'screen',
+        text: "Vita! Ao amin'ny \"Naoty\" ao anaty menio no ahitanao azy rehetra. Raha hamafa ity naoty fanandramana ity, sokafy ary tsindrio ny daba-pako. Azonao averina foana ao amin'ny Toro-lalana.",
       },
     ],
   },
