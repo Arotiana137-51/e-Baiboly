@@ -96,6 +96,14 @@ static void EBInstallMenuHook(void)
   });
 }
 
+// UIKit may cache which delegate methods exist when a text view gets its
+// delegate, so the method goes in at launch, before any verse is created.
+// A constructor rather than +load, which RCT_EXPORT_MODULE already defines.
+__attribute__((constructor)) static void EBInstallMenuHookAtLaunch(void)
+{
+  EBInstallMenuHook();
+}
+
 // iOS 15: UIMenuController items, appended after the system's. Each needs
 // its own selector; the responder chain reaches RNUITextView from its text
 // view, so only selectable verses show them (the default canPerformAction:
@@ -133,13 +141,6 @@ static void EBInstallLegacyMenuItems(void)
 }
 
 RCT_EXPORT_MODULE();
-
-// UIKit may cache which delegate methods exist when a text view gets its
-// delegate, so the method goes in at launch, before any verse is created.
-+ (void)load
-{
-  EBInstallMenuHook();
-}
 
 + (BOOL)requiresMainQueueSetup
 {
