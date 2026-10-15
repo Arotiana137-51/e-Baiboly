@@ -10,11 +10,14 @@ import {
   useWindowDimensions,
   type LayoutChangeEvent,
   type NativeSyntheticEvent,
+  type StyleProp,
   type TextLayoutEventData,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
-import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
+import { useTheme, useLowEndMode, type Theme } from '../contexts/ThemeContext';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import {renderBibleLineForReader} from '../utils/bibleTextUtils';
 import type {InlineBibleRef} from '../utils/bibleRefs';
@@ -28,7 +31,6 @@ import {
   rangeStyles,
   type ChapterMark,
   type MarkRange,
-  type MarkStyle,
   type VerseSpan,
 } from '../utils/chapterMarks';
 import {
@@ -65,8 +67,9 @@ import {
   clearSelection,
   onSelectionChange,
   onTextDoubleTap,
-  onTextSelectionChange,
+  onTextLines,
   reportSelection,
+  textLinesFor,
   type NativeSelection,
 } from '../services/selectionMenu';
 import {SPAN_LONG_PRESS} from '../utils/verseSelection';
@@ -84,6 +87,8 @@ const PASSAGE_MAX_VERSES = 50;
 const PASSAGE_MAX_VERSES_LOW_END = 25;
 // Where a verse the reader jumps to lands: 20 % from the top.
 const JUMP_VIEW_POSITION = 0.2;
+// The verse number sits a little above the line, more so in bigger text.
+const VERSE_NUMBER_LIFT = -3;
 // Behind the words of the verse a search or a link landed on.
 const SELECTED_VERSE_BACKGROUND = 'rgba(10, 132, 255, 0.16)';
 
@@ -96,6 +101,10 @@ const FLOATING_BOTTOM_NAV_SPACER = {
 } as const;
 
 const EMPTY_MARKS: ChapterMark[] = [];
+
+// iOS with native selection: the passages are the library's UITextViews,
+// whose onTextLayout gives no line positions; the native module sends them.
+const IOS_NATIVE_SELECTION = NATIVE_SELECTION && Platform.OS === 'ios';
 
 // A passage's text. On iOS, when selectable, a UITextView: a React Native
 // <Text> there can only copy its whole text, not select words. Its spans
@@ -130,20 +139,97 @@ type Measurable = {
   measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void;
 };
 
-const styleToTextStyle = (
-  marks: ChapterMark[],
-): {fontWeight?: 'bold'; fontStyle?: 'italic'; textDecorationLine?: 'underline'} => {
-  const out: any = {};
-  for (const m of marks) {
-    if (m.style === 'bold') out.fontWeight = 'bold';
-    if (m.style === 'italic') out.fontStyle = 'italic';
-    if (m.style === 'underline') out.textDecorationLine = 'underline';
-  }
-  return out;
-};
-
 // Sizes every verse of the reader shares.
 type VerseMetrics = {fontSize: number; lineHeight: number; fontScale: number};
+
+// The styles of a verse's spans, built once per theme and font size rather
+// than as new objects on every render.
+type VerseStyleSet = {
+  passage: StyleProp<TextStyle>;
+  title: StyleProp<TextStyle>;
+  number: StyleProp<TextStyle>;
+  numberOnNote: StyleProp<TextStyle>;
+  line: StyleProp<TextStyle>;
+  italicLine: StyleProp<TextStyle>;
+  footnote: StyleProp<TextStyle>;
+  preview: StyleProp<TextStyle>;
+  // For renderBibleLineForReader (inline footnote markers and references).
+  lineOptions: {baseTextStyle: TextStyle; footnoteTextStyle: TextStyle; refTextStyle?: TextStyle};
+  noteBar: StyleProp<ViewStyle>;
+  isDark: boolean;
+};
+
+const buildVerseStyles = (theme: Theme, metrics: VerseMetrics, withRefs: boolean): VerseStyleSet => {
+  const {fontSize, lineHeight, fontScale} = metrics;
+  return {
+    passage: [
+      TEXT_STYLES.body,
+      styles.passageText,
+      {fontSize, lineHeight, color: theme.colors.readerText},
+    ],
+    title: [
+      styles.verseTitle,
+      {
+        fontSize: Math.round(fontSize * 1.03),
+        // Faded through the colour: iOS's selectable text can't fade part of
+        // a text with opacity.
+        color: hexToRgba(
+          theme.colors.textSecondary ?? theme.colors.textWatermark ?? theme.colors.readerText,
+          0.62,
+        ),
+        lineHeight,
+      },
+    ],
+    number: [
+      TEXT_STYLES.verseNumber,
+      {
+        fontSize: scaleFontSize(TEXT_STYLES.verseNumber.fontSize, fontScale),
+        lineHeight,
+        color: theme.colors.verseNumber,
+        transform: [{translateY: VERSE_NUMBER_LIFT * fontScale}],
+      },
+    ],
+    numberOnNote: [styles.verseNumberOnNote, {backgroundColor: theme.colors.accentBlue}],
+    line: {lineHeight},
+    italicLine: [styles.italic, {color: theme.colors.textWatermark, lineHeight}],
+    footnote: [styles.footnote, {color: theme.colors.textWatermark, lineHeight}],
+    preview: [
+      styles.notePreview,
+      {
+        color: hexToRgba(theme.colors.accentBlue, 0.7),
+        fontSize: scaleFontSize(TEXT_STYLES.body.fontSize * 0.88, fontScale),
+        lineHeight,
+      },
+    ],
+    lineOptions: {
+      baseTextStyle: {lineHeight},
+      footnoteTextStyle: {
+        opacity: 0.72,
+        fontSize: Math.max(10, Math.round(fontSize * 0.92)),
+        fontStyle: 'italic',
+      },
+      refTextStyle: withRefs
+        ? {fontStyle: 'italic', color: theme.colors.accentBlue ?? theme.colors.verseNumber}
+        : undefined,
+    },
+    noteBar: [styles.noteBar, {backgroundColor: theme.colors.accentBlue}],
+    isDark: theme.isDark,
+  };
+};
+
+// One background style per highlight colour and theme, shared by every span.
+const highlightStyles = new Map<string, TextStyle>();
+const highlightStyle = (color: string, isDark: boolean): TextStyle => {
+  const key = `${color}-${isDark}`;
+  let style = highlightStyles.get(key);
+  if (!style) {
+    style = {
+      backgroundColor: isDark ? dimHighlightForDarkMode(color) : dimHighlightForLightMode(color),
+    };
+    highlightStyles.set(key, style);
+  }
+  return style;
+};
 
 // One verse inside its passage's <Text>: title, number, words, footnotes and
 // note previews, drawn from the passage's pieces. Its own component so a
@@ -152,8 +238,7 @@ const VerseSpans = React.memo(
   ({
     pv,
     pieces,
-    theme,
-    metrics,
+    verseStyles,
     verseMarks,
     isSelected,
     onInlineRefPress,
@@ -163,20 +248,18 @@ const VerseSpans = React.memo(
   }: {
     pv: PassageVerse;
     pieces: PassagePiece[];
-    theme: any;
-    metrics: VerseMetrics;
+    verseStyles: VerseStyleSet;
     verseMarks: ChapterMark[];
     isSelected: boolean;
     onInlineRefPress?: (ref: InlineBibleRef) => void;
     onNoteMarkPress?: (noteId: string) => void;
-    // Without native selection (iOS for now): the app's own double-tap and
-    // long-press on the verse.
+    // Without native selection (iOS 15, or no module): the app's own
+    // double-tap and long-press on the verse.
     onVersePress?: (verse: BibleVerse) => void;
     onVerseLongPress?: (verse: BibleVerse) => void;
   }) => {
     const {verse, display} = pv;
     const {lines, italicLines} = display;
-    const {fontSize, lineHeight, fontScale} = metrics;
     const lineOffsets = useMemo(() => buildVerseLineOffsets(lines), [lines]);
     const hasMarks = verseMarks.length > 0;
 
@@ -184,22 +267,7 @@ const VerseSpans = React.memo(
       switch (piece.kind) {
         case 'title':
           return (
-            <UITextView
-              key="title"
-              style={{
-                fontStyle: 'italic',
-                fontWeight: '200',
-                letterSpacing: 1.2,
-                fontSize: Math.round(fontSize * 1.03),
-                color:
-                  theme.colors.textSecondary ??
-                  theme.colors.textWatermark ??
-                  theme.colors.readerText,
-                opacity: 0.62,
-                lineHeight,
-                transform: [{ skewX: '-8deg' }],
-              }}
-            >
+            <UITextView key="title" style={verseStyles.title}>
               {piece.text}
             </UITextView>
           );
@@ -224,20 +292,7 @@ const VerseSpans = React.memo(
               suppressHighlighting
               accessibilityRole={noteId ? 'button' : undefined}
               accessibilityLabel={noteId ? t('notes.open') : undefined}
-              style={[
-                TEXT_STYLES.verseNumber,
-                {
-                  fontSize: scaleFontSize(TEXT_STYLES.verseNumber.fontSize, fontScale),
-                  lineHeight,
-                  color: theme.colors.verseNumber,
-                  transform: [
-                    {
-                      translateY: (styles.verseNumber.transform?.[0] as any)?.translateY * fontScale,
-                    },
-                  ],
-                },
-                noteId ? [styles.verseNumberOnNote, {backgroundColor: theme.colors.accentBlue}] : null,
-              ]}
+              style={[verseStyles.number, noteId ? verseStyles.numberOnNote : null]}
             >
               {piece.text}
             </UITextView>
@@ -245,50 +300,29 @@ const VerseSpans = React.memo(
         }
         case 'text':
           return lines.map((line, idx) => {
-            const isBlockItalic = italicLines.has(idx);
-            const lineStyle = isBlockItalic
-              ? {
-                  color: theme.colors.textWatermark,
-                  fontStyle: 'italic' as const,
-                  lineHeight,
-                }
-              : { lineHeight };
+            const lineStyle = italicLines.has(idx) ? verseStyles.italicLine : verseStyles.line;
 
             if (hasMarks) {
               const segments = buildLineSegments(line, lineOffsets[idx], verseMarks);
               return (
                 <UITextView key={`line-${idx}`} style={lineStyle}>
                   {idx === 0 ? '' : '\n'}
-                  {segments.map((seg, segIdx) => {
-                    const markStyles = styleToTextStyle(
-                      seg.marks.map(s => ({
-                        id: '',
-                        start: 0,
-                        end: 0,
-                        style: s,
-                        createdAt: '',
-                      })),
-                    );
-                    const hasHighlight = seg.marks.includes('highlight' as MarkStyle);
-                    return (
-                      <UITextView
-                        key={`seg-${segIdx}`}
-                        style={[
-                          seg.italic ? {fontStyle: 'italic'} : null,
-                          markStyles,
-                          hasHighlight && seg.highlightColor
-                            ? {
-                                backgroundColor: theme.isDark
-                                  ? dimHighlightForDarkMode(seg.highlightColor)
-                                  : dimHighlightForLightMode(seg.highlightColor),
-                              }
-                            : null,
-                        ]}
-                      >
-                        {seg.text}
-                      </UITextView>
-                    );
-                  })}
+                  {segments.map((seg, segIdx) => (
+                    <UITextView
+                      key={`seg-${segIdx}`}
+                      style={[
+                        seg.italic && styles.italic,
+                        seg.marks.includes('bold') && styles.bold,
+                        seg.marks.includes('italic') && styles.italic,
+                        seg.marks.includes('underline') && styles.underline,
+                        seg.marks.includes('highlight') && seg.highlightColor
+                          ? highlightStyle(seg.highlightColor, verseStyles.isDark)
+                          : null,
+                      ]}
+                    >
+                      {seg.text}
+                    </UITextView>
+                  ))}
                 </UITextView>
               );
             }
@@ -297,18 +331,7 @@ const VerseSpans = React.memo(
               <UITextView key={`line-${idx}`} style={lineStyle}>
                 {idx === 0 ? '' : '\n'}
                 {renderBibleLineForReader(line, {
-                  baseTextStyle: { lineHeight },
-                  footnoteTextStyle: {
-                    opacity: 0.72,
-                    fontSize: Math.max(10, Math.round(fontSize * 0.92)),
-                    fontStyle: 'italic',
-                  },
-                  refTextStyle: onInlineRefPress
-                    ? {
-                        fontStyle: 'italic',
-                        color: theme.colors.accentBlue ?? theme.colors.verseNumber,
-                      }
-                    : undefined,
+                  ...verseStyles.lineOptions,
                   onRefPress: onInlineRefPress,
                 })}
               </UITextView>
@@ -316,14 +339,7 @@ const VerseSpans = React.memo(
           });
         case 'footnote':
           return (
-            <UITextView
-              key={`footnote-${piece.start}`}
-              style={{
-                color: theme.colors.textWatermark,
-                fontStyle: 'italic',
-                lineHeight,
-              }}
-            >
+            <UITextView key={`footnote-${piece.start}`} style={verseStyles.footnote}>
               {piece.text}
             </UITextView>
           );
@@ -339,14 +355,7 @@ const VerseSpans = React.memo(
               suppressHighlighting
               accessibilityRole="button"
               accessibilityLabel={t('notes.open')}
-              style={[
-                styles.notePreview,
-                {
-                  color: hexToRgba(theme.colors.accentBlue, 0.7),
-                  fontSize: scaleFontSize(TEXT_STYLES.body.fontSize * 0.88, fontScale),
-                  lineHeight,
-                },
-              ]}
+              style={verseStyles.preview}
             >
               {piece.text}
             </UITextView>
@@ -372,8 +381,7 @@ const VerseSpans = React.memo(
 
 type PassageViewProps = {
   passage: Passage;
-  theme: any;
-  metrics: VerseMetrics;
+  verseStyles: VerseStyleSet;
   marksByVerseId: Record<number, ChapterMark[]>;
   noteMarksByVerse: Record<number, VerseNoteMarks>;
   selectedVerseNumber?: number | null;
@@ -396,8 +404,7 @@ type PassageViewProps = {
 const PassageView = React.memo(
   ({
     passage,
-    theme,
-    metrics,
+    verseStyles,
     marksByVerseId,
     noteMarksByVerse,
     selectedVerseNumber,
@@ -424,7 +431,7 @@ const PassageView = React.memo(
       (e: NativeSyntheticEvent<TextLayoutEventData>) =>
         onLines(
           key,
-          e.nativeEvent.lines.map(line => ({text: line.text, y: line.y, height: line.height})),
+          e.nativeEvent.lines.map(line => ({length: line.text.length, y: line.y, height: line.height})),
         ),
       [onLines, key],
     );
@@ -474,29 +481,16 @@ const PassageView = React.memo(
             accessibilityRole="button"
             accessibilityLabel={t('notes.open')}
           >
-            <View style={[styles.noteBar, {backgroundColor: theme.colors.accentBlue}]} />
+            <View style={verseStyles.noteBar} />
           </Pressable>
         ))}
         <VerseText
           ref={nativeSelection ? selectableRef : undefined}
           selectable={nativeSelection}
           uiTextView
-          onSelectionChange={onTextSelectionChange}
-          onTextLayout={handleTextLayout}
+          onTextLayout={IOS_NATIVE_SELECTION ? undefined : handleTextLayout}
           maxFontSizeMultiplier={1.3}
-          style={[
-            TEXT_STYLES.body,
-            {
-              fontSize: metrics.fontSize,
-              lineHeight: metrics.lineHeight,
-              // iOS breaks lines greedily with no hyphenation, so justify
-              // stretches long Malagasy words into wide gaps. Android balances
-              // line breaks and justifies cleanly.
-              textAlign: Platform.OS === 'ios' ? 'left' : 'justify',
-              color: theme.colors.readerText,
-              ...(Platform.OS === 'android' ? { includeFontPadding: true } : null),
-            },
-          ]}
+          style={verseStyles.passage}
         >
           {passage.verses.map((pv, index) => [
             // The end of the previous verse's last line, then a short empty
@@ -511,8 +505,7 @@ const PassageView = React.memo(
               key={pv.verse.id}
               pv={pv}
               pieces={piecesByVerse[index]}
-              theme={theme}
-              metrics={metrics}
+              verseStyles={verseStyles}
               verseMarks={marksByVerseId[pv.verse.id] ?? EMPTY_MARKS}
               isSelected={pv.verse.verse_number === selectedVerseNumber}
               onInlineRefPress={onInlineRefPress}
@@ -545,6 +538,8 @@ interface BibleReaderViewProps {
   renderNoteBubble?: (onFocus: () => void) => React.ReactNode;
   // The chapter's marks after a colour or style from the highlight bubble.
   onChapterMarksChange?: (next: ChapterMark[]) => void;
+  // The highlight bubble just appeared over a selection.
+  onHighlightBubbleOpen?: () => void;
   // Jump to a verse, back to the top.
   handleRef?: React.Ref<BibleReaderHandle>;
   headerText?: string | null;
@@ -567,6 +562,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   noteBubbleVerse,
   renderNoteBubble,
   onChapterMarksChange,
+  onHighlightBubbleOpen,
   handleRef,
   headerText,
   chapterMarks,
@@ -580,6 +576,25 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   const {transformText} = useJesusName();
   const insets = useSafeAreaInsets();
   const isScrollingRef = useRef(false);
+
+  // --- The highlight bubble over a native selection. ---
+  const rootRef = useRef<View>(null);
+  const [bubble, setBubble] = useState<BubbleState | null>(null);
+  // Bumped by every selection event, so a measurement that comes back after a
+  // newer event, or after the selection ended, is dropped.
+  const selectionSeq = useRef(0);
+  // The text whose selection the bubble is for: only its own end hides it.
+  const bubbleTag = useRef<number | null>(null);
+  // Where that text and the reader sit on screen, measured once per selection
+  // (iOS reports every step of a handle drag); forgotten whenever the text
+  // could have moved: a scroll, a new size.
+  const selectionOrigin = useRef<{
+    tag: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const visibleVerses = useMemo(() => {
     if (!selectedVerseRange) return verses;
@@ -641,14 +656,16 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     [visibleVerses, transformText, noteMarksByVerse, bubbleVerse, isLowEndMode],
   );
 
-  const metrics = useMemo<VerseMetrics>(() => {
+  const withRefs = !!onInlineRefPress;
+  const verseStyles = useMemo(() => {
     const fontSize = scaleFontSize(TEXT_STYLES.body.fontSize, fontScale);
-    return {
+    const metrics = {
       fontSize,
       lineHeight: Math.round(fontSize * BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER) + 3,
       fontScale,
     };
-  }, [fontScale]);
+    return buildVerseStyles(theme, metrics, withRefs);
+  }, [theme, fontScale, withRefs]);
 
   // Each passage's laid-out lines (for the brackets and jumps) and its place
   // in the scroll view. Lines also live in a ref, for the jumps.
@@ -690,6 +707,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     const extent = lines && pv ? verseExtent(lines, pv) : null;
     if (y == null || !extent) return;
     pendingVerse.current = null;
+    selectionOrigin.current = null;
     scrollRef.current?.scrollTo({
       y: Math.max(0, y + extent.top - viewportHeight.current * JUMP_VIEW_POSITION),
       animated: true,
@@ -703,22 +721,27 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
         pendingVerse.current = verseNumber;
         scrollToPendingVerse();
       },
-      scrollToTop: () => scrollRef.current?.scrollTo({y: 0, animated: true}),
+      scrollToTop: () => {
+        selectionOrigin.current = null;
+        scrollRef.current?.scrollTo({y: 0, animated: true});
+      },
     }),
     [scrollToPendingVerse],
   );
 
   const onLines = useCallback(
     (key: string, lines: TextLine[]) => {
-      linesRef.current[key] = lines;
-      setLinesByPassage(prev => {
-        const old = prev[key];
-        const same =
-          old &&
-          old.length === lines.length &&
-          old.every((line, i) => line.y === lines[i].y && line.text === lines[i].text);
-        return same ? prev : {...prev, [key]: lines};
-      });
+      const old = linesRef.current[key];
+      const same =
+        old &&
+        old.length === lines.length &&
+        old.every((line, i) => line.y === lines[i].y && line.length === lines[i].length);
+      if (!same) {
+        linesRef.current[key] = lines;
+        // The text moved: the bubble's measured place no longer holds.
+        selectionOrigin.current = null;
+        setLinesByPassage(prev => ({...prev, [key]: lines}));
+      }
       scrollToPendingVerse();
     },
     [scrollToPendingVerse],
@@ -743,6 +766,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       return;
     }
     const y = noteBubbleY.current;
+    selectionOrigin.current = null;
     setTimeout(() => scrollRef.current?.scrollTo({y, animated: true}), 120);
   }, []);
 
@@ -768,11 +792,27 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     return latest?.id ?? null;
   }, [notes]);
 
-  // --- Without native selection (iOS for now): the app's own double-tap
-  // (verse menu) and long-press (chapter editor) on a verse. ---
+  // --- Without native selection (iOS 15, or no module): the app's own
+  // double-tap (verse menu) and long-press (chapter editor) on a verse. With
+  // it, the native module reports double-taps and the long-press selects. ---
   const lastTap = useRef<{verse: number; at: number} | null>(null);
-  const contextRef = useRef({onVerseDoubleTap, onVerseLongPress, onInlineRefPress});
-  contextRef.current = {onVerseDoubleTap, onVerseLongPress, onInlineRefPress};
+  // When a reference, a note number or a preview was last tapped: the second
+  // tap of a double-tap on one isn't the verse's.
+  const spanPressedAt = useRef(0);
+  const contextRef = useRef({
+    onVerseDoubleTap,
+    onVerseLongPress,
+    onInlineRefPress,
+    onNoteMarkPress,
+    onHighlightBubbleOpen,
+  });
+  contextRef.current = {
+    onVerseDoubleTap,
+    onVerseLongPress,
+    onInlineRefPress,
+    onNoteMarkPress,
+    onHighlightBubbleOpen,
+  };
 
   const handleVersePress = useCallback((verse: BibleVerse) => {
     if (isScrollingRef.current) return;
@@ -794,33 +834,66 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   // A reference tap is never the first half of a double-tap.
   const handleInlineRefPress = useCallback((ref: InlineBibleRef) => {
     lastTap.current = null;
+    spanPressedAt.current = Date.now();
     contextRef.current.onInlineRefPress?.(ref);
+  }, []);
+
+  const handleNoteMarkPress = useCallback((noteId: string) => {
+    spanPressedAt.current = Date.now();
+    contextRef.current.onNoteMarkPress?.(noteId);
   }, []);
 
   // --- Native selection: each passage's <Text> by its React tag, so an event
   // can be traced back to its passage and the bubble placed by it. ---
   const selectableTexts = useRef(new Map<number, {passageKey: string; instance: unknown}>());
-  const onSelectableRef = useCallback((passageKey: string, instance: unknown) => {
-    const texts = selectableTexts.current;
-    if (!instance) {
-      for (const [tag, text] of texts) {
-        if (text.passageKey === passageKey) {
-          texts.delete(tag);
-          reportSelection(tag, false);
+  const onSelectableRef = useCallback(
+    (passageKey: string, instance: unknown) => {
+      const texts = selectableTexts.current;
+      if (!instance) {
+        for (const [tag, text] of texts) {
+          if (text.passageKey === passageKey) {
+            texts.delete(tag);
+            reportSelection(tag, false);
+            // Its selection went with it: so does the bubble, whose range
+            // would no longer match what's on screen.
+            if (bubbleTag.current === tag) {
+              bubbleTag.current = null;
+              selectionOrigin.current = null;
+              setBubble(null);
+            }
+          }
         }
+        return;
       }
-      return;
+      const tag = attachSelectionMenu(instance);
+      if (tag == null) return;
+      texts.set(tag, {passageKey, instance});
+      // iOS: lines laid out before this text was registered.
+      const lines = textLinesFor(tag);
+      if (lines) onLines(passageKey, lines);
+    },
+    [onLines],
+  );
+
+  // iOS: each passage's lines, from the native module. Lines that came between
+  // a text's registration and this subscription are picked up here.
+  useEffect(() => {
+    if (!IOS_NATIVE_SELECTION) return;
+    for (const [tag, text] of selectableTexts.current) {
+      const lines = textLinesFor(tag);
+      if (lines) onLines(text.passageKey, lines);
     }
-    const tag = attachSelectionMenu(instance);
-    if (tag != null) texts.set(tag, {passageKey, instance});
-  }, []);
+    return onTextLines((tag, lines) => {
+      const text = selectableTexts.current.get(tag);
+      if (text) onLines(text.passageKey, lines);
+    });
+  }, [onLines]);
 
-  const rootRef = useRef<View>(null);
-  const [bubble, setBubble] = useState<BubbleState | null>(null);
-  // Bumped by every selection event, so a measurement that comes back after a
-  // newer event, or after the selection ended, is dropped.
-  const selectionSeq = useRef(0);
-
+  // The highlight tutorial moves on once the bubble is there.
+  const bubbleShown = bubble != null;
+  useEffect(() => {
+    if (bubbleShown) contextRef.current.onHighlightBubbleOpen?.();
+  }, [bubbleShown]);
   // Read at event time, so the subscriptions below stay put.
   const selectionContext = useRef({verseSpans});
   selectionContext.current = {verseSpans};
@@ -833,9 +906,37 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       return text && passage ? {passage, instance: text.instance as Measurable} : null;
     };
 
-    const placeBubble = (selection: NativeSelection | null) => {
+    const hideBubble = () => setBubble(null);
+
+    const showBubble = (range: MarkRange, selection: NativeSelection) => {
+      const origin = selectionOrigin.current;
+      if (!origin) return;
+      // The text's top-left in the reader.
+      const x = origin.x + selection.x;
+      // Above the words when it fits, else under them, clear of the handles.
+      const above = origin.y + selection.top - BUBBLE_ARROW / 2 - 4 - BUBBLE_HEIGHT;
+      const below = above < BUBBLE_MARGIN;
+      const top = below ? origin.y + selection.bottom + HANDLE_ROOM : above;
+      const left = Math.min(
+        Math.max(x - BUBBLE_WIDTH / 2, BUBBLE_MARGIN),
+        origin.width - BUBBLE_WIDTH - BUBBLE_MARGIN,
+      );
+      setBubble({
+        range,
+        left,
+        top: Math.max(BUBBLE_MARGIN, Math.min(top, origin.height - BUBBLE_HEIGHT - BUBBLE_MARGIN)),
+        arrowX: Math.min(Math.max(x - left, 18), BUBBLE_WIDTH - 18),
+        below,
+      });
+    };
+
+    const placeBubble = (tag: number, selection: NativeSelection | null) => {
+      // A late end from another text (say the one selected before) leaves
+      // this selection's bubble alone.
+      if (!selection && tag !== bubbleTag.current) return;
       const seq = ++selectionSeq.current;
-      const found = selection && findPassage(selection.tag);
+      bubbleTag.current = selection ? tag : null;
+      const found = selection && findPassage(tag);
       const range =
         selection && found
           ? passageRangeToChapterRange(
@@ -846,35 +947,37 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
             )
           : null;
       if (!selection || !found || !range) {
-        setBubble(null);
+        if (!selection) selectionOrigin.current = null;
+        hideBubble();
+        return;
+      }
+      if (selectionOrigin.current?.tag === tag) {
+        showBubble(range, selection);
         return;
       }
       found.instance.measureInWindow((textX, textY) => {
         rootRef.current?.measureInWindow((rootX, rootY, rootWidth, rootHeight) => {
-          if (seq !== selectionSeq.current) return;
-          const x = textX - rootX + selection.x;
-          // Above the words when it fits, else under them, clear of the handles.
-          const above = textY - rootY + selection.top - BUBBLE_ARROW / 2 - 4 - BUBBLE_HEIGHT;
-          const below = above < BUBBLE_MARGIN;
-          const top = below ? textY - rootY + selection.bottom + HANDLE_ROOM : above;
-          const left = Math.min(
-            Math.max(x - BUBBLE_WIDTH / 2, BUBBLE_MARGIN),
-            rootWidth - BUBBLE_WIDTH - BUBBLE_MARGIN,
-          );
-          setBubble({
-            range,
-            left,
-            top: Math.max(BUBBLE_MARGIN, Math.min(top, rootHeight - BUBBLE_HEIGHT - BUBBLE_MARGIN)),
-            arrowX: Math.min(Math.max(x - left, 18), BUBBLE_WIDTH - 18),
-            below,
-          });
+          // Kept while the selection lasts, even when a newer step of the
+          // drag arrived meanwhile; only the bubble for an old step is dropped.
+          if (bubbleTag.current !== tag) return;
+          selectionOrigin.current = {
+            tag,
+            x: textX - rootX,
+            y: textY - rootY,
+            width: rootWidth,
+            height: rootHeight,
+          };
+          if (seq === selectionSeq.current) showBubble(range, selection);
         });
       });
     };
 
     const stopSelection = onSelectionChange(placeBubble);
-    // A double-tap opens the tapped verse's menu, as it always has.
+    // A double-tap opens the tapped verse's menu, as it always has; not one
+    // on a reference or a note's number (that tap already did its own thing),
+    // nor one while the reader scrolls.
     const doubleTaps = onTextDoubleTap(({tag, offset}) => {
+      if (isScrollingRef.current || Date.now() - spanPressedAt.current < 600) return;
       const found = findPassage(tag);
       const verse = found && verseAtOffset(found.passage, offset);
       if (!verse) return;
@@ -933,7 +1036,15 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   }
 
   return (
-    <View ref={rootRef} collapsable={false} style={styles.root}>
+    <View
+      ref={rootRef}
+      collapsable={false}
+      style={styles.root}
+      onLayout={() => {
+        // Sizes changed (rotation, keyboard): measure again for the bubble.
+        selectionOrigin.current = null;
+      }}
+    >
       <ScrollView
         ref={scrollRef}
         onLayout={e => {
@@ -1003,8 +1114,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
             ) : null}
             <PassageView
               passage={passage}
-              theme={theme}
-              metrics={metrics}
+              verseStyles={verseStyles}
               marksByVerseId={marksByVerseId}
               noteMarksByVerse={noteMarksByVerse}
               selectedVerseNumber={selectedVerseNumber}
@@ -1016,7 +1126,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
               onLines={onLines}
               onLayoutY={onLayoutY}
               onInlineRefPress={onInlineRefPress ? handleInlineRefPress : undefined}
-              onNoteMarkPress={onNoteMarkPress}
+              onNoteMarkPress={onNoteMarkPress ? handleNoteMarkPress : undefined}
               onVersePress={!NATIVE_SELECTION && onVerseDoubleTap ? handleVersePress : undefined}
               onVerseLongPress={!NATIVE_SELECTION && onVerseLongPress ? handleVerseLongPress : undefined}
             />
@@ -1069,8 +1179,27 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '700',
     color: '#3A86FF',
-    transform: [{ translateY: -3 }],
+    transform: [{ translateY: VERSE_NUMBER_LIFT }],
   },
+  // iOS breaks lines greedily with no hyphenation, so justify stretches long
+  // Malagasy words into wide gaps. Android balances line breaks and justifies
+  // cleanly.
+  passageText: {
+    textAlign: Platform.OS === 'ios' ? 'left' : 'justify',
+    ...(Platform.OS === 'android' ? {includeFontPadding: true} : null),
+  },
+  verseTitle: {
+    fontStyle: 'italic',
+    fontWeight: '200',
+    letterSpacing: 1.2,
+    transform: [{ skewX: '-8deg' }],
+  },
+  footnote: {
+    fontStyle: 'italic',
+  },
+  bold: {fontWeight: 'bold'},
+  italic: {fontStyle: 'italic'},
+  underline: {textDecorationLine: 'underline'},
   // The passage reaches into the reader's left padding, where the notes'
   // brackets go, so the text itself stays put and the brackets stay tappable
   // (a child outside its parent's bounds gets no touches on Android).

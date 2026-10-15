@@ -143,10 +143,10 @@ test('lines from the layout give each verse its top and bottom', () => {
   const cut = s.indexOf('tonga tany');
   const v2 = s.indexOf('2 Ary');
   const lines: TextLine[] = [
-    {text: s.slice(0, cut), y: 0, height: 24},
-    {text: s.slice(cut, v2 - 1), y: 24, height: 24},
-    {text: '\n', y: 48, height: 7},
-    {text: s.slice(v2), y: 55, height: 24},
+    {length: cut, y: 0, height: 24},
+    {length: v2 - 1 - cut, y: 24, height: 24},
+    {length: 1, y: 48, height: 7},
+    {length: s.length - v2, y: 55, height: 24},
   ];
   expect(lineAtOffset(lines, v2)?.y).toBe(55);
   expect(verseExtent(lines, p.verses[0])).toEqual({top: 0, bottom: 48});

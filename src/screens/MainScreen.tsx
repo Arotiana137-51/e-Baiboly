@@ -1142,15 +1142,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   // --- Native text selection (long-press a word): swipes wait while it is on
-  // screen, and the highlight tutorial moves on once its bubble shows. ---
+  // screen. ---
   useEffect(() => {
     if (!NATIVE_SELECTION) return;
     return onSelectionActive(active => {
       selectionActiveRef.current = active;
-      if (active) tutorial.notifyProgress('highlightMenuOpened');
     });
-    // Set once; tutorial.notifyProgress is stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // A colour or style from the highlight bubble, already merged in.
@@ -1537,6 +1534,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               noteBubbleVerse={noteBubbleVerse}
               renderNoteBubble={renderNoteBubble}
               onChapterMarksChange={handleChapterMarksEdit}
+              onHighlightBubbleOpen={() => tutorial.notifyProgress('highlightMenuOpened')}
               selectedVerseNumber={selectedVerseNumber}
               selectedVerseRange={selectedVerseRange}
               onInlineRefPress={handleInlineBibleRefPress}

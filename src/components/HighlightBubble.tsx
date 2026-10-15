@@ -54,7 +54,9 @@ export const HighlightBubble = ({left, top, arrowX, below, current, onColor, onS
   };
 
   return (
-    <View style={[styles.bubble, surface, {left, top}]}>
+    // The testID tells SelectionMenu.m (iOS) that a tap here keeps the
+    // selection, which any other tap outside the text clears.
+    <View testID="highlight-bubble" style={[styles.bubble, surface, {left, top}]}>
       <View ref={colorsRef} collapsable={false} style={styles.row}>
         {HIGHLIGHT_COLORS.map(color => {
           const chosen = current.color === color;

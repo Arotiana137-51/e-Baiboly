@@ -49,8 +49,9 @@ export type Passage = {
   length: number;
 };
 
-// A line of a laid-out passage, as onTextLayout gives it.
-export type TextLine = {text: string; y: number; height: number};
+// A line of a laid-out passage: how many characters it holds (its line break
+// included), its top and its height.
+export type TextLine = {length: number; y: number; height: number};
 
 const NOTE_PREVIEW_MARK = '✎';
 
@@ -152,7 +153,7 @@ export const verseAtOffset = (passage: Passage, offset: number): BibleVerse | nu
 export const lineAtOffset = (lines: TextLine[], offset: number): TextLine | null => {
   let cursor = 0;
   for (const line of lines) {
-    cursor += line.text.length;
+    cursor += line.length;
     if (offset < cursor) return line;
   }
   return lines[lines.length - 1] ?? null;
