@@ -6,9 +6,7 @@ import {
   Text,
   View,
   Dimensions,
-  FlatList,
   Platform,
-  Alert,
   AppState,
   PanResponder,
 } from 'react-native';
@@ -18,14 +16,10 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
 import BibleReaderView, {
+  type BibleReaderHandle,
   type SelectedVerseRange,
-  type VerseSelectionAction,
 } from '../components/BibleReaderView';
-import {
-  NATIVE_SELECTION,
-  onSelectionActive,
-  setSelectionMenuItems,
-} from '../services/selectionMenu';
+import {NATIVE_SELECTION, onSelectionActive} from '../services/selectionMenu';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
@@ -133,7 +127,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const { scale: rScale, isAndroid: rIsAndroid } = useResponsive();
   const TOP_BAR_TOOLBAR_HEIGHT = Math.max(TOP_BAR_TOOLBAR_BASE, rScale(rIsAndroid ? 52 : 44));
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
-  const flatListRef = useRef<FlatList>(null);
+  const readerRef = useRef<BibleReaderHandle>(null);
   const [shouldScrollToVerse, setShouldScrollToVerse] = useState<number | null>(null);
   // Set to true by the topnav chevrons after they advance the chapter, so
   // the Bible reader scrolls back to verse 1 once the new chapter's verses
@@ -309,6 +303,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     const SWIPE_MIN_DX = 60;
     const SWIPE_ACTIVATION_DX = 18;
     const SWIPE_MAX_DY = 80;
+    // A swipe moves at once. A finger held still first is a long-press: the
+    // phone's text selection, whose drag to extend it would read as a swipe.
+    const SWIPE_MAX_HOLD_MS = 300;
+    let touchStartedAt = 0;
 
     const isSwipeEligible = () => {
       if (selectionActiveRef.current) return false;
@@ -324,8 +322,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     };
 
     return PanResponder.create({
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+      // The touch's own timestamps, not the JS clock: a busy JS thread gets
+      // the start and the moves late and together, so a hold would look short.
+      onStartShouldSetPanResponderCapture: evt => {
+        touchStartedAt = evt.nativeEvent.timestamp;
+        return false;
+      },
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
         if (!isSwipeEligible()) return false;
+        if (evt.nativeEvent.timestamp - touchStartedAt > SWIPE_MAX_HOLD_MS) return false;
 
         const dx = gestureState.dx;
         const dy = gestureState.dy;
@@ -529,45 +534,32 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       return;
     }
 
-    // When a range is active, the reader filters its FlatList down to just
-    // the range, so the target verse is at index 0 — no scroll needed, and
-    // scrolling against the full-chapter index would crash with
-    // "scrollToIndex out of range" because the visible list is shorter.
+    // When a range is active, the reader shows only the range, so the
+    // target verse is already at the top — no scroll needed.
     if (selectedVerseRange) {
       setShouldScrollToVerse(null);
       return;
     }
 
-    const verseIndex = verses.findIndex(
-      verse => verse.verse_number === shouldScrollToVerse,
-    );
-    if (verseIndex === -1) {
+    if (!verses.some(verse => verse.verse_number === shouldScrollToVerse)) {
       // Target verse missing in this chapter — unblock future scroll requests.
       setShouldScrollToVerse(null);
       return;
     }
 
-    if (!flatListRef.current) {
+    if (!readerRef.current) {
       return;
     }
 
-    const timer = setTimeout(() => {
-      flatListRef.current?.scrollToIndex({
-        index: verseIndex,
-        viewPosition: 0.2, // Position verse at 20% from top
-        animated: true,
-      });
-      setShouldScrollToVerse(null);
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // The reader waits for the verse to be laid out, then scrolls it to 20 %
+    // from the top.
+    readerRef.current.scrollToVerse(shouldScrollToVerse);
+    setShouldScrollToVerse(null);
   }, [verses, shouldScrollToVerse, selectedVerseRange, currentBook?.id, currentChapter]);
 
   // Chevron-driven scroll-to-top: wait until the new chapter's verses have
   // loaded before scrolling, otherwise the call lands on the previous
-  // chapter's FlatList contents. Mirrors the shouldScrollToVerse effect
-  // above but without an index — we use scrollToOffset(0) so it's safe even
-  // if the list is empty mid-transition.
+  // chapter's contents. Mirrors the shouldScrollToVerse effect above.
   useEffect(() => {
     if (!shouldScrollToTop) return;
     if (mode !== 'bible') {
@@ -575,12 +567,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       return;
     }
     if (verses.length === 0) return;
-    if (!flatListRef.current) {
+    if (!readerRef.current) {
       setShouldScrollToTop(false);
       return;
     }
     const timer = setTimeout(() => {
-      flatListRef.current?.scrollToOffset({offset: 0, animated: true});
+      readerRef.current?.scrollToTop();
       setShouldScrollToTop(false);
     }, 50);
     return () => clearTimeout(timer);
@@ -1175,54 +1167,19 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   };
 
-  // --- Native text selection: the phone's own selection menu carries the
-  // verse actions that the double-tap menu had. ---
+  // --- Native text selection (long-press a word): swipes wait while it is on
+  // screen. ---
   useEffect(() => {
     if (!NATIVE_SELECTION) return;
-    setSelectionMenuItems([
-      {key: 'highlight', label: t('selection.highlight'), primary: true},
-      {key: 'note', label: t('selection.note'), primary: true},
-      {key: 'favorite', label: t('selection.favorite'), primary: true},
-      {key: 'share', label: t('selection.share'), primary: true},
-      {key: 'concordance', label: t('selection.concordance')},
-      {key: 'report', label: t('selection.report')},
-    ]);
     return onSelectionActive(active => {
       selectionActiveRef.current = active;
-      // The notes tutorial waits for the verse's menu to open.
-      if (active) tutorial.notifyProgress('verseActionOpened');
     });
-    // Set once; tutorial.notifyProgress is stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleVerseSelectionAction = ({verse, key, range, text}: VerseSelectionAction) => {
-    switch (key) {
-      case 'note':
-        openBibleNote(verse);
-        return;
-      case 'favorite':
-        handleAddToFavorites(verse);
-        return;
-      case 'share':
-        openBibleShare(verse);
-        return;
-      case 'concordance':
-        handleViewCorrespondence(verse);
-        return;
-      case 'report':
-        openBibleReportModal(verse);
-        return;
-      case 'highlight':
-        // TEMP(spike): shows what Surligner would colour, to check the
-        // selection maps onto the right words; the highlights store is next.
-        Alert.alert(
-          t('selection.highlight'),
-          `${currentBook?.name ?? ''} ${verse.chapter}:${verse.verse_number} ` +
-            `[${range?.start ?? '-'}–${range?.end ?? '-'}] «${text}»`,
-        );
-        return;
-    }
+  // A colour or style from the highlight bubble, already merged in.
+  const handleChapterMarksEdit = (next: ChapterMark[]) => {
+    setAllMarks(next);
+    tutorial.notifyProgress('editorSaved');
   };
 
   const closeVerseAction = () => {
@@ -1602,11 +1559,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               onNoteMarkPress={openNoteById}
               noteBubbleVerse={noteBubbleVerse}
               renderNoteBubble={renderNoteBubble}
-              onSelectionAction={handleVerseSelectionAction}
+              onChapterMarksChange={handleChapterMarksEdit}
+              onHighlightBubbleOpen={() => tutorial.notifyProgress('highlightMenuOpened')}
               selectedVerseNumber={selectedVerseNumber}
               selectedVerseRange={selectedVerseRange}
               onInlineRefPress={handleInlineBibleRefPress}
-              flatListRef={flatListRef}
+              handleRef={readerRef}
               headerText={mode === 'bible' ? bibleTitleLong : null}
               chapterMarks={chapterMarks}
               currentBookName={currentBook?.name ?? null}
