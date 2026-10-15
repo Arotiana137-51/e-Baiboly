@@ -19,8 +19,8 @@ const emitter = SelectionMenu ? new NativeEventEmitter(SelectionMenu) : null;
 // keeps the app's own double-tap / long-press menus.
 export const NATIVE_SELECTION = Platform.OS === 'android' && !!SelectionMenu?.attach;
 
-// A selection on screen. `start`/`end` index the verse's whole <Text> (title
-// and number included); x / top / bottom are dp from that Text's top-left.
+// A selection on screen. `start`/`end` index the whole <Text> it is in;
+// x / top / bottom are dp from that Text's top-left.
 export type NativeSelection = {
   tag: number;
   start: number;
@@ -57,8 +57,10 @@ export const onSelectionChange = (
   };
 };
 
-export const onVerseDoubleTap = (listener: (tag: number) => void): EmitterSubscription | null =>
-  emitter?.addListener('SelectionMenuDoubleTap', ({tag}) => listener(tag)) ?? null;
+// A double-tap on a selectable text, with the character it landed on.
+export const onTextDoubleTap = (
+  listener: (tap: {tag: number; offset: number}) => void,
+): EmitterSubscription | null => emitter?.addListener('SelectionMenuDoubleTap', listener) ?? null;
 
 const selectedTags = new Set<number>();
 const selectionListeners = new Set<(active: boolean) => void>();

@@ -6,7 +6,6 @@ import {
   Text,
   View,
   Dimensions,
-  FlatList,
   Platform,
   AppState,
   PanResponder,
@@ -16,7 +15,10 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
-import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
+import BibleReaderView, {
+  type BibleReaderHandle,
+  type SelectedVerseRange,
+} from '../components/BibleReaderView';
 import {NATIVE_SELECTION, onSelectionActive} from '../services/selectionMenu';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
@@ -125,7 +127,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const { scale: rScale, isAndroid: rIsAndroid } = useResponsive();
   const TOP_BAR_TOOLBAR_HEIGHT = Math.max(TOP_BAR_TOOLBAR_BASE, rScale(rIsAndroid ? 52 : 44));
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
-  const flatListRef = useRef<FlatList>(null);
+  const readerRef = useRef<BibleReaderHandle>(null);
   const [shouldScrollToVerse, setShouldScrollToVerse] = useState<number | null>(null);
   // Set to true by the topnav chevrons after they advance the chapter, so
   // the Bible reader scrolls back to verse 1 once the new chapter's verses
@@ -530,45 +532,32 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       return;
     }
 
-    // When a range is active, the reader filters its FlatList down to just
-    // the range, so the target verse is at index 0 — no scroll needed, and
-    // scrolling against the full-chapter index would crash with
-    // "scrollToIndex out of range" because the visible list is shorter.
+    // When a range is active, the reader shows only the range, so the
+    // target verse is already at the top — no scroll needed.
     if (selectedVerseRange) {
       setShouldScrollToVerse(null);
       return;
     }
 
-    const verseIndex = verses.findIndex(
-      verse => verse.verse_number === shouldScrollToVerse,
-    );
-    if (verseIndex === -1) {
+    if (!verses.some(verse => verse.verse_number === shouldScrollToVerse)) {
       // Target verse missing in this chapter — unblock future scroll requests.
       setShouldScrollToVerse(null);
       return;
     }
 
-    if (!flatListRef.current) {
+    if (!readerRef.current) {
       return;
     }
 
-    const timer = setTimeout(() => {
-      flatListRef.current?.scrollToIndex({
-        index: verseIndex,
-        viewPosition: 0.2, // Position verse at 20% from top
-        animated: true,
-      });
-      setShouldScrollToVerse(null);
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // The reader waits for the verse to be laid out, then scrolls it to 20 %
+    // from the top.
+    readerRef.current.scrollToVerse(shouldScrollToVerse);
+    setShouldScrollToVerse(null);
   }, [verses, shouldScrollToVerse, selectedVerseRange, currentBook?.id, currentChapter]);
 
   // Chevron-driven scroll-to-top: wait until the new chapter's verses have
   // loaded before scrolling, otherwise the call lands on the previous
-  // chapter's FlatList contents. Mirrors the shouldScrollToVerse effect
-  // above but without an index — we use scrollToOffset(0) so it's safe even
-  // if the list is empty mid-transition.
+  // chapter's contents. Mirrors the shouldScrollToVerse effect above.
   useEffect(() => {
     if (!shouldScrollToTop) return;
     if (mode !== 'bible') {
@@ -576,12 +565,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       return;
     }
     if (verses.length === 0) return;
-    if (!flatListRef.current) {
+    if (!readerRef.current) {
       setShouldScrollToTop(false);
       return;
     }
     const timer = setTimeout(() => {
-      flatListRef.current?.scrollToOffset({offset: 0, animated: true});
+      readerRef.current?.scrollToTop();
       setShouldScrollToTop(false);
     }, 50);
     return () => clearTimeout(timer);
@@ -1551,7 +1540,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               selectedVerseNumber={selectedVerseNumber}
               selectedVerseRange={selectedVerseRange}
               onInlineRefPress={handleInlineBibleRefPress}
-              flatListRef={flatListRef}
+              handleRef={readerRef}
               headerText={mode === 'bible' ? bibleTitleLong : null}
               chapterMarks={chapterMarks}
               currentBookName={currentBook?.name ?? null}

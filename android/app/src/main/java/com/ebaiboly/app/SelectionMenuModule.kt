@@ -126,8 +126,9 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
     }
 
     // Spots a double-tap and keeps its second tap from the TextView, which
-    // would otherwise select the word under it.
-    private inner class DoubleTapListener(textView: TextView, private val tag: Int) :
+    // would otherwise select the word under it. Sends the character tapped,
+    // since one TextView holds several verses.
+    private inner class DoubleTapListener(private val textView: TextView, private val tag: Int) :
         View.OnTouchListener {
 
         private var swallowing = false
@@ -136,7 +137,10 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
             textView.context,
             object : GestureDetector.SimpleOnGestureListener() {
                 override fun onDoubleTap(e: MotionEvent): Boolean {
-                    emitTag("SelectionMenuDoubleTap", tag)
+                    reactContext.emitDeviceEvent("SelectionMenuDoubleTap", Arguments.createMap().apply {
+                        putInt("tag", tag)
+                        putInt("offset", textView.getOffsetForPosition(e.x, e.y))
+                    })
                     return true
                 }
             },
