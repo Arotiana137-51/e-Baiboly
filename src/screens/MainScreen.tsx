@@ -320,13 +320,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     };
 
     return PanResponder.create({
-      onStartShouldSetPanResponderCapture: () => {
-        touchStartedAt = Date.now();
+      // The touch's own timestamps, not the JS clock: a busy JS thread gets
+      // the start and the moves late and together, so a hold would look short.
+      onStartShouldSetPanResponderCapture: evt => {
+        touchStartedAt = evt.nativeEvent.timestamp;
         return false;
       },
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
         if (!isSwipeEligible()) return false;
-        if (Date.now() - touchStartedAt > SWIPE_MAX_HOLD_MS) return false;
+        if (evt.nativeEvent.timestamp - touchStartedAt > SWIPE_MAX_HOLD_MS) return false;
 
         const dx = gestureState.dx;
         const dy = gestureState.dy;
