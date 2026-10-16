@@ -7,21 +7,20 @@ import {useTheme} from '../contexts/ThemeContext';
 import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
 import {useTenyHoAnao} from '../hooks/useTenyHoAnao';
 import {
+  FEELINGS,
   LIFE_SITUATIONS,
+  SITUATION_THEME,
+  SITUATION_THEMES,
+  type FeelingId,
   type LifeSituation,
   type SituationId,
-  type SituationKind,
 } from '../constants/lifeSituations';
+import {todaysWidgetRef, useVerse} from '../hooks/useSituationVerse';
+import type {DailyVerse} from '../services/reminders/readingReminder';
 import {situationById, type ActiveSituation} from '../utils/lifeSituations';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 // All copy on this screen is placeholder MG — user-owned.
-
-const KIND_SECTIONS: Array<{kind: SituationKind; title: string}> = [
-  {kind: 'short', title: 'Fotoana fohy'},
-  {kind: 'season', title: 'Vanim-potoana'},
-  {kind: 'long', title: 'Ady maharitra'},
-];
 
 const STEP_COUNT = 3;
 
@@ -126,6 +125,58 @@ const StepFooter = ({
   </View>
 );
 
+// A verse quoted on the screen: a plan's first one under "Ohatra", today's
+// one on the summary.
+const QuotedVerse = ({verse, colors}: {verse: DailyVerse; colors: Colors}) => (
+  <View style={[styles.quote, {backgroundColor: colors.readerBackground, borderLeftColor: colors.accentBlue}]}>
+    <Text style={[styles.quoteText, {color: colors.textPrimary}]}>{verse.body}</Text>
+    <Text style={[styles.quoteRef, {color: colors.accentBlue}]}>{verse.ref}</Text>
+  </View>
+);
+
+// One situation to choose. The row ticks it; "Ohatra" is its own button (so it
+// doesn't tick) and opens the plan's first verse under the row, outside it,
+// so touching the verse doesn't tick either.
+const SituationRow = ({
+  situation,
+  chosen,
+  sample,
+  onToggle,
+  onSample,
+  colors,
+}: {
+  situation: LifeSituation;
+  chosen: boolean;
+  // undefined: closed; null: open, the verse still loading.
+  sample: DailyVerse | null | undefined;
+  onToggle: () => void;
+  onSample: () => void;
+  colors: Colors;
+}) => (
+  <View>
+    <Pressable
+      onPress={onToggle}
+      style={styles.row}
+      accessibilityRole="checkbox"
+      accessibilityState={{checked: chosen}}
+    >
+      <View style={styles.rowText}>
+        <Text style={[styles.rowTitle, {color: colors.textPrimary}]}>{situation.label}</Text>
+        <Text style={[styles.rowHint, {color: colors.textSecondary}]}>{lengthLabel(situation)}</Text>
+        <Pressable onPress={onSample} hitSlop={8} style={styles.sampleLink} accessibilityRole="button">
+          <Text style={[styles.sampleLinkText, {color: colors.accentBlue}]}>
+            {sample === undefined ? 'Ohatra ▸' : 'Ohatra ▾'}
+          </Text>
+        </Pressable>
+      </View>
+      <View style={[styles.check, {borderColor: colors.accentBlue}, chosen && {backgroundColor: colors.accentBlue}]}>
+        {chosen ? <Text style={styles.checkMark}>✓</Text> : null}
+      </View>
+    </Pressable>
+    {sample ? <QuotedVerse verse={sample} colors={colors} /> : null}
+  </View>
+);
+
 // "Teny ho anao" (menu "Widget"): the person can choose words for the widget
 // that fit what they are living through. Gentle by design, after
 // trauma-informed guidance: an explanation instead of a question, at most
@@ -154,6 +205,11 @@ const TenyHoAnaoScreen = () => {
   } = useTenyHoAnao();
   const [step, setStep] = useState<'choose' | 'order'>('choose');
   const [confirmClear, setConfirmClear] = useState(false);
+  const [feeling, setFeeling] = useState<FeelingId | null>(null);
+  const [sampleId, setSampleId] = useState<SituationId | null>(null);
+  const sample = useVerse(sampleId ? situationById(sampleId)?.verses[0] ?? null : null);
+  // Only the summary shows it.
+  const todayVerse = useVerse(loaded && !draft && state.situations.length > 0 ? todaysWidgetRef(state) : null);
 
   const colors = theme.colors;
   const cardStyle = [styles.card, {backgroundColor: colors.backgroundSecondary, borderColor: colors.divider}];
@@ -198,6 +254,23 @@ const TenyHoAnaoScreen = () => {
   if (view === 'choose' && draft) {
     const chosen = new Set(draft.situations.map(s => s.id));
     const count = draft.situations.length;
+    const matches = (FEELINGS.find(f => f.id === feeling)?.situations ?? [])
+      .map(situationById)
+      .filter((s): s is LifeSituation => !!s);
+    const renderRows = (list: ReadonlyArray<LifeSituation>) =>
+      list.map((situation, index) => (
+        <View key={situation.id}>
+          {index > 0 ? <View style={[styles.divider, {backgroundColor: colors.divider}]} /> : null}
+          <SituationRow
+            situation={situation}
+            chosen={chosen.has(situation.id)}
+            sample={sampleId === situation.id ? sample : undefined}
+            onToggle={() => toggleDraft(situation.id)}
+            onSample={() => setSampleId(id => (id === situation.id ? null : situation.id))}
+            colors={colors}
+          />
+        </View>
+      ));
     return (
       <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
         <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
@@ -205,41 +278,62 @@ const TenyHoAnaoScreen = () => {
           <Text style={[styles.title, {color: colors.textPrimary}]}>
             Safidio ny karazana teny fampaherezana tianao hiseho eo amin'ny widget
           </Text>
+          <Text style={[styles.welcome, {color: colors.textPrimary}]}>
+            Ara-dalàna ny mahatsiaro ho mavesatra. Tsy voatery hanazava zavatra ianao.
+          </Text>
           <Text style={[styles.body, {color: colors.textSecondary}]}>Azonao atao ny misafidy maromaro.</Text>
-          {KIND_SECTIONS.map(section => (
-            <View key={section.kind}>
+
+          {/* Optional: a feeling brings what may fit to the top, ticks nothing. */}
+          <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Manao ahoana ny fonao ankehitriny?</Text>
+          <View style={styles.feelings}>
+            {FEELINGS.map(f => {
+              const on = feeling === f.id;
+              return (
+                <Pressable
+                  key={f.id}
+                  onPress={() => setFeeling(on ? null : f.id)}
+                  style={[styles.feeling, {borderColor: colors.accentBlue}, on && {backgroundColor: colors.accentBlue}]}
+                  accessibilityRole="button"
+                  accessibilityState={{selected: on}}
+                >
+                  <Text style={[styles.feelingText, on ? styles.feelingTextOn : {color: colors.textPrimary}]}>
+                    {f.emoji} {f.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Nobody has to name what hurts. Only before a first choice, so it
+              never drops plans already chosen. */}
+          {state.situations.length === 0 ? (
+            <Pressable
+              onPress={() => {
+                cancelEditing();
+                leave();
+              }}
+              style={styles.unsure}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.answerText, {color: colors.accentBlue}]}>Tsy fantatro</Text>
+              <Text style={[styles.rowHint, {color: colors.textSecondary}]}>
+                Ny teny isan'andro mahazatra no hiseho eo amin'ny widget.
+              </Text>
+            </Pressable>
+          ) : null}
+
+          {matches.length > 0 ? (
+            <View>
+              <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Mety aminao</Text>
+              <View style={[...cardStyle, {borderColor: colors.accentBlue}]}>{renderRows(matches)}</View>
+            </View>
+          ) : null}
+
+          {SITUATION_THEMES.map(section => (
+            <View key={section.theme}>
               <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>{section.title}</Text>
               <View style={cardStyle}>
-                {LIFE_SITUATIONS.filter(s => s.kind === section.kind).map((situation, index) => {
-                  const isChosen = chosen.has(situation.id);
-                  return (
-                    <View key={situation.id}>
-                      {index > 0 ? <View style={[styles.divider, {backgroundColor: colors.divider}]} /> : null}
-                      <Pressable
-                        onPress={() => toggleDraft(situation.id)}
-                        style={styles.row}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{checked: isChosen}}
-                      >
-                        <View style={styles.rowText}>
-                          <Text style={[styles.rowTitle, {color: colors.textPrimary}]}>{situation.label}</Text>
-                          <Text style={[styles.rowHint, {color: colors.textSecondary}]}>
-                            {lengthLabel(situation)}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.check,
-                            {borderColor: colors.accentBlue},
-                            isChosen && {backgroundColor: colors.accentBlue},
-                          ]}
-                        >
-                          {isChosen ? <Text style={styles.checkMark}>✓</Text> : null}
-                        </View>
-                      </Pressable>
-                    </View>
-                  );
-                })}
+                {renderRows(LIFE_SITUATIONS.filter(s => SITUATION_THEME[s.id] === section.theme))}
               </View>
             </View>
           ))}
@@ -284,6 +378,12 @@ const TenyHoAnaoScreen = () => {
   return (
     <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
       <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
+        {todayVerse ? (
+          <View>
+            <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Ny teny anio</Text>
+            <QuotedVerse verse={todayVerse} colors={colors} />
+          </View>
+        ) : null}
         <Text style={[styles.body, {color: colors.textSecondary}]}>
           Ireto no hiseho ao amin'ny widget: andininy iray isan'andro, mifandimby araka
           ity filaharana ity.
@@ -448,6 +548,24 @@ const styles = StyleSheet.create({
   textButton: {paddingVertical: 9, paddingHorizontal: 10},
   safety: {fontSize: 13, lineHeight: 19, borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 14},
   clearButton: {alignItems: 'center', paddingVertical: 12},
+  welcome: {fontSize: 16, lineHeight: 23, marginBottom: 8},
+  feelings: {flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14},
+  feeling: {borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 14, minHeight: 44, justifyContent: 'center'},
+  feelingText: {fontSize: 15, fontWeight: '600'},
+  feelingTextOn: {color: '#FFFFFF'},
+  unsure: {paddingVertical: 10, marginBottom: 14},
+  sampleLink: {alignSelf: 'flex-start', paddingVertical: 6, marginTop: 2},
+  sampleLinkText: {fontSize: 14, fontWeight: '700'},
+  quote: {
+    borderLeftWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  quoteText: {fontSize: 15, lineHeight: 22},
+  quoteRef: {marginTop: 6, fontSize: 13, fontWeight: '700'},
 });
 
 export default TenyHoAnaoScreen;
