@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -32,6 +31,7 @@ import VerseActionPopover from '../components/VerseActionPopover';
 import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
 import NoteBubble, {type NoteBubbleTarget} from '../components/NoteBubble';
+import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
 import {UndoBar} from '../components/UndoBar';
 import {ShareCardModal} from '../components/ShareCardModal';
 import {
@@ -259,7 +259,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [selectedVerse, setSelectedVerse] = useState<BibleVerse | null>(null);
   const [crossRefs, setCrossRefs] = useState<BibleCrossReference[]>([]);
   const [isCrossRefsLoading, setIsCrossRefsLoading] = useState(false);
-  const crossRefListRef = useRef<ScrollView>(null);
 
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
@@ -1697,16 +1696,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                 <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Tsy misy cross-reference.</Text>
               </View>
             ) : (
-              <ScrollView
-                ref={crossRefListRef}
+              <ScrollViewWithThumb
                 style={styles.crossRefList}
                 contentContainerStyle={styles.crossRefListContent}
-                // Say there is more below: Android keeps its bar on screen,
-                // iOS only shows it while scrolling, so it flashes it once the
-                // rows are laid out.
-                persistentScrollbar
-                indicatorStyle={theme.isDark ? 'white' : 'black'}
-                onContentSizeChange={() => crossRefListRef.current?.flashScrollIndicators()}
+                thumbColor={theme.colors.navBackground}
               >
                 {crossRefs.slice(0, 200).map((ref, index) => {
                   const rangeText =
@@ -1731,7 +1724,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </ScrollViewWithThumb>
             )}
 
             <View style={[styles.modalFooter, {borderTopColor: theme.colors.divider}]}>
