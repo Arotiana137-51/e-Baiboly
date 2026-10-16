@@ -13,6 +13,7 @@ type TranslationKey =
   | 'notes.save'
   | 'notes.edit'
   | 'notes.placeholder'
+  | 'notes.fromVerse'
   | 'notes.untilVerse'
   | 'notes.editedOn'
   | 'notes.deleted'
@@ -161,7 +162,8 @@ const translations: Translations = {
     'notes.save': 'Tahirizo',
     'notes.edit': 'Ovay',
     'notes.placeholder': 'Soraty eto ny naotinao…',
-    'notes.untilVerse': "Hatramin'ny andininy",
+    'notes.fromVerse': 'Andininy',
+    'notes.untilVerse': "hatramin'ny",
     'notes.editedOn': 'Novaina {{date}}',
     'notes.deleted': 'Voafafa ny naoty',
     'notes.undo': 'Averina',

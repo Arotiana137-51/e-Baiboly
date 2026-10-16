@@ -34,9 +34,10 @@ type Props = {
 
 const sameAnchor = (a: NoteAnchor, b: NoteAnchor) => JSON.stringify(a) === JSON.stringify(b);
 
-// The writing field's height: 3 to 7 lines of text.
+// The writing field's height: at least 3 lines, at most 16% of the window
+// (about 5 lines on a big phone), and no more than fits above the keyboard.
 const FIELD_MIN = 92;
-const FIELD_MAX = 188;
+const FIELD_SHARE = 0.16;
 // What sits above the keyboard besides the field once the reader has scrolled
 // the bubble to its top: the app's top bar and the bubble's other rows, plus a
 // margin. NOTE: an estimate kept on the safe side so Tahirizo never ends up
@@ -62,7 +63,7 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
   // window), so the field doesn't jump when it opens.
   const keyboardHeight = useKeyboardHeight() || windowHeight * 0.4;
   const fieldHeight = Math.round(
-    Math.min(FIELD_MAX, Math.max(FIELD_MIN, windowHeight - keyboardHeight - AROUND_FIELD)),
+    Math.max(FIELD_MIN, Math.min(windowHeight * FIELD_SHARE, windowHeight - keyboardHeight - AROUND_FIELD)),
   );
   const [text, setText] = useState(() => target.existing?.text ?? '');
   const [anchor, setAnchor] = useState<NoteAnchor>(() => target.existing?.anchor ?? target.anchor);
@@ -141,6 +142,8 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
 
   const bibleAnchor = anchor.kind === 'bible' ? anchor : null;
   const maxVerse = target.maxVerse;
+  const canShrink = bibleAnchor !== null && bibleAnchor.verseEnd > bibleAnchor.verseStart;
+  const canGrow = bibleAnchor !== null && typeof maxVerse === 'number' && bibleAnchor.verseEnd < maxVerse;
   const stepEnd = (delta: number) => {
     if (!bibleAnchor || typeof maxVerse !== 'number') return;
     setAnchor({
@@ -213,13 +216,19 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
 
         {editing && bibleAnchor && typeof maxVerse === 'number' ? (
           <View style={styles.stepper}>
+            {/* The whole range as a sentence, "Andininy 16 hatramin'ny − 18 +",
+                so the start stays in view next to the end the buttons move. */}
             <Text style={[styles.stepLabel, {color: theme.colors.textSecondary}]}>
+              {t('notes.fromVerse')}{' '}
+              <Text style={[styles.stepNumber, {color: theme.colors.textPrimary}]}>
+                {bibleAnchor.verseStart}
+              </Text>{' '}
               {t('notes.untilVerse')}
             </Text>
             <Pressable
-              style={[styles.stepButton, {borderColor: theme.colors.divider}]}
+              style={[styles.stepButton, {borderColor: theme.colors.divider}, !canShrink && styles.disabled]}
               onPress={() => stepEnd(-1)}
-              disabled={bibleAnchor.verseEnd <= bibleAnchor.verseStart}
+              disabled={!canShrink}
               hitSlop={4}
               accessibilityRole="button"
             >
@@ -227,9 +236,9 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
             </Pressable>
             <Text style={[styles.stepValue, {color: theme.colors.textPrimary}]}>{bibleAnchor.verseEnd}</Text>
             <Pressable
-              style={[styles.stepButton, {borderColor: theme.colors.divider}]}
+              style={[styles.stepButton, {borderColor: theme.colors.divider}, !canGrow && styles.disabled]}
               onPress={() => stepEnd(1)}
-              disabled={bibleAnchor.verseEnd >= maxVerse}
+              disabled={!canGrow}
               hitSlop={4}
               accessibilityRole="button"
             >
@@ -377,6 +386,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepText: {fontSize: 20, lineHeight: 22},
+  stepNumber: {fontSize: 16, fontWeight: '700'},
   stepValue: {minWidth: 28, textAlign: 'center', fontSize: 16, fontWeight: '700'},
   iconButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   disabled: {opacity: 0.4},
