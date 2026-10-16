@@ -1693,7 +1693,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                       : `${ref.to_verse_start}-${ref.to_verse_end}`;
                   return (
                     <Pressable
-                      key={ref.id}
+                      key={`${ref.to_book}:${ref.to_chapter}:${ref.to_verse_start}-${ref.to_verse_end}`}
                       style={[styles.crossRefRow, {borderTopColor: theme.colors.divider}]}
                       onPress={() => handleCrossRefPress(ref)}
                     >
