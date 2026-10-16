@@ -1,6 +1,5 @@
 import React, {useRef, useState} from 'react';
 import {Animated, StyleSheet, View, type ScrollViewProps} from 'react-native';
-import {hexToRgba} from '../utils/colorUtils';
 
 const INSET = 4;
 const MIN_THUMB = 28;
@@ -17,8 +16,8 @@ export const thumbFor = (viewHeight: number, contentHeight: number) => {
 };
 
 type Props = ScrollViewProps & {
-  // The thumb's colour; its track is the same, fainter.
   thumbColor: string;
+  trackColor: string;
 };
 
 // A ScrollView with its own thumb on a track along the right edge, drawn as
@@ -27,6 +26,7 @@ type Props = ScrollViewProps & {
 // tell that more rows sat below.
 export const ScrollViewWithThumb = ({
   thumbColor,
+  trackColor,
   style,
   children,
   onLayout,
@@ -68,14 +68,14 @@ export const ScrollViewWithThumb = ({
       {thumb.height > 0 ? (
         <View
           pointerEvents="none"
-          style={[styles.track, {backgroundColor: hexToRgba(thumbColor, 0.12)}]}
+          style={[styles.track, {backgroundColor: trackColor}]}
         >
           <Animated.View
             style={[
               styles.thumb,
               {
                 height: thumb.height,
-                backgroundColor: hexToRgba(thumbColor, 0.55),
+                backgroundColor: thumbColor,
                 transform: [{translateY}],
               },
             ]}
@@ -94,8 +94,8 @@ const styles = StyleSheet.create({
     top: INSET,
     bottom: INSET,
     right: INSET,
-    width: 4,
-    borderRadius: 2,
+    width: 6,
+    borderRadius: 3,
   },
-  thumb: {width: 4, borderRadius: 2},
+  thumb: {width: 6, borderRadius: 3},
 });

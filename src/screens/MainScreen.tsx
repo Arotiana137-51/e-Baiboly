@@ -1699,7 +1699,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               <ScrollViewWithThumb
                 style={styles.crossRefList}
                 contentContainerStyle={styles.crossRefListContent}
-                thumbColor={theme.colors.navBackground}
+                // A solid accent thumb on a white rail (a faint white one in
+                // dark mode, where the card is dark).
+                thumbColor={theme.colors.accentBlue}
+                trackColor={theme.isDark ? 'rgba(255,255,255,0.16)' : '#FFFFFF'}
               >
                 {crossRefs.slice(0, 200).map((ref, index) => {
                   const rangeText =
