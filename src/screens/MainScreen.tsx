@@ -244,7 +244,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     loadHymnVerses,
     isLoading: isHymnsLoading,
   } = useHymnsData();
-  const { addToFavorites: addToBibleFavorites } = useFavorites();
+  const { addToFavorites: addToBibleFavorites, favorites: bibleFavorites } = useFavorites();
   const { addToFavorites: addToHymnFavorites } = useHymnFavorites();
   const { logAccess: logBibleAccess } = useBibleHistory();
   const { logAccess: logHymnAccess } = useHymnHistory();
@@ -965,6 +965,16 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     () => (mode === 'hymnal' && currentHymnId ? hymnNotes(notes, currentHymnId) : []),
     [notes, mode, currentHymnId],
   );
+  // This chapter's favourite verses, which the reader frames.
+  const favoriteVerseNumbers = useMemo(
+    () =>
+      new Set(
+        bibleFavorites
+          .filter(f => f.book_id === currentBook?.id && f.chapter === currentChapter)
+          .map(f => f.verse_number),
+      ),
+    [bibleFavorites, currentBook?.id, currentChapter],
+  );
 
   const bibleNoteTarget = useCallback(
     (anchor: NoteAnchor, existing: Note | null): NoteBubbleTarget => ({
@@ -1545,6 +1555,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               chapterMarks={chapterMarks}
               currentBookName={currentBook?.name ?? null}
               onClearRange={() => setSelectedVerseRange(null)}
+              favoriteVerses={favoriteVerseNumbers}
             />
           ) : (
             <HymnReaderView
