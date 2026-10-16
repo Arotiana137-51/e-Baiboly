@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState, useRef} from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -32,6 +31,7 @@ import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
 import NoteBubble, {type NoteBubbleTarget} from '../components/NoteBubble';
 import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
+import {SheetButton, SheetModal} from '../components/SheetModal';
 import {UndoBar} from '../components/UndoBar';
 import {ShareCardModal} from '../components/ShareCardModal';
 import {
@@ -1658,96 +1658,56 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         }}
       />
 
-      <Modal
+      <SheetModal
         visible={crossRefModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeCrossReferences}
+        title={
+          selectedVerse
+            ? `${currentBook?.name ?? ''} ${selectedVerse.chapter}:${selectedVerse.verse_number}`
+            : 'Cross references'
+        }
+        onClose={closeCrossReferences}
+        footer={<SheetButton label={t('common.close')} onPress={closeCrossReferences} />}
       >
-        <Pressable style={styles.modalBackdrop} onPress={closeCrossReferences}>
-          {/* Header (reference, ×) and footer (Hidio) stay put; only the
-              list between them scrolls when it runs past the card's 80%. */}
-          <Pressable
-            style={[styles.modalCard, {backgroundColor: theme.colors.backgroundSecondary}]}
-            onPress={() => {}}>
-            <View style={[styles.modalHeader, {borderBottomColor: theme.colors.divider}]}>
-              <Text style={[styles.modalTitle, {color: theme.colors.textPrimary}]} numberOfLines={1}>
-                {selectedVerse
-                  ? `${currentBook?.name ?? ''} ${selectedVerse.chapter}:${selectedVerse.verse_number}`
-                  : 'Cross references'}
-              </Text>
-              <Pressable
-                onPress={closeCrossReferences}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.close')}
-                style={styles.modalClose}
-              >
-                <Text style={[styles.modalCloseText, {color: theme.colors.textSecondary}]}>×</Text>
-              </Pressable>
-            </View>
-
-            {isCrossRefsLoading ? (
-              <View style={styles.modalState}>
-                <ActivityIndicator color={theme.colors.navBackground} />
-                <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Mitady...</Text>
-              </View>
-            ) : crossRefs.length === 0 ? (
-              <View style={styles.modalState}>
-                <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Tsy misy cross-reference.</Text>
-              </View>
-            ) : (
-              <ScrollViewWithThumb
-                style={styles.crossRefList}
-                contentContainerStyle={styles.crossRefListContent}
-                // A solid accent thumb on a white rail (a faint white one in
-                // dark mode, where the card is dark).
-                thumbColor={theme.colors.accentBlue}
-                trackColor={theme.isDark ? 'rgba(255,255,255,0.16)' : '#FFFFFF'}
-              >
-                {crossRefs.slice(0, 200).map((ref, index) => {
-                  const rangeText =
-                    ref.to_verse_start === ref.to_verse_end
-                      ? `${ref.to_verse_start}`
-                      : `${ref.to_verse_start}-${ref.to_verse_end}`;
-                  return (
-                    <Pressable
-                      key={`${ref.to_book}:${ref.to_chapter}:${ref.to_verse_start}-${ref.to_verse_end}`}
-                      style={({pressed}) => [
-                        styles.crossRefRow,
-                        index > 0 && [styles.crossRefRowDivider, {borderTopColor: theme.colors.divider}],
-                        pressed && {backgroundColor: hexToRgba(theme.colors.navBackground, 0.08)},
-                      ]}
-                      onPress={() => handleCrossRefPress(ref)}
-                      accessibilityRole="button"
-                    >
-                      <Text style={[styles.crossRefText, {color: theme.colors.readerText}]}>
-                        {ref.to_book_name} {ref.to_chapter}:{rangeText}
-                      </Text>
-                      <Text style={[styles.crossRefChevron, {color: theme.colors.textSecondary}]}>›</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollViewWithThumb>
-            )}
-
-            <View style={[styles.modalFooter, {borderTopColor: theme.colors.divider}]}>
-              <Pressable
-                onPress={closeCrossReferences}
-                accessibilityRole="button"
-                style={({pressed}) => [
-                  styles.modalFooterButton,
-                  {borderColor: theme.colors.navBackground},
-                  pressed && {backgroundColor: hexToRgba(theme.colors.navBackground, 0.08)},
-                ]}
-              >
-                <Text style={[styles.modalFooterButtonText, {color: theme.colors.navBackground}]}>
-                  {t('common.close')}
-                </Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        {isCrossRefsLoading ? (
+          <View style={styles.modalState}>
+            <ActivityIndicator color={theme.colors.navBackground} />
+            <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Mitady...</Text>
+          </View>
+        ) : crossRefs.length === 0 ? (
+          <View style={styles.modalState}>
+            <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Tsy misy cross-reference.</Text>
+          </View>
+        ) : (
+          <ScrollViewWithThumb
+            style={styles.crossRefList}
+            contentContainerStyle={styles.crossRefListContent}
+          >
+            {crossRefs.slice(0, 200).map((ref, index) => {
+              const rangeText =
+                ref.to_verse_start === ref.to_verse_end
+                  ? `${ref.to_verse_start}`
+                  : `${ref.to_verse_start}-${ref.to_verse_end}`;
+              return (
+                <Pressable
+                  key={`${ref.to_book}:${ref.to_chapter}:${ref.to_verse_start}-${ref.to_verse_end}`}
+                  style={({pressed}) => [
+                    styles.crossRefRow,
+                    index > 0 && [styles.crossRefRowDivider, {borderTopColor: theme.colors.divider}],
+                    pressed && {backgroundColor: hexToRgba(theme.colors.navBackground, 0.08)},
+                  ]}
+                  onPress={() => handleCrossRefPress(ref)}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.crossRefText, {color: theme.colors.readerText}]}>
+                    {ref.to_book_name} {ref.to_chapter}:{rangeText}
+                  </Text>
+                  <Text style={[styles.crossRefChevron, {color: theme.colors.textSecondary}]}>›</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollViewWithThumb>
+        )}
+      </SheetModal>
 
       <HamburgerMenuPopover
         visible={isMenuOpen}
@@ -1925,48 +1885,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#FFFFFF',
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    paddingVertical: 24,
-  },
-  modalCard: {
-    borderRadius: 16,
-    maxHeight: '80%',
-    overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: {width: 0, height: 4},
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 20,
-    paddingRight: 8,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  modalTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    paddingRight: 12,
-  },
-  // 44pt box, like the note bubble's ×.
-  modalClose: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCloseText: {
-    fontSize: 28,
-    lineHeight: 30,
-  },
   modalState: {
     alignItems: 'center',
     paddingVertical: 28,
@@ -2003,23 +1921,6 @@ const styles = StyleSheet.create({
   crossRefChevron: {
     fontSize: 24,
     lineHeight: 26,
-  },
-  // Same 20pt inset as the title and the rows, so the edges line up.
-  modalFooter: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  modalFooterButton: {
-    minHeight: 48,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalFooterButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
 

@@ -1,5 +1,6 @@
 import React, {useRef, useState} from 'react';
-import {Animated, StyleSheet, View, type ScrollViewProps} from 'react-native';
+import {Animated, StyleSheet, View, type ScrollView, type ScrollViewProps} from 'react-native';
+import {useTheme} from '../contexts/ThemeContext';
 
 const INSET = 4;
 const MIN_THUMB = 28;
@@ -16,17 +17,16 @@ export const thumbFor = (viewHeight: number, contentHeight: number) => {
 };
 
 type Props = ScrollViewProps & {
-  thumbColor: string;
-  trackColor: string;
+  ref?: React.Ref<ScrollView>;
 };
 
 // A ScrollView with its own thumb on a track along the right edge, drawn as
 // long as the content is taller than the view. The platforms' bars are
 // hair-thin (Samsung) or only show mid-scroll (iOS), so a reader couldn't
-// tell that more rows sat below.
+// tell that more rows sat below. A solid accent thumb on a white rail (a
+// faint white one in dark mode, where the card is dark).
 export const ScrollViewWithThumb = ({
-  thumbColor,
-  trackColor,
+  ref,
   style,
   children,
   onLayout,
@@ -36,6 +36,7 @@ export const ScrollViewWithThumb = ({
   const [viewHeight, setViewHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const scrollY = useRef(new Animated.Value(0)).current;
+  const {theme} = useTheme();
 
   const thumb = thumbFor(viewHeight, contentHeight);
   const translateY = scrollY.interpolate({
@@ -48,6 +49,7 @@ export const ScrollViewWithThumb = ({
     <View style={style}>
       <Animated.ScrollView
         {...rest}
+        ref={ref}
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
@@ -68,14 +70,14 @@ export const ScrollViewWithThumb = ({
       {thumb.height > 0 ? (
         <View
           pointerEvents="none"
-          style={[styles.track, {backgroundColor: trackColor}]}
+          style={[styles.track, theme.isDark ? styles.trackDark : styles.trackLight]}
         >
           <Animated.View
             style={[
               styles.thumb,
               {
                 height: thumb.height,
-                backgroundColor: thumbColor,
+                backgroundColor: theme.colors.accentBlue,
                 transform: [{translateY}],
               },
             ]}
@@ -97,5 +99,7 @@ const styles = StyleSheet.create({
     width: 6,
     borderRadius: 3,
   },
+  trackLight: {backgroundColor: '#FFFFFF'},
+  trackDark: {backgroundColor: 'rgba(255,255,255,0.16)'},
   thumb: {width: 6, borderRadius: 3},
 });

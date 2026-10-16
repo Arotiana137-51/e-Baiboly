@@ -1,14 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ScrollView,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import {t} from '../i18n/strings';
+import { SheetButton, SheetModal } from './SheetModal';
+import { ScrollViewWithThumb } from './ScrollViewWithThumb';
 
 type ReportIssueModalProps = {
   visible: boolean;
@@ -27,6 +29,8 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const [comment, setComment] = useState('');
+  const bodyRef = useRef<ScrollView>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (visible) {
@@ -34,177 +38,126 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
     }
   }, [visible]);
 
+  // The comment field is the last thing in the body: once the card has made
+  // room for the keyboard, bring it (and the note under it) into view.
+  useEffect(() => {
+    if (keyboardHeight > 0) {
+      requestAnimationFrame(() => bodyRef.current?.scrollToEnd({ animated: true }));
+    }
+  }, [keyboardHeight]);
+
   const canSubmit = useMemo(() => comment.trim().length > 0, [comment]);
 
   return (
-    <Modal
+    <SheetModal
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
+      title={t('report.title')}
+      onClose={onClose}
+      footer={
+        <>
+          <SheetButton label={t('common.cancel')} onPress={onClose} />
+          <SheetButton
+            label={t('common.send')}
+            variant="filled"
+            onPress={() => onSubmit(comment)}
+            disabled={!canSubmit}
+          />
+        </>
+      }
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable
+      <ScrollViewWithThumb
+        ref={bodyRef}
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.reference')}</Text>
+        <Text style={[styles.reference, { color: theme.colors.textPrimary }]}>{reference}</Text>
+
+        <Text style={[styles.label, styles.spaced, { color: theme.colors.textSecondary }]}>
+          {t('report.text')}
+        </Text>
+        <View
           style={[
-            styles.card,
-            { backgroundColor: theme.colors.backgroundSecondary },
+            styles.quote,
+            { backgroundColor: theme.colors.readerBackground, borderLeftColor: theme.colors.accentBlue },
           ]}
-          onPress={() => {}}
         >
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
-              {t('report.title')}
-            </Text>
-            <Pressable onPress={onClose}>
-              <Text style={[styles.closeText, { color: theme.colors.textSecondary }]}>
-                {t('common.close')}
-              </Text>
-            </Pressable>
-          </View>
+          <Text style={[styles.quoteText, { color: theme.colors.textPrimary }]} numberOfLines={8}>
+            {text}
+          </Text>
+        </View>
 
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.reference')}</Text>
-            <Text style={[styles.value, { color: theme.colors.textPrimary }]}>
-              {reference}
-            </Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.text')}</Text>
-            <Text
-              style={[styles.value, { color: theme.colors.textPrimary }]}
-              numberOfLines={8}
-            >
-              {text}
-            </Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.comment')}</Text>
-            <TextInput
-              value={comment}
-              onChangeText={setComment}
-              placeholder={t('report.placeholder')}
-              placeholderTextColor={theme.colors.textSecondary}
-              multiline
-              style={[
-                styles.input,
-                {
-                  borderColor: theme.colors.divider,
-                  color: theme.colors.textPrimary,
-                },
-              ]}
-            />
-            <Text style={[styles.note, { color: theme.colors.textSecondary }]}>
-              {t('report.note')}
-            </Text>
-          </View>
-
-          <View style={styles.actions}>
-            <Pressable
-              style={[styles.button, { borderColor: theme.colors.divider }]}
-              onPress={onClose}
-            >
-              <Text style={[styles.buttonText, { color: theme.colors.textPrimary }]}>{t('common.cancel')}</Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.button,
-                styles.primaryButton,
-                {
-                  backgroundColor: canSubmit ? '#005a9e' : theme.colors.divider,
-                },
-              ]}
-              onPress={() => onSubmit(comment)}
-              disabled={!canSubmit}
-            >
-              <Text style={[styles.buttonText, { color: '#fff' }]}>{t('common.send')}</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        <Text style={[styles.label, styles.spaced, { color: theme.colors.textSecondary }]}>
+          {t('report.comment')}
+        </Text>
+        <TextInput
+          value={comment}
+          onChangeText={setComment}
+          placeholder={t('report.placeholder')}
+          placeholderTextColor={theme.colors.textSecondary}
+          multiline
+          textAlignVertical="top"
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.colors.readerBackground,
+              borderColor: theme.colors.divider,
+              color: theme.colors.textPrimary,
+            },
+          ]}
+        />
+        <Text style={[styles.note, { color: theme.colors.textSecondary }]}>{t('report.note')}</Text>
+      </ScrollViewWithThumb>
+    </SheetModal>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    padding: 16,
+  // Shrinks between the header and the footer when the card runs out of room.
+  body: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
-  card: {
-    borderRadius: 12,
-    padding: 16,
-    minWidth: 280,
-    maxWidth: '92%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  bodyContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
   },
-  title: {
+  spaced: {
+    marginTop: 18,
+  },
+  reference: {
     fontSize: 16,
     fontWeight: '700',
   },
-  closeText: {
-    fontSize: 12,
-    fontWeight: '700',
+  quote: {
+    borderLeftWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  section: {
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 12,
-    marginBottom: 6,
-  },
-  value: {
-    fontSize: 14,
+  quoteText: {
+    fontSize: 15,
+    lineHeight: 22,
   },
   input: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 10,
-    padding: 10,
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
-  note: {
-    marginTop: 8,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 12,
-  },
-  button: {
-    flex: 1,
     borderWidth: 1,
     borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 110,
+    fontSize: 16,
+    lineHeight: 22,
   },
-  primaryButton: {
-    borderWidth: 0,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '700',
+  note: {
+    marginTop: 10,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });
 
