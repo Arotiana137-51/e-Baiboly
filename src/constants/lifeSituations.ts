@@ -1112,3 +1112,92 @@ export const LIFE_SITUATIONS: ReadonlyArray<LifeSituation> = [
     ],
   },
 ];
+
+// The choice list is grouped by what a situation touches in a life, not by
+// how long its plan runs (that stays under each label). Titles are
+// placeholder MG copy — user-owned.
+export type SituationTheme = 'heart' | 'family' | 'health' | 'life' | 'hardship' | 'faith';
+
+export const SITUATION_THEMES: ReadonlyArray<{theme: SituationTheme; title: string}> = [
+  {theme: 'heart', title: 'Ny ao am-po'},
+  {theme: 'family', title: 'Fianakaviana sy fifandraisana'},
+  {theme: 'health', title: 'Fahasalamana, fahanterana ary fisaonana'},
+  {theme: 'life', title: 'Fiainana andavanandro'},
+  {theme: 'hardship', title: 'Loza, herisetra ary tsy rariny'},
+  {theme: 'faith', title: 'Finoana'},
+];
+
+// Every situation in exactly one theme: a Record, so a new id that is left out
+// does not compile.
+export const SITUATION_THEME: Record<SituationId, SituationTheme> = {
+  fear: 'heart',
+  discouraged: 'heart',
+  lonely: 'heart',
+  shame: 'heart',
+  anger: 'heart',
+  insomnia: 'heart',
+  family: 'family',
+  children: 'family',
+  conflict: 'family',
+  betrayed: 'family',
+  divorce: 'family',
+  heartbreak: 'family',
+  addictedrelative: 'family',
+  illness: 'health',
+  grief: 'health',
+  babyloss: 'health',
+  ageing: 'health',
+  disability: 'health',
+  caregiver: 'health',
+  pregnancy: 'health',
+  work: 'life',
+  studies: 'life',
+  newtask: 'life',
+  journey: 'life',
+  guidance: 'life',
+  waiting: 'life',
+  disaster: 'hardship',
+  insecurity: 'hardship',
+  injustice: 'hardship',
+  prison: 'hardship',
+  newfaith: 'faith',
+  doubt: 'faith',
+  faraway: 'faith',
+  guilt: 'faith',
+  temptation: 'faith',
+  thanks: 'faith',
+};
+
+// "How is your heart?", above the list: a feeling, said without having to find
+// the words, brings the situations that may fit to the top. Nothing is chosen
+// for the person. Labels are placeholder MG copy — user-owned.
+export type FeelingId = 'afraid' | 'sad' | 'discouraged' | 'angry' | 'ashamed' | 'thankful';
+
+export const FEELINGS: ReadonlyArray<{
+  id: FeelingId;
+  emoji: string;
+  label: string;
+  situations: ReadonlyArray<SituationId>;
+}> = [
+  {
+    id: 'afraid',
+    emoji: '😟',
+    label: 'Matahotra',
+    situations: ['fear', 'insecurity', 'insomnia', 'disaster', 'pregnancy', 'newtask', 'studies'],
+  },
+  {
+    id: 'sad',
+    emoji: '😢',
+    label: 'Malahelo',
+    situations: ['grief', 'babyloss', 'lonely', 'divorce', 'heartbreak', 'betrayed', 'illness'],
+  },
+  {
+    id: 'discouraged',
+    emoji: '😔',
+    label: 'Kivy',
+    situations: ['discouraged', 'waiting', 'work', 'caregiver', 'disability', 'ageing', 'faraway'],
+  },
+  {id: 'angry', emoji: '😠', label: 'Tezitra', situations: ['anger', 'injustice', 'conflict', 'betrayed', 'family']},
+  {id: 'ashamed', emoji: '😞', label: 'Menatra', situations: ['shame', 'guilt', 'temptation', 'prison', 'addictedrelative']},
+  {id: 'thankful', emoji: '🙏', label: 'Mankasitraka', situations: ['thanks', 'newfaith']},
+];

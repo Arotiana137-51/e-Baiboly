@@ -1,5 +1,11 @@
 import path from 'path';
-import {LIFE_SITUATIONS, type SituationId} from '../src/constants/lifeSituations';
+import {
+  FEELINGS,
+  LIFE_SITUATIONS,
+  SITUATION_THEME,
+  SITUATION_THEMES,
+  type SituationId,
+} from '../src/constants/lifeSituations';
 import type {VerseRef} from '../src/constants/dailyVerses';
 import {
   CHECK_IN_GRACE_DAYS,
@@ -54,6 +60,15 @@ describe('lifeSituations content', () => {
         expect(s.checkEvery).toBeLessThanOrEqual(s.days!);
       }
       expect(new Set(s.verses.map(key)).size).toBe(s.verses.length);
+    }
+  });
+
+  it('groups every plan under a theme that is shown, and lists the plans of a feeling once', () => {
+    for (const {theme} of SITUATION_THEMES) {
+      expect(LIFE_SITUATIONS.filter(s => SITUATION_THEME[s.id] === theme).length).toBeGreaterThan(0);
+    }
+    for (const feeling of FEELINGS) {
+      expect(new Set(feeling.situations).size).toBe(feeling.situations.length);
     }
   });
 
