@@ -4,6 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
+import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
 import {useTenyHoAnao} from '../hooks/useTenyHoAnao';
 import {
   LIFE_SITUATIONS,
@@ -199,7 +200,7 @@ const TenyHoAnaoScreen = () => {
     const count = draft.situations.length;
     return (
       <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
           {stepCounter(2)}
           <Text style={[styles.title, {color: colors.textPrimary}]}>Safidio izay mety aminao</Text>
           <Text style={[styles.body, {color: colors.textSecondary}]}>Azonao atao ny misafidy maromaro.</Text>
@@ -240,7 +241,7 @@ const TenyHoAnaoScreen = () => {
               </View>
             </View>
           ))}
-        </ScrollView>
+        </ScrollViewWithThumb>
         <StepFooter
           colors={colors}
           backLabel="Hiverina"
@@ -257,14 +258,14 @@ const TenyHoAnaoScreen = () => {
   if (view === 'order' && draft) {
     return (
       <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
           {stepCounter(3)}
           <Text style={[styles.title, {color: colors.textPrimary}]}>Alaharo araka izay tianao</Text>
           <Text style={[styles.body, {color: colors.textSecondary}]}>
             Andininy iray isan'andro, mifandimby araka io filaharana io.
           </Text>
           <RankedList situations={draft.situations} colors={colors} onMove={moveDraft} />
-        </ScrollView>
+        </ScrollViewWithThumb>
         <StepFooter
           colors={colors}
           backLabel="Hiverina"
@@ -280,7 +281,7 @@ const TenyHoAnaoScreen = () => {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
         <Text style={[styles.body, {color: colors.textSecondary}]}>
           Ireto no hiseho ao amin'ny widget: andininy iray isan'andro, mifandimby araka
           ity filaharana ity.
@@ -397,13 +398,15 @@ const TenyHoAnaoScreen = () => {
             <Text style={[styles.answerText, {color: colors.textSecondary}]}>Fafao ny zava-drehetra</Text>
           </Pressable>
         )}
-      </ScrollView>
+      </ScrollViewWithThumb>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {flex: 1},
+  // Fills the space above the step footer; its thumb says when more is below.
+  list: {flex: 1},
   scroll: {padding: 16, paddingBottom: 32},
   stepCounter: {fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8},
   title: {fontSize: 20, fontWeight: '700', marginBottom: 10},
