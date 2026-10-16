@@ -259,6 +259,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [selectedVerse, setSelectedVerse] = useState<BibleVerse | null>(null);
   const [crossRefs, setCrossRefs] = useState<BibleCrossReference[]>([]);
   const [isCrossRefsLoading, setIsCrossRefsLoading] = useState(false);
+  const crossRefListRef = useRef<ScrollView>(null);
 
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
@@ -1696,7 +1697,17 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                 <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Tsy misy cross-reference.</Text>
               </View>
             ) : (
-              <ScrollView style={styles.crossRefList} contentContainerStyle={styles.crossRefListContent}>
+              <ScrollView
+                ref={crossRefListRef}
+                style={styles.crossRefList}
+                contentContainerStyle={styles.crossRefListContent}
+                // Say there is more below: Android keeps its bar on screen,
+                // iOS only shows it while scrolling, so it flashes it once the
+                // rows are laid out.
+                persistentScrollbar
+                indicatorStyle={theme.isDark ? 'white' : 'black'}
+                onContentSizeChange={() => crossRefListRef.current?.flashScrollIndicators()}
+              >
                 {crossRefs.slice(0, 200).map((ref, index) => {
                   const rangeText =
                     ref.to_verse_start === ref.to_verse_end
@@ -1922,7 +1933,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 28,
+    paddingVertical: 24,
   },
   modalCard: {
     borderRadius: 16,
@@ -1996,8 +2008,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 26,
   },
+  // Same 20pt inset as the title and the rows, so the edges line up.
   modalFooter: {
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   modalFooterButton: {
