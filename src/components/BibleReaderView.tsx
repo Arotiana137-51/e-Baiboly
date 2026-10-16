@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useImperativeHandle, useMemo, useRef, use
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -10,6 +11,7 @@ import {
   useWindowDimensions,
   type LayoutChangeEvent,
   type NativeSyntheticEvent,
+  type ImageStyle,
   type StyleProp,
   type TextLayoutEventData,
   type TextStyle,
@@ -83,6 +85,9 @@ const NOTE_GUTTER = 16;
 // How far a favourite's frame reaches above its first line and below its
 // last: under half the 7pt gap, so two favourites in a row keep apart.
 const FAVORITE_FRAME_OUTSET = 2;
+const FAVORITE_BADGE = 18;
+// The menu's favourites heart (MenuIcons), tinted with the accent colour.
+const HEART = require('./shared/heart.png');
 const BIBLE_BASE_BOTTOM_PADDING = 28;
 const DOUBLE_TAP_DELAY_MS = 280;
 // Verses drawn as one text: nearly every chapter fits, and the cap keeps the
@@ -161,6 +166,8 @@ type VerseStyleSet = {
   lineOptions: {baseTextStyle: TextStyle; footnoteTextStyle: TextStyle; refTextStyle?: TextStyle};
   noteBar: StyleProp<ViewStyle>;
   favoriteFrame: StyleProp<ViewStyle>;
+  favoriteBadge: StyleProp<ViewStyle>;
+  favoriteHeart: StyleProp<ImageStyle>;
   isDark: boolean;
 };
 
@@ -219,6 +226,9 @@ const buildVerseStyles = (theme: Theme, metrics: VerseMetrics, withRefs: boolean
     },
     noteBar: [styles.noteBar, {backgroundColor: theme.colors.accentBlue}],
     favoriteFrame: [styles.favoriteFrame, {borderColor: hexToRgba(theme.colors.accentBlue, 0.55)}],
+    // The reader's own background, so the badge cuts the frame's line.
+    favoriteBadge: [styles.favoriteBadge, {backgroundColor: theme.colors.readerBackground}],
+    favoriteHeart: [styles.favoriteHeart, {tintColor: theme.colors.accentBlue}],
     isDark: theme.isDark,
   };
 };
@@ -498,7 +508,11 @@ const PassageView = React.memo(
             key={`favorite-${frame.id}`}
             pointerEvents="none"
             style={[verseStyles.favoriteFrame, {top: frame.top, height: frame.height}]}
-          />
+          >
+            <View style={verseStyles.favoriteBadge}>
+              <Image source={HEART} style={verseStyles.favoriteHeart} />
+            </View>
+          </View>
         ))}
         {brackets.map((bar, index) => (
           <Pressable
@@ -1255,14 +1269,28 @@ const styles = StyleSheet.create({
     width: NOTE_GUTTER,
   },
   // Starts just right of a note's bar (left 6 to 9) and reaches a little past
-  // the text's right edge, into the reader's padding.
+  // the text's right edge, into the reader's 16pt padding.
   favoriteFrame: {
     position: 'absolute',
     left: NOTE_GUTTER - 6,
-    right: -6,
+    right: -4,
     borderWidth: 1.5,
     borderRadius: 10,
   },
+  // The heart sits on the frame's bottom-right corner rather than inside it,
+  // where a full last line of justified text would run under it; the badge
+  // ends 3pt short of the screen edge.
+  favoriteBadge: {
+    position: 'absolute',
+    right: -FAVORITE_BADGE / 2,
+    bottom: -FAVORITE_BADGE / 2,
+    width: FAVORITE_BADGE,
+    height: FAVORITE_BADGE,
+    borderRadius: FAVORITE_BADGE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  favoriteHeart: {width: 11, height: 11},
   noteBar: {
     position: 'absolute',
     left: 6,
