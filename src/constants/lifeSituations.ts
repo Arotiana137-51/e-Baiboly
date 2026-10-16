@@ -813,7 +813,7 @@ export const LIFE_SITUATIONS: ReadonlyArray<LifeSituation> = [
   },
   {
     id: 'babyloss',
-    label: 'Fahaverezan-jaza',
+    label: 'Afa-jaza',
     kind: 'season',
     days: 21,
     checkEvery: 7,
