@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useMemo, useState, useRef} from 'react';
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -1675,8 +1676,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                   ? `${currentBook?.name ?? ''} ${selectedVerse.chapter}:${selectedVerse.verse_number}`
                   : 'Cross references'}
               </Text>
-              <Pressable onPress={closeCrossReferences}>
-                <Text style={[styles.modalClose, {color: theme.colors.accentBlue}]}>HIDY</Text>
+              <Pressable
+                onPress={closeCrossReferences}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                style={styles.modalClose}
+              >
+                <Text style={[styles.modalCloseText, {color: theme.colors.textSecondary}]}>×</Text>
               </Pressable>
             </View>
 
@@ -1685,7 +1691,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             ) : crossRefs.length === 0 ? (
               <Text style={[styles.modalHint, {color: theme.colors.readerText}]}>Tsy misy cross-reference.</Text>
             ) : (
-              <View>
+              // Up to 200 rows: the card stops at 80% of the screen and the
+              // list scrolls under the header, which stays in place.
+              <ScrollView style={styles.crossRefList}>
                 {crossRefs.slice(0, 200).map(ref => {
                   const rangeText =
                     ref.to_verse_start === ref.to_verse_end
@@ -1704,7 +1712,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                     </Pressable>
                   );
                 })}
-              </View>
+              </ScrollView>
             )}
           </Pressable>
         </Pressable>
@@ -1911,10 +1919,22 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 12,
   },
+  // 44pt box pulled into the card's corner, like the note bubble's ×.
   modalClose: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#005a9e',
+    width: 44,
+    height: 44,
+    marginTop: -8,
+    marginRight: -8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    fontSize: 28,
+    lineHeight: 30,
+  },
+  // Sized by its rows when they fit, shrunk to the card's 80% when they don't.
+  crossRefList: {
+    flexGrow: 0,
   },
   modalHint: {
     paddingVertical: 12,
