@@ -202,7 +202,9 @@ const TenyHoAnaoScreen = () => {
       <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: colors.backgroundPrimary}]}>
         <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
           {stepCounter(2)}
-          <Text style={[styles.title, {color: colors.textPrimary}]}>Safidio izay mety aminao</Text>
+          <Text style={[styles.title, {color: colors.textPrimary}]}>
+            Safidio ny karazana teny fampaherezana tianao hiseho eo amin'ny widget
+          </Text>
           <Text style={[styles.body, {color: colors.textSecondary}]}>Azonao atao ny misafidy maromaro.</Text>
           {KIND_SECTIONS.map(section => (
             <View key={section.kind}>
