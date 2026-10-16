@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -29,12 +30,14 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const [comment, setComment] = useState('');
+  const [infoVisible, setInfoVisible] = useState(false);
   const bodyRef = useRef<ScrollView>(null);
   const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (visible) {
       setComment('');
+      setInfoVisible(false);
     }
   }, [visible]);
 
@@ -52,6 +55,23 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
     <SheetModal
       visible={visible}
       title={t('report.title')}
+      titleExtra={
+        // What gets sent and what doesn't, one tap away instead of a
+        // paragraph under the field.
+        <Pressable
+          onPress={() => setInfoVisible(true)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="?"
+          style={({ pressed }) => [
+            styles.info,
+            { borderColor: theme.colors.accentBlue },
+            pressed && styles.infoPressed,
+          ]}
+        >
+          <Text style={[styles.infoText, { color: theme.colors.accentBlue }]}>?</Text>
+        </Pressable>
+      }
       onClose={onClose}
       footer={
         <>
@@ -71,12 +91,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
         contentContainerStyle={styles.bodyContent}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.reference')}</Text>
-        <Text style={[styles.reference, { color: theme.colors.textPrimary }]}>{reference}</Text>
-
-        <Text style={[styles.label, styles.spaced, { color: theme.colors.textSecondary }]}>
-          {t('report.text')}
-        </Text>
+        {/* The text being reported, quoted with its reference under it. */}
         <View
           style={[
             styles.quote,
@@ -86,6 +101,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
           <Text style={[styles.quoteText, { color: theme.colors.textPrimary }]} numberOfLines={8}>
             {text}
           </Text>
+          <Text style={[styles.reference, { color: theme.colors.accentBlue }]}>{reference}</Text>
         </View>
 
         <Text style={[styles.label, styles.spaced, { color: theme.colors.textSecondary }]}>
@@ -107,8 +123,12 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
             },
           ]}
         />
-        <Text style={[styles.note, { color: theme.colors.textSecondary }]}>{t('report.note')}</Text>
       </ScrollViewWithThumb>
+
+      {/* Inside the report card's tree, so iOS stacks it over that modal. */}
+      <SheetModal visible={infoVisible} onClose={() => setInfoVisible(false)}>
+        <Text style={[styles.note, { color: theme.colors.textPrimary }]}>{t('report.note')}</Text>
+      </SheetModal>
     </SheetModal>
   );
 };
@@ -131,8 +151,24 @@ const styles = StyleSheet.create({
   spaced: {
     marginTop: 18,
   },
+  info: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoPressed: {
+    opacity: 0.6,
+  },
+  infoText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
   reference: {
-    fontSize: 16,
+    marginTop: 8,
+    fontSize: 14,
     fontWeight: '700',
   },
   quote: {
@@ -155,9 +191,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   note: {
-    marginTop: 10,
-    fontSize: 13,
-    lineHeight: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    fontSize: 15,
+    lineHeight: 22,
   },
 });
 

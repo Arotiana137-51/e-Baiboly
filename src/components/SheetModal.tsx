@@ -10,7 +10,10 @@ const EDGE = 24;
 
 type SheetModalProps = {
   visible: boolean;
-  title: string;
+  // Without one, the header is just the ×, with no line under it.
+  title?: string;
+  // Sits right after the title, e.g. a "?" button.
+  titleExtra?: React.ReactNode;
   onClose: () => void;
   // Stays in view under the body: the action buttons.
   footer?: React.ReactNode;
@@ -22,7 +25,7 @@ type SheetModalProps = {
 // over a dim backdrop that closes it. It keeps clear of the status bar and
 // rises above the keyboard itself: the app is edge-to-edge, so neither the
 // Android dialog window nor iOS makes room for it.
-export const SheetModal = ({visible, title, onClose, footer, children}: SheetModalProps) => {
+export const SheetModal = ({visible, title, titleExtra, onClose, footer, children}: SheetModalProps) => {
   const {theme} = useTheme();
   const {height} = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -37,10 +40,17 @@ export const SheetModal = ({visible, title, onClose, footer, children}: SheetMod
           style={[styles.card, {maxHeight, backgroundColor: theme.colors.backgroundSecondary}]}
           onPress={() => {}}
         >
-          <View style={[styles.header, {borderBottomColor: theme.colors.divider}]}>
-            <Text style={[styles.title, {color: theme.colors.textPrimary}]} numberOfLines={1}>
-              {title}
-            </Text>
+          <View
+            style={[styles.header, title ? [styles.headerLine, {borderBottomColor: theme.colors.divider}] : null]}
+          >
+            <View style={styles.titleRow}>
+              {title ? (
+                <Text style={[styles.title, {color: theme.colors.textPrimary}]} numberOfLines={1}>
+                  {title}
+                </Text>
+              ) : null}
+              {titleExtra}
+            </View>
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
@@ -113,13 +123,19 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
     paddingRight: 8,
     paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerLine: {borderBottomWidth: StyleSheet.hairlineWidth},
+  titleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingRight: 12,
   },
   title: {
-    flex: 1,
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: '700',
-    paddingRight: 12,
   },
   close: {
     width: 44,
