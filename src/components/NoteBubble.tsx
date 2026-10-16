@@ -38,9 +38,9 @@ const sameAnchor = (a: NoteAnchor, b: NoteAnchor) => JSON.stringify(a) === JSON.
 // list, so it scrolls with the text and never covers it.
 //
 // An existing note opens for reading: × closes it, "Ovay" (or a tap on the
-// text) edits it. While editing, "Tahirizo" saves and closes; Android back
-// does the same; leaving the bubble any other way (chapter change, scrolled
-// out of the list) saves too.
+// text) edits it. While editing, "Tahirizo" saves and closes, × drops the
+// draft and closes; Android back saves; leaving the bubble any other way
+// (chapter change, scrolled out of the list) saves too.
 const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFocus}) => {
   const {theme} = useTheme();
   const {saveNote, removeNote} = useNotes();
@@ -101,14 +101,19 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
     return () => sub.remove();
   }, [close]);
 
-  const handleDelete = () => {
+  // Closes without the unmount save: the draft (or the whole note) is dropped.
+  const discard = () => {
     done.current = true;
+    onClose();
+    tutorial.notifyProgress('noteClosed');
+  };
+
+  const handleDelete = () => {
     if (target.existing) {
       removeNote(target.existing.id);
       onDeleted(target.existing);
     }
-    onClose();
-    tutorial.notifyProgress('noteClosed');
+    discard();
   };
 
   const handleShare = () => {
@@ -148,17 +153,16 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
             >
               <Text style={styles.saveText}>{t('notes.save')}</Text>
             </Pressable>
-          ) : (
-            <Pressable
-              onPress={close}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.close')}
-              style={styles.closeButton}
-            >
-              <Text style={[styles.closeText, {color: theme.colors.textSecondary}]}>×</Text>
-            </Pressable>
-          )}
+          ) : null}
+          <Pressable
+            onPress={editing ? discard : close}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+            style={styles.closeButton}
+          >
+            <Text style={[styles.closeText, {color: theme.colors.textSecondary}]}>×</Text>
+          </Pressable>
         </View>
 
         <View ref={inputRef} collapsable={false}>
@@ -296,7 +300,7 @@ const styles = StyleSheet.create({
   reference: {flex: 1, fontSize: 15, fontWeight: '700', marginRight: 10},
   saveButton: {borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6},
   saveText: {color: '#FFFFFF', fontSize: 14, fontWeight: '700'},
-  closeButton: {paddingHorizontal: 6},
+  closeButton: {paddingHorizontal: 6, marginLeft: 4},
   closeText: {fontSize: 26, lineHeight: 28},
   readText: {marginTop: 8, fontSize: 16, lineHeight: 23},
   editButton: {
