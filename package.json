@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android": "node scripts/devAndroid.js",
+    "android:full": "yarn build:database && yarn android",
     "ios": "yarn react-native run-ios",
     "start": "node scripts/devMetro.js",
     "dev:metro": "node scripts/devMetro.js",
