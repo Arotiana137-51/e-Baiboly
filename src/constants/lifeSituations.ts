@@ -31,7 +31,23 @@ export type SituationId =
   | 'temptation'
   | 'work'
   | 'illness'
-  | 'lonely';
+  | 'lonely'
+  | 'family'
+  | 'children'
+  | 'betrayed'
+  | 'waiting'
+  | 'insecurity'
+  | 'studies'
+  | 'ageing'
+  | 'disaster'
+  | 'faraway'
+  | 'anger'
+  | 'shame'
+  | 'injustice'
+  | 'divorce'
+  | 'babyloss'
+  | 'journey'
+  | 'newtask';
 
 export type SituationKind = 'short' | 'season' | 'long';
 
@@ -423,6 +439,445 @@ export const LIFE_SITUATIONS: ReadonlyArray<LifeSituation> = [
       {b: 19, c: 139, v: 17}, // Salamo 139:17
       {b: 19, c: 9, v: 10}, // Salamo 9:10
       {b: 19, c: 68, v: 5}, // Salamo 68:5
+    ],
+  },
+  {
+    id: 'family',
+    label: 'Fanambadiana sy fianakaviana',
+    kind: 'season',
+    days: 14,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 69, v: 8}, // Salamo 69:8
+      {b: 19, c: 34, v: 18}, // Salamo 34:18
+      {b: 45, c: 15, v: 5}, // Romana 15:5
+      {b: 45, c: 12, v: 10, correction: true}, // Romana 12:10 c
+      {b: 20, c: 15, v: 1, correction: true}, // Ohabolana 15:1 c
+      {b: 59, c: 1, v: 19, correction: true}, // Jakoba 1:19 c
+      {b: 49, c: 4, v: 32, correction: true}, // Efesiana 4:32 c
+      {b: 51, c: 3, v: 13, correction: true}, // Kolosiana 3:13 c
+      {b: 46, c: 13, v: 4, correction: true}, // 1 Korintiana 13:4 c
+      {b: 21, c: 4, v: 12}, // Mpitoriteny 4:12
+      {b: 45, c: 12, v: 18, correction: true}, // Romana 12:18 c
+      {b: 51, c: 3, v: 14, correction: true}, // Kolosiana 3:14 c
+      {b: 23, c: 54, v: 10}, // Isaia 54:10
+      {b: 50, c: 4, v: 7}, // Filipiana 4:7
+    ],
+  },
+  {
+    id: 'children',
+    label: "Manahy ny amin'ny zanako",
+    kind: 'long',
+    checkEvery: 14,
+    verses: [
+      {b: 40, c: 15, v: 22}, // Matio 15:22
+      {b: 41, c: 9, v: 24}, // Marka 9:24
+      {b: 60, c: 5, v: 7}, // 1 Petera 5:7
+      {b: 23, c: 49, v: 25}, // Isaia 49:25
+      {b: 23, c: 54, v: 13}, // Isaia 54:13
+      {b: 23, c: 44, v: 3}, // Isaia 44:3
+      {b: 19, c: 103, v: 17}, // Salamo 103:17
+      {b: 24, c: 31, v: 17}, // Jeremia 31:17
+      {b: 23, c: 40, v: 11}, // Isaia 40:11
+      {b: 50, c: 4, v: 6}, // Filipiana 4:6
+      {b: 19, c: 121, v: 7}, // Salamo 121:7
+      {b: 42, c: 15, v: 20}, // Lioka 15:20
+      {b: 20, c: 22, v: 6}, // Ohabolana 22:6
+      {b: 19, c: 127, v: 3}, // Salamo 127:3
+      {b: 40, c: 19, v: 14}, // Matio 19:14
+      {b: 40, c: 7, v: 11}, // Matio 7:11
+      {b: 43, c: 17, v: 15}, // Jaona 17:15
+      {b: 4, c: 6, v: 24, to: 26}, // Nomery 6:24-26
+      {b: 23, c: 43, v: 5}, // Isaia 43:5
+      {b: 44, c: 16, v: 31}, // Asan'ny Apostoly 16:31
+      {b: 19, c: 37, v: 25}, // Salamo 37:25
+      {b: 64, c: 1, v: 4}, // 3 Jaona 1:4
+      {b: 19, c: 112, v: 2}, // Salamo 112:2
+      {b: 24, c: 29, v: 11}, // Jeremia 29:11
+      {b: 19, c: 138, v: 8}, // Salamo 138:8
+      {b: 23, c: 41, v: 10}, // Isaia 41:10
+      {b: 25, c: 3, v: 22, to: 23}, // Fitomaniana 3:22-23
+      {b: 19, c: 121, v: 8}, // Salamo 121:8
+    ],
+  },
+  {
+    id: 'betrayed',
+    label: 'Voaratra, voafitaka na nolavina',
+    kind: 'season',
+    days: 21,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 55, v: 12}, // Salamo 55:12
+      {b: 19, c: 41, v: 9}, // Salamo 41:9
+      {b: 19, c: 6, v: 6}, // Salamo 6:6
+      {b: 19, c: 31, v: 9}, // Salamo 31:9
+      {b: 19, c: 56, v: 8}, // Salamo 56:8
+      {b: 19, c: 34, v: 18}, // Salamo 34:18
+      {b: 23, c: 53, v: 3}, // Isaia 53:3
+      {b: 19, c: 27, v: 10}, // Salamo 27:10
+      {b: 19, c: 147, v: 3}, // Salamo 147:3
+      {b: 19, c: 62, v: 8}, // Salamo 62:8
+      {b: 19, c: 3, v: 3}, // Salamo 3:3
+      {b: 19, c: 37, v: 5, to: 6}, // Salamo 37:5-6
+      {b: 19, c: 55, v: 22}, // Salamo 55:22
+      {b: 1, c: 50, v: 20}, // Genesisy 50:20
+      {b: 19, c: 118, v: 8}, // Salamo 118:8
+      {b: 24, c: 30, v: 17}, // Jeremia 30:17
+      {b: 19, c: 23, v: 3}, // Salamo 23:3
+      {b: 47, c: 4, v: 8, to: 9}, // 2 Korintiana 4:8-9
+      {b: 19, c: 94, v: 14}, // Salamo 94:14
+      {b: 23, c: 49, v: 15}, // Isaia 49:15
+      {b: 60, c: 5, v: 10}, // 1 Petera 5:10
+    ],
+  },
+  {
+    id: 'waiting',
+    label: 'Miandry ela',
+    kind: 'long',
+    checkEvery: 14,
+    verses: [
+      {b: 19, c: 13, v: 2}, // Salamo 13:2
+      {b: 35, c: 1, v: 2}, // Habakoka 1:2
+      {b: 19, c: 6, v: 3}, // Salamo 6:3
+      {b: 19, c: 27, v: 14}, // Salamo 27:14
+      {b: 23, c: 40, v: 31}, // Isaia 40:31
+      {b: 25, c: 3, v: 25, to: 26}, // Fitomaniana 3:25-26
+      {b: 35, c: 2, v: 3}, // Habakoka 2:3
+      {b: 19, c: 40, v: 2}, // Salamo 40:2
+      {b: 45, c: 8, v: 25}, // Romana 8:25
+      {b: 33, c: 7, v: 7}, // Mika 7:7
+      {b: 19, c: 130, v: 5}, // Salamo 130:5
+      {b: 19, c: 130, v: 6}, // Salamo 130:6
+      {b: 21, c: 3, v: 1}, // Mpitoriteny 3:1
+      {b: 21, c: 3, v: 11}, // Mpitoriteny 3:11
+      {b: 23, c: 30, v: 18}, // Isaia 30:18
+      {b: 19, c: 62, v: 5}, // Salamo 62:5
+      {b: 19, c: 33, v: 20}, // Salamo 33:20
+      {b: 59, c: 5, v: 8}, // Jakoba 5:8
+      {b: 19, c: 33, v: 22}, // Salamo 33:22
+      {b: 19, c: 31, v: 24}, // Salamo 31:24
+      {b: 19, c: 25, v: 5}, // Salamo 25:5
+      {b: 45, c: 12, v: 12}, // Romana 12:12
+      {b: 58, c: 10, v: 36}, // Hebreo 10:36
+      {b: 23, c: 26, v: 3}, // Isaia 26:3
+      {b: 19, c: 46, v: 10}, // Salamo 46:10
+      {b: 19, c: 39, v: 7}, // Salamo 39:7
+      {b: 23, c: 64, v: 3}, // Isaia 64:3
+      {b: 19, c: 27, v: 13}, // Salamo 27:13
+    ],
+  },
+  {
+    id: 'insecurity',
+    label: 'Tsy fandriampahalemana sy herisetra',
+    kind: 'long',
+    checkEvery: 14,
+    safetyNote: true,
+    verses: [
+      {b: 19, c: 55, v: 4}, // Salamo 55:4
+      {b: 19, c: 56, v: 3}, // Salamo 56:3
+      {b: 19, c: 91, v: 2}, // Salamo 91:2
+      {b: 19, c: 91, v: 5}, // Salamo 91:5
+      {b: 19, c: 91, v: 11}, // Salamo 91:11
+      {b: 19, c: 4, v: 8}, // Salamo 4:8
+      {b: 20, c: 18, v: 10}, // Ohabolana 18:10
+      {b: 19, c: 121, v: 7}, // Salamo 121:7
+      {b: 23, c: 54, v: 17}, // Isaia 54:17
+      {b: 19, c: 23, v: 4}, // Salamo 23:4
+      {b: 5, c: 31, v: 6}, // Deoteronomia 31:6
+      {b: 23, c: 41, v: 10}, // Isaia 41:10
+      {b: 19, c: 34, v: 7}, // Salamo 34:7
+      {b: 19, c: 3, v: 5}, // Salamo 3:5
+      {b: 19, c: 3, v: 6}, // Salamo 3:6
+      {b: 43, c: 14, v: 27}, // Jaona 14:27
+      {b: 23, c: 43, v: 2}, // Isaia 43:2
+      {b: 19, c: 118, v: 6}, // Salamo 118:6
+      {b: 58, c: 13, v: 6}, // Hebreo 13:6
+      {b: 19, c: 62, v: 6}, // Salamo 62:6
+      {b: 19, c: 9, v: 9}, // Salamo 9:9
+      {b: 36, c: 3, v: 17}, // Zefania 3:17
+      {b: 19, c: 16, v: 8}, // Salamo 16:8
+      {b: 19, c: 32, v: 7}, // Salamo 32:7
+      {b: 34, c: 1, v: 7}, // Nahoma 1:7
+      {b: 33, c: 4, v: 4}, // Mika 4:4
+      {b: 23, c: 32, v: 18}, // Isaia 32:18
+      {b: 19, c: 61, v: 3}, // Salamo 61:3
+    ],
+  },
+  {
+    id: 'studies',
+    label: 'Fianarana sy fanadinana',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 94, v: 19}, // Salamo 94:19
+      {b: 50, c: 4, v: 6}, // Filipiana 4:6
+      {b: 55, c: 1, v: 7}, // 2 Timoty 1:7
+      {b: 59, c: 1, v: 5}, // Jakoba 1:5
+      {b: 20, c: 2, v: 6}, // Ohabolana 2:6
+      {b: 19, c: 32, v: 8}, // Salamo 32:8
+      {b: 20, c: 16, v: 3}, // Ohabolana 16:3
+      {b: 51, c: 3, v: 23}, // Kolosiana 3:23
+      {b: 50, c: 4, v: 13}, // Filipiana 4:13
+      {b: 6, c: 1, v: 9}, // Josoa 1:9
+    ],
+  },
+  {
+    id: 'ageing',
+    label: 'Fahanterana',
+    kind: 'long',
+    checkEvery: 14,
+    verses: [
+      {b: 19, c: 71, v: 9}, // Salamo 71:9
+      {b: 19, c: 71, v: 18}, // Salamo 71:18
+      {b: 19, c: 73, v: 26}, // Salamo 73:26
+      {b: 23, c: 46, v: 4}, // Isaia 46:4
+      {b: 19, c: 92, v: 14}, // Salamo 92:14
+      {b: 47, c: 4, v: 16}, // 2 Korintiana 4:16
+      {b: 19, c: 90, v: 12}, // Salamo 90:12
+      {b: 18, c: 12, v: 12}, // Joba 12:12
+      {b: 20, c: 16, v: 31}, // Ohabolana 16:31
+      {b: 19, c: 37, v: 25}, // Salamo 37:25
+      {b: 23, c: 40, v: 29}, // Isaia 40:29
+      {b: 23, c: 40, v: 31}, // Isaia 40:31
+      {b: 19, c: 23, v: 6}, // Salamo 23:6
+      {b: 43, c: 14, v: 2}, // Jaona 14:2
+      {b: 43, c: 14, v: 3}, // Jaona 14:3
+      {b: 55, c: 4, v: 7}, // 2 Timoty 4:7
+      {b: 50, c: 1, v: 21}, // Filipiana 1:21
+      {b: 66, c: 21, v: 4}, // Apokalypsy 21:4
+      {b: 19, c: 48, v: 14}, // Salamo 48:14
+      {b: 19, c: 121, v: 8}, // Salamo 121:8
+      {b: 23, c: 41, v: 10}, // Isaia 41:10
+      {b: 19, c: 103, v: 5}, // Salamo 103:5
+      {b: 19, c: 103, v: 14}, // Salamo 103:14
+      {b: 19, c: 71, v: 5}, // Salamo 71:5
+      {b: 43, c: 11, v: 25}, // Jaona 11:25
+      {b: 46, c: 15, v: 55}, // 1 Korintiana 15:55
+      {b: 58, c: 13, v: 8}, // Hebreo 13:8
+      {b: 23, c: 43, v: 1}, // Isaia 43:1
+    ],
+  },
+  {
+    id: 'disaster',
+    label: 'Rivodoza, hain-tany sy loza',
+    kind: 'season',
+    days: 14,
+    checkEvery: 7,
+    safetyNote: true,
+    verses: [
+      {b: 19, c: 69, v: 2}, // Salamo 69:2
+      {b: 35, c: 3, v: 17}, // Habakoka 3:17
+      {b: 35, c: 3, v: 18}, // Habakoka 3:18
+      {b: 19, c: 46, v: 2}, // Salamo 46:2
+      {b: 23, c: 25, v: 4}, // Isaia 25:4
+      {b: 23, c: 43, v: 2}, // Isaia 43:2
+      {b: 19, c: 107, v: 29}, // Salamo 107:29
+      {b: 34, c: 1, v: 7}, // Nahoma 1:7
+      {b: 19, c: 34, v: 6}, // Salamo 34:6
+      {b: 23, c: 41, v: 17}, // Isaia 41:17
+      {b: 24, c: 17, v: 8}, // Jeremia 17:8
+      {b: 19, c: 37, v: 19}, // Salamo 37:19
+      {b: 25, c: 3, v: 22, to: 23}, // Fitomaniana 3:22-23
+      {b: 23, c: 58, v: 11}, // Isaia 58:11
+    ],
+  },
+  {
+    id: 'faraway',
+    label: 'Toa lavitra Andriamanitra',
+    kind: 'season',
+    days: 14,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 10, v: 1}, // Salamo 10:1
+      {b: 19, c: 22, v: 2}, // Salamo 22:2
+      {b: 19, c: 42, v: 3}, // Salamo 42:3
+      {b: 19, c: 77, v: 7}, // Salamo 77:7
+      {b: 25, c: 3, v: 57}, // Fitomaniana 3:57
+      {b: 19, c: 139, v: 7, to: 8}, // Salamo 139:7-8
+      {b: 19, c: 119, v: 151}, // Salamo 119:151
+      {b: 19, c: 145, v: 18}, // Salamo 145:18
+      {b: 24, c: 29, v: 13}, // Jeremia 29:13
+      {b: 23, c: 41, v: 13}, // Isaia 41:13
+      {b: 36, c: 3, v: 17}, // Zefania 3:17
+      {b: 45, c: 8, v: 39}, // Romana 8:39
+      {b: 5, c: 31, v: 6}, // Deoteronomia 31:6
+      {b: 19, c: 73, v: 28}, // Salamo 73:28
+    ],
+  },
+  {
+    id: 'anger',
+    label: 'Fahatezerana sy lolompo',
+    kind: 'season',
+    days: 14,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 39, v: 3}, // Salamo 39:3
+      {b: 19, c: 62, v: 8}, // Salamo 62:8
+      {b: 20, c: 14, v: 29, correction: true}, // Ohabolana 14:29 c
+      {b: 49, c: 4, v: 26, correction: true}, // Efesiana 4:26 c
+      {b: 59, c: 1, v: 19, correction: true}, // Jakoba 1:19 c
+      {b: 59, c: 1, v: 20, correction: true}, // Jakoba 1:20 c
+      {b: 20, c: 15, v: 1, correction: true}, // Ohabolana 15:1 c
+      {b: 19, c: 37, v: 8, correction: true}, // Salamo 37:8 c
+      {b: 20, c: 16, v: 32, correction: true}, // Ohabolana 16:32 c
+      {b: 19, c: 103, v: 8}, // Salamo 103:8
+      {b: 49, c: 4, v: 31, correction: true}, // Efesiana 4:31 c
+      {b: 49, c: 4, v: 32, correction: true}, // Efesiana 4:32 c
+      {b: 48, c: 5, v: 22}, // Galatiana 5:22
+      {b: 40, c: 11, v: 29}, // Matio 11:29
+    ],
+  },
+  {
+    id: 'shame',
+    label: 'Henatra sy fahatsapana ho tsy misy dikany',
+    kind: 'season',
+    days: 21,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 44, v: 15}, // Salamo 44:15
+      {b: 19, c: 69, v: 19}, // Salamo 69:19
+      {b: 19, c: 34, v: 5}, // Salamo 34:5
+      {b: 19, c: 3, v: 3}, // Salamo 3:3
+      {b: 23, c: 54, v: 4}, // Isaia 54:4
+      {b: 23, c: 61, v: 7}, // Isaia 61:7
+      {b: 45, c: 8, v: 1}, // Romana 8:1
+      {b: 58, c: 12, v: 2}, // Hebreo 12:2
+      {b: 19, c: 139, v: 14}, // Salamo 139:14
+      {b: 23, c: 43, v: 4}, // Isaia 43:4
+      {b: 23, c: 49, v: 16}, // Isaia 49:16
+      {b: 40, c: 10, v: 31}, // Matio 10:31
+      {b: 49, c: 2, v: 10}, // Efesiana 2:10
+      {b: 60, c: 2, v: 9}, // 1 Petera 2:9
+      {b: 47, c: 5, v: 17}, // 2 Korintiana 5:17
+      {b: 24, c: 31, v: 3}, // Jeremia 31:3
+      {b: 36, c: 3, v: 17}, // Zefania 3:17
+      {b: 42, c: 15, v: 20}, // Lioka 15:20
+      {b: 23, c: 50, v: 7}, // Isaia 50:7
+      {b: 45, c: 10, v: 11}, // Romana 10:11
+      {b: 62, c: 3, v: 1}, // 1 Jaona 3:1
+    ],
+  },
+  {
+    id: 'injustice',
+    label: 'Tsy rariny sy fanenjehana',
+    kind: 'season',
+    days: 14,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 94, v: 3}, // Salamo 94:3
+      {b: 21, c: 4, v: 1}, // Mpitoriteny 4:1
+      {b: 19, c: 9, v: 9}, // Salamo 9:9
+      {b: 19, c: 103, v: 6}, // Salamo 103:6
+      {b: 19, c: 146, v: 7}, // Salamo 146:7
+      {b: 19, c: 10, v: 17}, // Salamo 10:17
+      {b: 42, c: 18, v: 7}, // Lioka 18:7
+      {b: 19, c: 37, v: 5, to: 6}, // Salamo 37:5-6
+      {b: 40, c: 5, v: 10}, // Matio 5:10
+      {b: 60, c: 3, v: 14}, // 1 Petera 3:14
+      {b: 47, c: 4, v: 8, to: 9}, // 2 Korintiana 4:8-9
+      {b: 43, c: 16, v: 33}, // Jaona 16:33
+      {b: 23, c: 54, v: 17}, // Isaia 54:17
+      {b: 45, c: 8, v: 31}, // Romana 8:31
+    ],
+  },
+  {
+    id: 'divorce',
+    label: 'Fisarahana sy fisaraham-panambadiana',
+    kind: 'season',
+    days: 21,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 6, v: 6}, // Salamo 6:6
+      {b: 19, c: 102, v: 7}, // Salamo 102:7
+      {b: 19, c: 38, v: 10}, // Salamo 38:10
+      {b: 19, c: 34, v: 18}, // Salamo 34:18
+      {b: 19, c: 147, v: 3}, // Salamo 147:3
+      {b: 19, c: 55, v: 22}, // Salamo 55:22
+      {b: 23, c: 54, v: 5}, // Isaia 54:5
+      {b: 23, c: 54, v: 10}, // Isaia 54:10
+      {b: 40, c: 11, v: 28}, // Matio 11:28
+      {b: 47, c: 1, v: 3}, // 2 Korintiana 1:3
+      {b: 19, c: 68, v: 5}, // Salamo 68:5
+      {b: 23, c: 41, v: 10}, // Isaia 41:10
+      {b: 5, c: 31, v: 8}, // Deoteronomia 31:8
+      {b: 19, c: 126, v: 5}, // Salamo 126:5
+      {b: 25, c: 3, v: 22, to: 23}, // Fitomaniana 3:22-23
+      {b: 19, c: 31, v: 24}, // Salamo 31:24
+      {b: 23, c: 43, v: 19}, // Isaia 43:19
+      {b: 24, c: 29, v: 11}, // Jeremia 29:11
+      {b: 19, c: 73, v: 26}, // Salamo 73:26
+      {b: 19, c: 121, v: 2}, // Salamo 121:2
+      {b: 50, c: 4, v: 7}, // Filipiana 4:7
+    ],
+  },
+  {
+    id: 'babyloss',
+    label: 'Fahaverezan-jaza',
+    kind: 'season',
+    days: 21,
+    checkEvery: 7,
+    safetyNote: true,
+    verses: [
+      {b: 24, c: 31, v: 15}, // Jeremia 31:15
+      {b: 19, c: 6, v: 6}, // Salamo 6:6
+      {b: 19, c: 88, v: 3}, // Salamo 88:3
+      {b: 19, c: 31, v: 9}, // Salamo 31:9
+      {b: 19, c: 56, v: 8}, // Salamo 56:8
+      {b: 19, c: 34, v: 18}, // Salamo 34:18
+      {b: 40, c: 5, v: 4}, // Matio 5:4
+      {b: 23, c: 66, v: 13}, // Isaia 66:13
+      {b: 23, c: 40, v: 11}, // Isaia 40:11
+      {b: 19, c: 139, v: 13}, // Salamo 139:13
+      {b: 19, c: 139, v: 16}, // Salamo 139:16
+      {b: 47, c: 1, v: 4}, // 2 Korintiana 1:4
+      {b: 23, c: 49, v: 16}, // Isaia 49:16
+      {b: 10, c: 12, v: 23}, // 2 Samoela 12:23
+      {b: 43, c: 16, v: 22}, // Jaona 16:22
+      {b: 19, c: 147, v: 3}, // Salamo 147:3
+      {b: 23, c: 25, v: 8}, // Isaia 25:8
+      {b: 66, c: 21, v: 4}, // Apokalypsy 21:4
+      {b: 19, c: 126, v: 5}, // Salamo 126:5
+      {b: 43, c: 14, v: 1}, // Jaona 14:1
+      {b: 19, c: 23, v: 4}, // Salamo 23:4
+    ],
+  },
+  {
+    id: 'journey',
+    label: 'Fiaingana sy fifindrana',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 137, v: 4}, // Salamo 137:4
+      {b: 1, c: 28, v: 15}, // Genesisy 28:15
+      {b: 2, c: 33, v: 14}, // Eksodosy 33:14
+      {b: 5, c: 31, v: 8}, // Deoteronomia 31:8
+      {b: 6, c: 1, v: 9}, // Josoa 1:9
+      {b: 19, c: 121, v: 3}, // Salamo 121:3
+      {b: 19, c: 121, v: 8}, // Salamo 121:8
+      {b: 19, c: 139, v: 9, to: 10}, // Salamo 139:9-10
+      {b: 23, c: 43, v: 2}, // Isaia 43:2
+      {b: 20, c: 3, v: 6}, // Ohabolana 3:6
+    ],
+  },
+  {
+    id: 'newtask',
+    label: 'Andraikitra vaovao',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 24, c: 1, v: 6}, // Jeremia 1:6
+      {b: 24, c: 1, v: 8}, // Jeremia 1:8
+      {b: 2, c: 4, v: 12}, // Eksodosy 4:12
+      {b: 6, c: 1, v: 9}, // Josoa 1:9
+      {b: 19, c: 37, v: 5}, // Salamo 37:5
+      {b: 23, c: 41, v: 10}, // Isaia 41:10
+      {b: 47, c: 12, v: 9}, // 2 Korintiana 12:9
+      {b: 50, c: 4, v: 13}, // Filipiana 4:13
+      {b: 50, c: 1, v: 6}, // Filipiana 1:6
+      {b: 20, c: 16, v: 3}, // Ohabolana 16:3
     ],
   },
 ];

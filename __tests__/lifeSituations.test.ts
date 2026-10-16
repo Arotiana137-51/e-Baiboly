@@ -35,12 +35,14 @@ const plusDays = (iso: string, n: number) => {
 // rules in constants/lifeSituations.ts).
 const COMFORT_ONLY: SituationId[] = [
   'fear', 'guidance', 'thanks', 'grief', 'discouraged', 'doubt', 'work', 'illness', 'lonely',
+  'children', 'betrayed', 'waiting', 'insecurity', 'studies', 'ageing', 'disaster', 'faraway',
+  'shame', 'injustice', 'divorce', 'babyloss', 'journey', 'newtask',
 ];
 
 describe('lifeSituations content', () => {
-  it('has the 13 agreed plans with their shapes', () => {
-    expect(LIFE_SITUATIONS).toHaveLength(13);
-    expect(new Set(LIFE_SITUATIONS.map(s => s.id)).size).toBe(13);
+  it('has the 29 agreed plans with their shapes', () => {
+    expect(LIFE_SITUATIONS).toHaveLength(29);
+    expect(new Set(LIFE_SITUATIONS.map(s => s.id)).size).toBe(29);
     for (const s of LIFE_SITUATIONS) {
       if (s.kind === 'long') {
         expect(s.days).toBeUndefined();
@@ -61,7 +63,9 @@ describe('lifeSituations content', () => {
   });
 
   // Same check as dailyVerses.test.ts, against the DB the app bundles.
-  it('every ref resolves and carries no Psalm heading', async () => {
+  // A verse has to read on its own on a small widget: at most 250 characters
+  // (the longest of the first 13 plans was 249).
+  it('every ref resolves, carries no Psalm heading and fits the widget', async () => {
     const sqlite3 = require('sqlite3');
     const db = new sqlite3.Database(
       path.join(__dirname, '../assets/data/dev/BibleMG65.db'),
@@ -80,8 +84,9 @@ describe('lifeSituations content', () => {
     for (const s of LIFE_SITUATIONS) {
       for (const v of s.verses) {
         const texts = await rows(v);
-        const headed = /mpiventy hira|Tonon-kira|Miktama|Maskila|Fihirana fiakarana|nataon'i Davida/i;
-        if (texts.length !== (v.to ?? v.v) - v.v + 1 || headed.test(texts.join(' '))) {
+        const headed = /mpiventy hira|Tonon-kira|Miktama|Maskila|Fihirana fiakarana|nataon'i Davida|Salamon'i/i;
+        const text = texts.join(' ');
+        if (texts.length !== (v.to ?? v.v) - v.v + 1 || headed.test(text) || text.length > 250) {
           bad.push(`${s.id} ${key(v)}`);
         }
       }
