@@ -38,9 +38,9 @@ const sameAnchor = (a: NoteAnchor, b: NoteAnchor) => JSON.stringify(a) === JSON.
 // list, so it scrolls with the text and never covers it.
 //
 // An existing note opens for reading: × closes it, "Ovay" (or a tap on the
-// text) edits it. While editing, "Tahirizo" saves and closes; Android back
-// does the same; leaving the bubble any other way (chapter change, scrolled
-// out of the list) saves too.
+// text) edits it. While editing, "Tahirizo" saves and closes, × drops the
+// draft and closes; Android back saves; leaving the bubble any other way
+// (chapter change, scrolled out of the list) saves too.
 const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFocus}) => {
   const {theme} = useTheme();
   const {saveNote, removeNote} = useNotes();
@@ -101,14 +101,19 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
     return () => sub.remove();
   }, [close]);
 
-  const handleDelete = () => {
+  // Closes without the unmount save: the draft (or the whole note) is dropped.
+  const discard = () => {
     done.current = true;
+    onClose();
+    tutorial.notifyProgress('noteClosed');
+  };
+
+  const handleDelete = () => {
     if (target.existing) {
       removeNote(target.existing.id);
       onDeleted(target.existing);
     }
-    onClose();
-    tutorial.notifyProgress('noteClosed');
+    discard();
   };
 
   const handleShare = () => {
@@ -135,30 +140,29 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
           {backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.accentBlue},
         ]}
       >
+        {/* Touch layout: × alone in the top corner, the main action (Tahirizo /
+            Ovay) alone at the bottom right, share and delete at the bottom
+            left, every target at least 44pt, so a wide finger can't hit
+            "close" while aiming for "save". */}
         <View style={styles.header}>
-          <Text style={[styles.reference, {color: theme.colors.textPrimary}]} numberOfLines={1}>
-            {target.reference(anchor)}
-          </Text>
-          {editing ? (
-            <Pressable
-              onPress={close}
-              hitSlop={8}
-              accessibilityRole="button"
-              style={[styles.saveButton, {backgroundColor: theme.colors.navBackground}]}
-            >
-              <Text style={styles.saveText}>{t('notes.save')}</Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              onPress={close}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.close')}
-              style={styles.closeButton}
-            >
-              <Text style={[styles.closeText, {color: theme.colors.textSecondary}]}>×</Text>
-            </Pressable>
-          )}
+          <View style={styles.titleBlock}>
+            <Text style={[styles.reference, {color: theme.colors.textPrimary}]} numberOfLines={1}>
+              {target.reference(anchor)}
+            </Text>
+            {date ? (
+              <Text style={[styles.date, {color: theme.colors.textSecondary}]} numberOfLines={1}>
+                {t('notes.editedOn', {date})}
+              </Text>
+            ) : null}
+          </View>
+          <Pressable
+            onPress={editing ? discard : close}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+            style={styles.closeButton}
+          >
+            <Text style={[styles.closeText, {color: theme.colors.textSecondary}]}>×</Text>
+          </Pressable>
         </View>
 
         <View ref={inputRef} collapsable={false}>
@@ -197,7 +201,6 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
               style={[styles.stepButton, {borderColor: theme.colors.divider}]}
               onPress={() => stepEnd(-1)}
               disabled={bibleAnchor.verseEnd <= bibleAnchor.verseStart}
-              hitSlop={4}
               accessibilityRole="button"
             >
               <Text style={[styles.stepText, {color: theme.colors.textPrimary}]}>−</Text>
@@ -207,7 +210,6 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
               style={[styles.stepButton, {borderColor: theme.colors.divider}]}
               onPress={() => stepEnd(1)}
               disabled={bibleAnchor.verseEnd >= maxVerse}
-              hitSlop={4}
               accessibilityRole="button"
             >
               <Text style={[styles.stepText, {color: theme.colors.textPrimary}]}>+</Text>
@@ -216,25 +218,9 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
         ) : null}
 
         <View style={styles.footer}>
-          <Text style={[styles.date, {color: theme.colors.textSecondary}]} numberOfLines={1}>
-            {date ? t('notes.editedOn', {date}) : ''}
-          </Text>
-          {!editing ? (
-            <Pressable
-              onPress={() => setEditing(true)}
-              hitSlop={6}
-              accessibilityRole="button"
-              style={[styles.editButton, {borderColor: theme.colors.navBackground}]}
-            >
-              <Text style={[styles.editText, {color: theme.colors.navBackground}]}>
-                {t('notes.edit')}
-              </Text>
-            </Pressable>
-          ) : null}
           <Pressable
             onPress={handleShare}
             disabled={!text.trim()}
-            hitSlop={8}
             style={[styles.iconButton, !text.trim() && styles.disabled]}
             accessibilityRole="button"
             accessibilityLabel={t('actions.share')}
@@ -243,13 +229,41 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
           </Pressable>
           <Pressable
             onPress={handleDelete}
-            hitSlop={8}
             style={styles.iconButton}
             accessibilityRole="button"
             accessibilityLabel={t('common.remove')}
           >
             <MenuIcon name="trash" color={theme.colors.textSecondary} />
           </Pressable>
+          <View style={styles.spacer} />
+          {editing ? (
+            <Pressable
+              onPress={close}
+              accessibilityRole="button"
+              style={({pressed}) => [
+                styles.mainButton,
+                {backgroundColor: theme.colors.navBackground},
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.saveText}>{t('notes.save')}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => setEditing(true)}
+              accessibilityRole="button"
+              style={({pressed}) => [
+                styles.mainButton,
+                styles.editButton,
+                {borderColor: theme.colors.navBackground},
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.editText, {color: theme.colors.navBackground}]}>
+                {t('notes.edit')}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
       {/* The point aimed at the verse below, over the bubble's border. */}
@@ -292,21 +306,32 @@ const styles = StyleSheet.create({
     transform: [{rotate: '45deg'}],
     elevation: 4,
   },
-  header: {flexDirection: 'row', alignItems: 'center'},
-  reference: {flex: 1, fontSize: 15, fontWeight: '700', marginRight: 10},
-  saveButton: {borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6},
-  saveText: {color: '#FFFFFF', fontSize: 14, fontWeight: '700'},
-  closeButton: {paddingHorizontal: 6},
-  closeText: {fontSize: 26, lineHeight: 28},
-  readText: {marginTop: 8, fontSize: 16, lineHeight: 23},
-  editButton: {
-    borderWidth: 1.5,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginRight: 4,
+  header: {flexDirection: 'row', alignItems: 'flex-start'},
+  titleBlock: {flex: 1, marginRight: 12, paddingTop: 2},
+  reference: {fontSize: 15, fontWeight: '700'},
+  // 44pt box pulled into the bubble's corner, away from everything else.
+  closeButton: {
+    width: 44,
+    height: 44,
+    marginTop: -8,
+    marginRight: -8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  editText: {fontSize: 13, fontWeight: '700'},
+  closeText: {fontSize: 28, lineHeight: 30},
+  readText: {marginTop: 8, fontSize: 16, lineHeight: 23},
+  mainButton: {
+    minHeight: 44,
+    minWidth: 110,
+    borderRadius: 22,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveText: {color: '#FFFFFF', fontSize: 16, fontWeight: '700'},
+  editButton: {borderWidth: 1.5},
+  editText: {fontSize: 16, fontWeight: '700'},
+  pressed: {opacity: 0.7},
   input: {
     marginTop: 10,
     minHeight: 64,
@@ -318,21 +343,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
-  footer: {flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 2},
-  date: {flex: 1, fontSize: 12},
-  stepper: {flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8},
-  stepLabel: {flex: 1, fontSize: 13},
+  footer: {flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 12},
+  spacer: {flex: 1},
+  date: {fontSize: 12, marginTop: 2},
+  stepper: {flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10},
+  stepLabel: {flex: 1, fontSize: 14},
   stepButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepText: {fontSize: 17, lineHeight: 19},
-  stepValue: {minWidth: 24, textAlign: 'center', fontSize: 14, fontWeight: '700'},
-  iconButton: {padding: 6},
+  stepText: {fontSize: 20, lineHeight: 22},
+  stepValue: {minWidth: 28, textAlign: 'center', fontSize: 16, fontWeight: '700'},
+  iconButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   disabled: {opacity: 0.4},
 });
 
