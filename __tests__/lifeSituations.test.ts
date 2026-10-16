@@ -37,12 +37,13 @@ const COMFORT_ONLY: SituationId[] = [
   'fear', 'guidance', 'thanks', 'grief', 'discouraged', 'doubt', 'work', 'illness', 'lonely',
   'children', 'betrayed', 'waiting', 'insecurity', 'studies', 'ageing', 'disaster', 'faraway',
   'shame', 'injustice', 'divorce', 'babyloss', 'journey', 'newtask',
+  'prison', 'disability', 'heartbreak', 'caregiver', 'insomnia', 'pregnancy', 'addictedrelative',
 ];
 
 describe('lifeSituations content', () => {
-  it('has the 29 agreed plans with their shapes', () => {
-    expect(LIFE_SITUATIONS).toHaveLength(29);
-    expect(new Set(LIFE_SITUATIONS.map(s => s.id)).size).toBe(29);
+  it('has the 36 agreed plans with their shapes', () => {
+    expect(LIFE_SITUATIONS).toHaveLength(36);
+    expect(new Set(LIFE_SITUATIONS.map(s => s.id)).size).toBe(36);
     for (const s of LIFE_SITUATIONS) {
       if (s.kind === 'long') {
         expect(s.days).toBeUndefined();
