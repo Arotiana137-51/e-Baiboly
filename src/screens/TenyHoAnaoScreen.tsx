@@ -49,6 +49,10 @@ const INVITATION = {
   ref: 'Matio 11:28',
 };
 
+// A reading column: on a tablet, a foldable or a phone on its side the cards
+// stay phone-width and centred instead of stretching edge to edge.
+const COLUMN = {width: '100%', maxWidth: 560, alignSelf: 'center'} as const;
+
 type Step = 'intro' | 'feeling' | 'choose' | 'order';
 type Feeling = (typeof FEELINGS)[number];
 
@@ -725,7 +729,7 @@ const styles = StyleSheet.create({
   flex: {flex: 1},
   // Fills the space above the step footer; its thumb says when more is below.
   list: {flex: 1},
-  scroll: {paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32, gap: 12},
+  scroll: {...COLUMN, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32, gap: 12},
   // The feeling step is meant to fit a usual phone without scrolling.
   scrollTight: {paddingBottom: 12},
   headingLarge: {fontSize: 25, lineHeight: 31, fontWeight: '600'},
@@ -733,7 +737,7 @@ const styles = StyleSheet.create({
   lead: {fontSize: 16, lineHeight: 24, marginBottom: 8},
   hint: {fontSize: 14, lineHeight: 19},
   itemTitle: {fontSize: 17, lineHeight: 22, fontWeight: '700'},
-  pill: {height: 54, borderRadius: 27, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center'},
+  pill: {minHeight: 54, borderRadius: 27, paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center', justifyContent: 'center'},
   pillOutline: {borderWidth: 1.5},
   pillText: {fontSize: 17, fontWeight: '700'},
   pressed: {opacity: 0.85},
@@ -741,10 +745,10 @@ const styles = StyleSheet.create({
   dots: {flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 12},
   dot: {width: 6, height: 6, borderRadius: 3},
   dotOn: {width: 20},
-  footer: {paddingHorizontal: 24, paddingTop: 14, paddingBottom: 12},
+  footer: {...COLUMN, paddingHorizontal: 24, paddingTop: 14, paddingBottom: 12},
   backButton: {alignItems: 'center', justifyContent: 'center', minHeight: 48},
   backText: {fontSize: 16, fontWeight: '600'},
-  introScroll: {flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, gap: 18},
+  introScroll: {...COLUMN, flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, gap: 18},
   sunrise: {width: 160, height: 92, marginBottom: 12},
   half: {position: 'absolute', bottom: 1.5, overflow: 'hidden'},
   halfLine: {borderWidth: 1.5},
@@ -755,7 +759,7 @@ const styles = StyleSheet.create({
   tile: {
     flexBasis: '45%',
     flexGrow: 1,
-    height: 88,
+    minHeight: 88,
     borderWidth: 2,
     borderRadius: 18,
     paddingHorizontal: 12,
