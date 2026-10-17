@@ -35,6 +35,9 @@ export type ShareCardLook = {
 export const PRESET_LOOKS: ShareCardLook[] = [
   {background: '#F6EBD9', text: '#2B2116', accent: '#007991'},
   {background: '#0B0B0C', text: '#F2E6D5', accent: '#FFD60A'},
+  // The earth tones of Teny ho anao: sand, then dark brown.
+  {background: '#F6F0E7', text: '#2E2924', accent: '#9C5A3C'},
+  {background: '#4A3F35', text: '#F3ECE2', accent: '#E0B99C'},
 ];
 
 const LIGHT_INK = {text: '#FFFFFF', accent: '#FFD60A'};

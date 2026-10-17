@@ -4,7 +4,7 @@ import {useTheme} from '../contexts/ThemeContext';
 import {PRIMARY_COLOR_OPTIONS} from '../theme/personalizationPalette';
 import {lookForColor, PRESET_LOOKS, type ShareCardLook} from '../utils/shareCard';
 
-// The two designed looks first, then the app's own colour palette.
+// The designed looks first, then the app's own colour palette.
 export const SWATCH_LOOKS: ShareCardLook[] = [
   ...PRESET_LOOKS,
   ...PRIMARY_COLOR_OPTIONS.map(option => lookForColor(option.hex)),
