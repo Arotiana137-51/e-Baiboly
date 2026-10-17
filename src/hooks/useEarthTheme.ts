@@ -13,6 +13,8 @@ const LIGHT = {
   ink: '#2E2924',
   muted: '#6B5F53',
   line: '#E7DCCD',
+  // Quiet outlines and the step dots still to come.
+  edge: '#D2C2AE',
 };
 
 const DARK: typeof LIGHT = {
@@ -23,6 +25,7 @@ const DARK: typeof LIGHT = {
   ink: '#EDE4D8',
   muted: '#B5A898',
   line: '#3E352D',
+  edge: '#5A4E43',
 };
 
 export type EarthTheme = typeof LIGHT & {
@@ -43,15 +46,18 @@ export const useEarthTheme = (): EarthTheme => {
   const color = theme.colors.accentBlue;
   return useMemo(() => {
     const palette = theme.isDark ? DARK : LIGHT;
-    const {fill, text} = accentFill(color);
+    // Checked on the chip, the surface closest to the text's own tone, so it
+    // reads on every other one.
+    const accentText = readableAccent(color, palette.chip);
+    // In dark mode the buttons take the lightened accent too: a dark theme
+    // color (black, violet…) would draw a pill that vanishes into the ground.
+    const {fill, text} = accentFill(theme.isDark ? accentText : color);
     return {
       ...palette,
       isDark: theme.isDark,
       accent: fill,
       onAccent: text,
-      // Checked on the chip, the surface closest to the text's own tone, so it
-      // reads on every other one.
-      accentText: readableAccent(color, palette.chip),
+      accentText,
       accentTint: mixHex(palette.card, color, theme.isDark ? 0.2 : 0.12),
       serif: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     };

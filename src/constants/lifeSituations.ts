@@ -1175,29 +1175,25 @@ export type FeelingId = 'afraid' | 'sad' | 'discouraged' | 'angry' | 'ashamed' |
 
 export const FEELINGS: ReadonlyArray<{
   id: FeelingId;
-  emoji: string;
   label: string;
   situations: ReadonlyArray<SituationId>;
 }> = [
   {
     id: 'afraid',
-    emoji: '😟',
     label: 'Matahotra',
     situations: ['fear', 'insecurity', 'insomnia', 'disaster', 'pregnancy', 'newtask', 'studies'],
   },
   {
     id: 'sad',
-    emoji: '😢',
     label: 'Malahelo',
     situations: ['grief', 'babyloss', 'lonely', 'divorce', 'heartbreak', 'betrayed', 'illness'],
   },
   {
     id: 'discouraged',
-    emoji: '😔',
     label: 'Kivy',
     situations: ['discouraged', 'waiting', 'work', 'caregiver', 'disability', 'ageing', 'faraway'],
   },
-  {id: 'angry', emoji: '😠', label: 'Tezitra', situations: ['anger', 'injustice', 'conflict', 'betrayed', 'family']},
-  {id: 'ashamed', emoji: '😞', label: 'Menatra', situations: ['shame', 'guilt', 'temptation', 'prison', 'addictedrelative']},
-  {id: 'thankful', emoji: '🙏', label: 'Mankasitraka', situations: ['thanks', 'newfaith']},
+  {id: 'angry', label: 'Tezitra', situations: ['anger', 'injustice', 'conflict', 'betrayed', 'family']},
+  {id: 'ashamed', label: 'Menatra', situations: ['shame', 'guilt', 'temptation', 'prison', 'addictedrelative']},
+  {id: 'thankful', label: 'Mankasitraka', situations: ['thanks', 'newfaith']},
 ];
