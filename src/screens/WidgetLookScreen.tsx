@@ -127,16 +127,13 @@ const WidgetLookScreen = () => {
               </>
             ) : null}
             <View style={styles.previewContent}>
-              {verse ? (
-                <Text style={[styles.previewBadge, {color: shown.text, backgroundColor: shown.text + '26'}]}>
-                  {verse.ref.toUpperCase()}
-                </Text>
-              ) : null}
               <Text style={[styles.previewVerse, {color: shown.text}]} numberOfLines={4}>
-                {verse ? `“${verse.body}”` : ''}
+                {verse?.body ?? ''}
               </Text>
-              <View style={[styles.previewRule, {backgroundColor: shown.text + '33'}]} />
-              <Text style={[styles.previewRef, {color: shown.accent}]}>{verse?.ref ?? ''}</Text>
+              <View style={styles.previewRefRow}>
+                <View style={[styles.previewRule, {backgroundColor: shown.accent}]} />
+                <Text style={[styles.previewRef, {color: shown.accent}]}>{verse?.ref ?? ''}</Text>
+              </View>
             </View>
           </View>
         ) : null}
@@ -191,25 +188,15 @@ const styles = StyleSheet.create({
   preview: {borderRadius: 24, overflow: 'hidden', minHeight: 150},
   previewImage: {...StyleSheet.absoluteFillObject, width: undefined, height: undefined, resizeMode: 'cover'},
   previewScrim: {...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.45)'},
-  previewContent: {padding: 14},
-  previewBadge: {
-    alignSelf: 'flex-start',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    paddingHorizontal: 9,
-    paddingVertical: 2,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
+  previewContent: {flex: 1, justifyContent: 'space-between', padding: 16, gap: 10},
   previewVerse: {
     fontFamily: Platform.select({ios: 'Georgia', default: 'serif'}),
     fontSize: 15,
     lineHeight: 21,
-    marginTop: 10,
   },
-  previewRule: {height: StyleSheet.hairlineWidth, marginTop: 10},
-  previewRef: {fontSize: 12, fontWeight: '700', marginTop: 6},
+  previewRefRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  previewRule: {width: 20, height: 1.5},
+  previewRef: {fontSize: 12, fontWeight: '700'},
 });
 
 export default WidgetLookScreen;

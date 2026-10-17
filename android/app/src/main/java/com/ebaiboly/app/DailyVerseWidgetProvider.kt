@@ -114,8 +114,6 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         val night: Look?,
         // The day's own label (a Teny ho anao plan day), else the feed's.
         val label: String,
-        val translation: String,
-        val dateLabel: String,
         val ref: String,
         val text: String,
         val url: String?,
@@ -132,8 +130,6 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
                 look = parseLook(root.optJSONObject("look")),
                 night = root.optJSONObject("lookDark")?.let { parseLook(it) },
                 label = entry.optString("label", "").ifEmpty { root.optString("label", "") },
-                translation = root.optString("translation", ""),
-                dateLabel = entry.optString("dateLabel", ""),
                 ref = entry.optString("ref", ""),
                 text = entry.optString("text", ""),
                 url = entry.optString("url", null),
@@ -181,53 +177,29 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         val size = Size.of(widthDp, heightDp)
         views.setTextViewTextSize(R.id.widget_text, TypedValue.COMPLEX_UNIT_SP, size.verseSp)
         views.setInt(R.id.widget_text, "setMaxLines", size.verseLines)
-        val secondary = if (size.minimal) View.GONE else View.VISIBLE
-        views.setViewVisibility(R.id.widget_label, secondary)
-        views.setViewVisibility(R.id.widget_settings_label, secondary)
 
-        // Ink: the look's text colour at full strength for the verse and badge,
-        // dimmed for the secondary lines; the reference takes the accent.
-        color(R.id.widget_date, "setTextColor", ink(day, 230), ink(night, 230))
+        // The verse in the look's ink, the plan label and the shortcut dimmed,
+        // the rule and the reference in its accent.
         color(R.id.widget_label, "setTextColor", ink(day, 179), ink(night, 179))
         color(R.id.widget_text, "setTextColor", day.text, night.text)
+        color(R.id.widget_rule, "setBackgroundColor", day.accent, night.accent)
         color(R.id.widget_ref, "setTextColor", day.accent, night.accent)
-        color(R.id.widget_translation, "setTextColor", ink(day, 153), ink(night, 153))
-        color(R.id.widget_divider, "setBackgroundColor", ink(day, 51), ink(night, 51))
         color(R.id.widget_settings_icon, "setColorFilter", ink(day, 179), ink(night, 179))
-        color(R.id.widget_settings_label, "setTextColor", ink(day, 179), ink(night, 179))
 
-        // Pills behind the date and the translation, for light or dark ink. A
-        // light look whose night version has light ink gets the *_auto ones:
-        // the launcher picks their drawable-night version itself.
-        val lightDay = ColorUtils.calculateLuminance(day.text) > 0.5
-        val lightNight = ColorUtils.calculateLuminance(night.text) > 0.5
-        val (badge, tag) = when {
-            lightDay -> R.drawable.widget_badge to R.drawable.widget_tag
-            lightNight -> R.drawable.widget_badge_auto to R.drawable.widget_tag_auto
-            else -> R.drawable.widget_badge_dark to R.drawable.widget_tag_dark
-        }
-        views.setInt(R.id.widget_date, "setBackgroundResource", badge)
-        views.setInt(R.id.widget_translation, "setBackgroundResource", tag)
-
+        // Nothing above the verse but a plan day's label, and not on the
+        // small size, where the verse needs every line.
+        val label = feed?.label.orEmpty()
+        views.setViewVisibility(R.id.widget_label, if (label.isEmpty() || size.minimal) View.GONE else View.VISIBLE)
+        views.setTextViewText(R.id.widget_label, label)
         if (feed == null) {
             // No feed yet (fresh install, or the app hasn't been opened in two
             // months): invite the user in. Placeholder MG copy — user-owned.
-            views.setTextViewText(R.id.widget_date, context.getString(R.string.app_name))
-            views.setTextViewText(R.id.widget_label, "")
             views.setTextViewText(R.id.widget_text, "Sokafy ny e-Baiboly hahitana ny andinin-teny androany.")
-            views.setViewVisibility(R.id.widget_ref, View.GONE)
-            views.setViewVisibility(R.id.widget_translation, View.GONE)
+            views.setViewVisibility(R.id.widget_ref_row, View.GONE)
         } else {
-            views.setTextViewText(R.id.widget_date, feed.dateLabel)
-            views.setTextViewText(R.id.widget_label, feed.label)
-            views.setTextViewText(R.id.widget_text, "“${feed.text}”")
-            views.setViewVisibility(R.id.widget_ref, View.VISIBLE)
+            views.setTextViewText(R.id.widget_text, feed.text)
+            views.setViewVisibility(R.id.widget_ref_row, View.VISIBLE)
             views.setTextViewText(R.id.widget_ref, feed.ref)
-            views.setViewVisibility(
-                R.id.widget_translation,
-                if (feed.translation.isEmpty() || size.minimal) View.GONE else View.VISIBLE,
-            )
-            views.setTextViewText(R.id.widget_translation, feed.translation)
         }
 
         val intent = if (feed?.url != null) {
@@ -244,8 +216,8 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_root, pending)
 
-        // The glyph on the footer line is a one-tap shortcut to the look
-        // picker (App.tsx routes ebaiboly://widget-look to Safidio ny loko).
+        // The glyph at the end of the reference line is a one-tap shortcut to
+        // the look picker (App.tsx routes ebaiboly://widget-look to Safidio ny loko).
         val settings = Intent(Intent.ACTION_VIEW, Uri.parse(SETTINGS_URL), context, MainActivity::class.java)
         settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         views.setOnClickPendingIntent(

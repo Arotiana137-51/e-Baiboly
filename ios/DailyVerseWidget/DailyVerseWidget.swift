@@ -8,10 +8,11 @@ import WidgetKit
 // contract). The verse calendar itself lives in JS and is never duplicated.
 //
 // Look: the share card's — a flat colour with matching ink, or a photo (copied
-// next to the feed) under a dark scrim — behind a serif verse, a date badge on
-// top, reference + translation tag on the bottom line; small, medium and large
-// families. With "follow dark mode" the feed adds a night look, used while the
-// phone is in dark mode. From iOS 16 the lock screen gets the words alone.
+// next to the feed) under a dark scrim — behind a serif verse and, under it, a
+// short rule and the reference; a plan day's label on top. Small, medium and
+// large families. With "follow dark mode" the feed adds a night look, used
+// while the phone is in dark mode. From iOS 16 the lock screen gets the words
+// alone.
 
 private let appGroup = "group.com.ebaiboly.app"
 // One-tap shortcut to the look picker (App.tsx routes it to Safidio ny loko).
@@ -32,7 +33,6 @@ private struct Feed: Decodable {
   // Night version of `look`; null when the widget ignores dark mode.
   let lookDark: FeedLook?
   let label: String
-  let translation: String?
   let days: [String: Day]
 }
 
@@ -49,16 +49,13 @@ private struct Day: Decodable {
   let ref: String
   let text: String
   let url: String
-  let dateLabel: String?
   // A Teny ho anao plan day's own label, shown instead of the feed's.
   let label: String?
 }
 
 struct VerseEntry: TimelineEntry {
   let date: Date
-  let dateLabel: String
   let label: String
-  let translation: String
   let ref: String?
   let text: String
   let url: URL?
@@ -113,9 +110,7 @@ private func makeLook(_ feed: FeedLook?) -> Look {
 private func fallbackEntry(_ date: Date) -> VerseEntry {
   VerseEntry(
     date: date,
-    dateLabel: "e-Baiboly",
     label: "",
-    translation: "",
     ref: nil,
     text: "Sokafy ny e-Baiboly hahitana ny andinin-teny androany.",
     url: nil,
@@ -126,9 +121,7 @@ private func fallbackEntry(_ date: Date) -> VerseEntry {
 
 private let sampleEntry = VerseEntry(
   date: Date(),
-  dateLabel: "Tal 15 Sep",
   label: "",
-  translation: "MG1865",
   ref: "Salamo 23:1",
   text: "Jehovah no Mpiandry ahy, tsy hanan-java-mahory aho.",
   url: nil,
@@ -150,9 +143,7 @@ private func entries(from now: Date) -> [VerseEntry] {
     if midnight < today { return nil }
     return VerseEntry(
       date: midnight == today ? now : midnight,
-      dateLabel: day.dateLabel ?? key,
       label: day.label ?? feed.label,
-      translation: feed.translation ?? "",
       ref: day.ref,
       text: day.text,
       url: URL(string: day.url),
@@ -233,65 +224,46 @@ struct DailyVerseView: View {
 
   private var card: some View {
     VStack(alignment: .leading, spacing: 0) {
-      HStack(alignment: .center) {
-        Text(entry.dateLabel.uppercased())
+      // Nothing above the verse but a plan day's label, and not on the small
+      // size, where the verse needs every line.
+      if !isSmall, !entry.label.isEmpty {
+        Text(entry.label.uppercased())
           .font(.system(size: 10, weight: .semibold))
           .kerning(1)
-          .foregroundColor(ink.opacity(0.9))
-          .padding(.horizontal, 9)
-          .padding(.vertical, 2)
-          .background(Capsule().fill(ink.opacity(0.15)))
-          .overlay(Capsule().stroke(ink.opacity(0.1), lineWidth: 1))
+          .foregroundColor(ink.opacity(0.7))
           .lineLimit(1)
-        Spacer(minLength: 4)
-        if !isSmall, !entry.label.isEmpty {
-          Text(entry.label.uppercased())
-            .font(.system(size: 10))
-            .kerning(1)
-            .foregroundColor(ink.opacity(0.7))
-            .lineLimit(1)
-        }
+          .padding(.bottom, 4)
       }
 
-      Text(entry.ref == nil ? entry.text : "\u{201C}\(entry.text)\u{201D}")
+      Text(entry.text)
         .font(.system(size: verseSize, weight: .medium, design: .serif))
         .foregroundColor(ink)
         .lineSpacing(3)
         .lineLimit(verseLines)
         .minimumScaleFactor(0.6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(.vertical, 10)
+        .padding(.bottom, 10)
 
       if let ref = entry.ref {
-        Rectangle()
-          .fill(ink.opacity(0.2))
-          .frame(height: 1)
-        HStack(spacing: 4) {
+        // A short rule, the reference, and the look shortcut at the end.
+        HStack(spacing: 8) {
+          Rectangle()
+            .fill(look.accent)
+            .frame(width: 20, height: 1.5)
           Text(ref)
             .font(.system(size: isSmall ? 11 : 12, weight: .semibold))
             .foregroundColor(look.accent)
             .lineLimit(1)
-          if !entry.translation.isEmpty {
-            Text(entry.translation.uppercased())
-              .font(.system(size: 9, weight: .medium))
-              .kerning(0.5)
-              .foregroundColor(ink.opacity(0.6))
-              .padding(.horizontal, 3)
-              .padding(.vertical, 1)
-              .background(RoundedRectangle(cornerRadius: 4).fill(ink.opacity(0.1)))
-          }
           // Small widgets only take one URL (widgetURL), so the shortcut is
           // medium/large only. The Link takes the whole trailing remainder
           // of the line so it is an easy target next to the verse tap.
           if !isSmall {
             Link(destination: settingsURL) {
-              HStack(spacing: 3) {
+              HStack {
                 Spacer(minLength: 8)
                 Image(systemName: "slider.horizontal.3")
                   .font(.system(size: 12, weight: .semibold))
-                Text("Loko".uppercased()) // placeholder MG copy — user-owned
-                  .font(.system(size: 10, weight: .bold))
-                  .kerning(0.5)
+                  .accessibilityLabel("Loko") // placeholder MG copy — user-owned
               }
               .foregroundColor(ink.opacity(0.7))
               .frame(maxWidth: .infinity, minHeight: 28, alignment: .trailing)
@@ -301,10 +273,9 @@ struct DailyVerseView: View {
             Spacer(minLength: 0)
           }
         }
-        .padding(.top, 4)
       }
     }
-    .padding(isSmall ? 12 : 14)
+    .padding(isSmall ? 12 : 16)
     .widgetBackground(CardBackground(look: look))
     .widgetURL(entry.url)
   }
