@@ -163,14 +163,14 @@ const StepFooter = ({
 const VerseQuote = ({
   verse,
   earth,
-  large,
+  size = 'medium',
 }: {
   verse: Pick<DailyVerse, 'body' | 'ref'>;
   earth: EarthTheme;
-  large?: boolean;
+  size?: keyof typeof VERSE_SIZE;
 }) => (
   <View style={styles.verse}>
-    <Text style={[large ? styles.verseLarge : styles.verseText, {color: earth.ink, fontFamily: earth.serif}]}>
+    <Text style={[VERSE_SIZE[size], {color: earth.ink, fontFamily: earth.serif}]}>
       {verse.body}
     </Text>
     <View style={styles.refRow}>
@@ -419,11 +419,11 @@ const TenyHoAnaoScreen = () => {
   if (view === 'feeling' && draft) {
     return (
       <SafeAreaView edges={['bottom']} style={ground}>
-        <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
+        <ScrollViewWithThumb style={styles.list} contentContainerStyle={[styles.scroll, styles.scrollTight]}>
           <Text style={[styles.headingLarge, {color: earth.ink, fontFamily: earth.serif}]}>
             Manahoana ny toe-ponao ankehitriny?
           </Text>
-          <VerseQuote verse={INVITATION} earth={earth} />
+          <VerseQuote verse={INVITATION} earth={earth} size="small" />
           {/* Optional: a feeling brings what may fit to the top, ticks nothing. */}
           <View style={styles.tiles}>
             {FEELINGS.map(f => (
@@ -622,7 +622,7 @@ const TenyHoAnaoScreen = () => {
         {todayVerse ? (
           <View style={[styles.hero, {backgroundColor: earth.card}]}>
             <Text style={[styles.eyebrow, {color: earth.muted}]}>Ny teny anio</Text>
-            <VerseQuote verse={todayVerse} earth={earth} large />
+            <VerseQuote verse={todayVerse} earth={earth} size="large" />
           </View>
         ) : null}
 
@@ -726,7 +726,9 @@ const styles = StyleSheet.create({
   // Fills the space above the step footer; its thumb says when more is below.
   list: {flex: 1},
   scroll: {paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32, gap: 12},
-  headingLarge: {fontSize: 28, lineHeight: 35, fontWeight: '600'},
+  // The feeling step is meant to fit a usual phone without scrolling.
+  scrollTight: {paddingBottom: 12},
+  headingLarge: {fontSize: 25, lineHeight: 31, fontWeight: '600'},
   heading: {fontSize: 23, lineHeight: 30, fontWeight: '600'},
   lead: {fontSize: 16, lineHeight: 24, marginBottom: 8},
   hint: {fontSize: 14, lineHeight: 19},
@@ -736,7 +738,7 @@ const styles = StyleSheet.create({
   pillText: {fontSize: 17, fontWeight: '700'},
   pressed: {opacity: 0.85},
   disabled: {opacity: 0.35},
-  dots: {flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 16},
+  dots: {flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 12},
   dot: {width: 6, height: 6, borderRadius: 3},
   dotOn: {width: 20},
   footer: {paddingHorizontal: 24, paddingTop: 14, paddingBottom: 12},
@@ -753,19 +755,18 @@ const styles = StyleSheet.create({
   tile: {
     flexBasis: '45%',
     flexGrow: 1,
-    height: 118,
+    height: 88,
     borderWidth: 2,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 14,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     justifyContent: 'space-between',
   },
   tileTop: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
-  tileArt: {width: 56, height: 56},
+  tileArt: {width: 44, height: 44},
   tileTick: {fontSize: 18, fontWeight: '700'},
-  tileLabel: {fontSize: 18, fontWeight: '700'},
-  unsure: {paddingVertical: 12, gap: 3},
+  tileLabel: {fontSize: 17, lineHeight: 22, fontWeight: '700'},
+  unsure: {paddingVertical: 4, gap: 3},
   unsureTitle: {fontSize: 16, fontWeight: '700'},
   feelingChip: {
     alignSelf: 'flex-start',
@@ -788,6 +789,7 @@ const styles = StyleSheet.create({
   sampleText: {fontSize: 14, fontWeight: '700'},
   quoteBox: {borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, marginTop: 4, marginBottom: 6},
   verse: {gap: 10},
+  verseSmall: {fontSize: 15, lineHeight: 22},
   verseText: {fontSize: 17, lineHeight: 26},
   verseLarge: {fontSize: 23, lineHeight: 33},
   refRow: {flexDirection: 'row', alignItems: 'center', gap: 10},
@@ -830,5 +832,7 @@ const styles = StyleSheet.create({
   switchRow: {flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingVertical: 8},
   linkRow: {flexDirection: 'row', alignItems: 'center', minHeight: 56},
 });
+
+const VERSE_SIZE = {small: styles.verseSmall, medium: styles.verseText, large: styles.verseLarge};
 
 export default TenyHoAnaoScreen;
