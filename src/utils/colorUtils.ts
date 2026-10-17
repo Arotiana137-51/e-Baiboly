@@ -129,19 +129,26 @@ export const accentFill = (accent: string, ink = WARM_INK): {fill: string; text:
   if (contrastRatio(accent, '#FFFFFF') >= READABLE) return {fill: accent, text: '#FFFFFF'};
   if (contrastRatio(accent, ink) >= READABLE) return {fill: accent, text: ink};
   let fill = accent;
-  for (let t = 0.05; contrastRatio(fill, '#FFFFFF') < READABLE && t <= 1; t += 0.05) {
-    fill = darkenHex(accent, t);
+  // Whole steps of 5%, so the last one is exactly black (a float t never is).
+  for (let step = 1; contrastRatio(fill, '#FFFFFF') < READABLE && step <= 20; step += 1) {
+    fill = darkenHex(accent, step / 20);
   }
   return {fill, text: '#FFFFFF'};
 };
 
 // A theme color used as text or an outline on `ground`: darkened (on a light
-// ground) or lightened (on a dark one) just until it reads.
-export const readableAccent = (accent: string, ground: string): string => {
-  const lightGround = getRelativeLuminance(ground) > 0.4;
+// ground) or lightened (on a dark one) just until it reads. `lighten` forces
+// the direction, for a mid-tone ground where the text beside it is white;
+// `target` lowers the bar for short bold text (3:1).
+export const readableAccent = (
+  accent: string,
+  ground: string,
+  lighten = getRelativeLuminance(ground) <= 0.4,
+  target = READABLE,
+): string => {
   let color = accent;
-  for (let t = 0.05; contrastRatio(color, ground) < READABLE && t <= 1; t += 0.05) {
-    color = lightGround ? darkenHex(accent, t) : lightenHex(accent, t);
+  for (let step = 1; contrastRatio(color, ground) < target && step <= 20; step += 1) {
+    color = lighten ? lightenHex(accent, step / 20) : darkenHex(accent, step / 20);
   }
   return color;
 };

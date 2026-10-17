@@ -16,10 +16,13 @@ import {
   lookForColor,
   lookForImage,
   MAX_SHARE_ITEMS,
+  nightLook,
   PRESET_LOOKS,
   type ShareCardData,
 } from '../src/utils/shareCard';
 import {buildChapterDisplay} from '../src/utils/chapterMarks';
+import {contrastRatio, getRelativeLuminance} from '../src/utils/colorUtils';
+import {PRIMARY_COLOR_OPTIONS} from '../src/theme/personalizationPalette';
 import type {BibleVerse} from '../src/hooks/useBibleData';
 import type {HymnVerse} from '../src/hooks/useHymnsData';
 
@@ -109,6 +112,26 @@ test('background colour picks readable ink; a photo always gets the light ink', 
   expect(lookForColor('#F6EBD9').text).toBe('#1B1B1B');
   expect(lookForImage('file:///bg.jpg')).toMatchObject({text: '#FFFFFF', imageUri: 'file:///bg.jpg'});
 });
+
+test.each(PRIMARY_COLOR_OPTIONS.map(o => [o.name, o.hex]))(
+  '%s: the reference reads (3:1, short bold text) in a shade of the colour',
+  (_name, hex) => {
+    const look = lookForColor(hex);
+    const textContrast = contrastRatio(look.text, hex);
+    expect(textContrast).toBeGreaterThanOrEqual(3); // verse text is large
+    expect(contrastRatio(look.accent, hex)).toBeGreaterThanOrEqual(Math.min(3, textContrast) - 0.05);
+  },
+);
+
+test.each([...PRESET_LOOKS, ...PRIMARY_COLOR_OPTIONS.map(o => lookForColor(o.hex))].map(l => [l.background, l]))(
+  'night look of %s is dark and readable',
+  (_bg, look) => {
+    const night = nightLook(look);
+    expect(getRelativeLuminance(night.background)).toBeLessThan(0.2);
+    expect(contrastRatio(night.text, night.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(night.accent, night.background)).toBeGreaterThanOrEqual(3);
+  },
+);
 
 test('card on a photo paints the image under a scrim', () => {
   const data = bibleData(1);
