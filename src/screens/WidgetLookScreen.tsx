@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {BackHandler, Image, Platform, StyleSheet, Text, View} from 'react-native';
+import {BackHandler, Image, Platform, StyleSheet, Switch, Text, View, useColorScheme} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -9,8 +9,13 @@ import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
 import {SheetButton} from '../components/SheetModal';
 import {bibleDatabaseService} from '../services/database/DatabaseService';
 import {verseForDate, type DailyVerse} from '../services/reminders/readingReminder';
-import {getWidgetLook, setWidgetLook} from '../services/widget/dailyVerseWidget';
-import {lookForImage, pickBackgroundImage, type ShareCardLook} from '../utils/shareCard';
+import {
+  getWidgetFollowDark,
+  getWidgetLook,
+  setWidgetFollowDark,
+  setWidgetLook,
+} from '../services/widget/dailyVerseWidget';
+import {lookForImage, nightLook, pickBackgroundImage, type ShareCardLook} from '../utils/shareCard';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -31,6 +36,8 @@ const WidgetLookScreen = () => {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [verse, setVerse] = useState<DailyVerse | null>(null);
+  const [followDark, setFollowDark] = useState(false);
+  const scheme = useColorScheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +45,9 @@ const WidgetLookScreen = () => {
       if (cancelled) return;
       setLookState(stored);
       setPhotoUri(stored.imageUri ?? null);
+    });
+    getWidgetFollowDark().then(on => {
+      if (!cancelled) setFollowDark(on);
     });
     bibleDatabaseService
       .initDatabase()
@@ -50,6 +60,15 @@ const WidgetLookScreen = () => {
       cancelled = true;
     };
   }, []);
+
+  const toggleFollowDark = (on: boolean) => {
+    setFollowDark(on);
+    setWidgetFollowDark(on);
+  };
+
+  // What the home screen shows right now: the night version while the phone
+  // is in dark mode, if the widget follows it.
+  const shown = look && followDark && scheme === 'dark' ? nightLook(look) : look;
 
   const apply = (next: ShareCardLook) => {
     setLookState(next);
@@ -99,29 +118,44 @@ const WidgetLookScreen = () => {
           Safidio ny lokon'ny andinin-teny eo amin'ny écran fandraisana.
         </Text>
 
-        {look ? (
-          <View style={[styles.preview, {backgroundColor: look.background}]}>
-            {look.imageUri ? (
+        {shown ? (
+          <View style={[styles.preview, {backgroundColor: shown.background}]}>
+            {shown.imageUri ? (
               <>
-                <Image source={{uri: look.imageUri}} style={styles.previewImage} />
+                <Image source={{uri: shown.imageUri}} style={styles.previewImage} />
                 <View style={styles.previewScrim} />
               </>
             ) : null}
             <View style={styles.previewContent}>
-              <Text style={[styles.previewBadge, {color: look.text, backgroundColor: look.text + '26'}]}>
+              <Text style={[styles.previewBadge, {color: shown.text, backgroundColor: shown.text + '26'}]}>
                 {verse ? verse.ref.toUpperCase() : 'SAKAFOM-PANAHY'}
               </Text>
-              <Text style={[styles.previewVerse, {color: look.text}]} numberOfLines={4}>
+              <Text style={[styles.previewVerse, {color: shown.text}]} numberOfLines={4}>
                 {verse ? `“${verse.body}”` : ''}
               </Text>
-              <View style={[styles.previewRule, {backgroundColor: look.text + '33'}]} />
-              <Text style={[styles.previewRef, {color: look.accent}]}>{verse?.ref ?? ''}</Text>
+              <View style={[styles.previewRule, {backgroundColor: shown.text + '33'}]} />
+              <Text style={[styles.previewRef, {color: shown.accent}]}>{verse?.ref ?? ''}</Text>
             </View>
           </View>
         ) : null}
       </View>
 
       <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
+        {/* Placeholder MG copy — user-owned. */}
+        <View style={[styles.darkRow, {backgroundColor: theme.colors.backgroundSecondary}]}>
+          <View style={styles.darkText}>
+            <Text style={[styles.darkTitle, {color: theme.colors.textPrimary}]}>Mode sombre</Text>
+            <Text style={[styles.hint, styles.darkHint, {color: theme.colors.textSecondary}]}>
+              Maizina koa ny widget rehefa mode sombre ny finday.
+            </Text>
+          </View>
+          <Switch
+            value={followDark}
+            onValueChange={toggleFollowDark}
+            trackColor={{false: theme.colors.divider, true: theme.colors.accentBlue}}
+            thumbColor="#FFFFFF"
+          />
+        </View>
         {look ? <LookGrid look={look} photoUri={photoUri} onSelect={apply} onPickPhoto={pickPhoto} /> : null}
       </ScrollViewWithThumb>
 
@@ -148,6 +182,10 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   hint: {fontSize: 14, lineHeight: 20, marginBottom: 12},
+  darkRow: {flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 12, padding: 14, marginBottom: 20},
+  darkText: {flex: 1},
+  darkTitle: {fontSize: 15, fontWeight: '700'},
+  darkHint: {marginBottom: 0, marginTop: 2},
   preview: {borderRadius: 24, overflow: 'hidden', minHeight: 150},
   previewImage: {...StyleSheet.absoluteFillObject, width: undefined, height: undefined, resizeMode: 'cover'},
   previewScrim: {...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.45)'},

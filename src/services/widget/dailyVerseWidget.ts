@@ -5,9 +5,9 @@ import {bibleDatabaseService} from '../database/DatabaseService';
 import {reportSchedulingFailure, verseForDate} from '../reminders/readingReminder';
 import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
 import {PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
-import {lookForColor, type ShareCardLook} from '../../utils/shareCard';
+import {lookForColor, nightLook, type ShareCardLook} from '../../utils/shareCard';
 import {isoDay} from '../../utils/isoDay';
-import {isCheckInDay, situationSchedule} from '../../utils/lifeSituations';
+import {isCheckInDay, planPosition, situationSchedule, type ActiveSituation} from '../../utils/lifeSituations';
 import {loadTenyHoAnao} from '../lifeSituations/situationStore';
 
 /**
@@ -20,7 +20,10 @@ import {loadTenyHoAnao} from '../lifeSituations/situationStore';
  * the LOCAL calendar date, yyyy-MM-dd.
  *
  * The look is the share card's vocabulary (utils/shareCard): a flat colour
- * with matching ink, or a photo under a dark scrim. A chosen photo is copied
+ * with matching ink, or a photo under a dark scrim. With "follow dark mode"
+ * on, `lookDark` carries its night version and native swaps the two with the
+ * phone's dark mode. A day of a Teny ho anao plan carries its own `label`,
+ * shown instead of the feed's. A chosen photo is copied
  * next to the feed as WIDGET_IMAGE_NAME so both widgets can read it; only
  * the file name travels in the JSON because the sandbox path can change
  * between launches.
@@ -34,6 +37,7 @@ export const WIDGET_IMAGE_NAME = 'widgetBackground.jpg';
 export const IOS_APP_GROUP = 'group.com.ebaiboly.app';
 const WIDGET_WINDOW_DAYS = 60;
 const STORAGE_KEY_LOOK = 'settings.widget.look';
+const STORAGE_KEY_FOLLOW_DARK = 'settings.widget.followDark';
 
 // What is persisted: the look minus the temporary picker URI, plus whether a
 // copied photo exists.
@@ -48,6 +52,19 @@ export const TENY_HO_ANAO_URL = 'ebaiboly://teny-ho-anao';
 const CHECK_IN_CARD = {
   ref: 'Teny ho anao',
   text: 'Mbola mety aminao ve ireo teny ireo? Tsindrio eto raha hamaly.',
+};
+
+// A plan day's label, so the person knows the verse is from their plan.
+// Never the situation's name, for the same reason as the check-in card.
+// Placeholder MG copy — user-owned.
+const planLabel = (
+  id: ActiveSituation['id'],
+  situations: ReadonlyArray<ActiveSituation>,
+  date: Date,
+  since?: string,
+): string => {
+  const {shown, days} = planPosition(id, situations, date, since);
+  return days ? `Teny ho anao · ${shown}/${days}` : 'Teny ho anao';
 };
 
 export const verseDeepLink = (v: {bookId: number; bookName: string; chapter: number; verse: number}) =>
@@ -89,6 +106,24 @@ export const getWidgetLook = async (): Promise<ShareCardLook> => {
   return image ? {...look, imageUri: `file://${await widgetDir()}/${WIDGET_IMAGE_NAME}`} : look;
 };
 
+/** Whether the widget switches to a night look with the phone's dark mode. Off by default. */
+export const getWidgetFollowDark = async (): Promise<boolean> => {
+  try {
+    return (await AsyncStorage.getItem(STORAGE_KEY_FOLLOW_DARK)) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+export const setWidgetFollowDark = async (on: boolean): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY_FOLLOW_DARK, on ? 'true' : 'false');
+  } catch (error) {
+    reportSchedulingFailure('setWidgetFollowDark', error);
+  }
+  await syncDailyVerseWidget();
+};
+
 /** Persists a look (copying a freshly picked photo next to the feed) and re-syncs the widget. */
 export const setWidgetLook = async (look: ShareCardLook): Promise<void> => {
   try {
@@ -109,7 +144,7 @@ export const setWidgetLook = async (look: ShareCardLook): Promise<void> => {
 export const syncDailyVerseWidget = async (): Promise<void> => {
   try {
     await bibleDatabaseService.initDatabase(); // idempotent
-    const days: Record<string, {ref: string; text: string; url: string; dateLabel: string}> = {};
+    const days: Record<string, {ref: string; text: string; url: string; dateLabel: string; label?: string}> = {};
     const today = new Date();
     const tenyHoAnao = await loadTenyHoAnao();
     const situations = tenyHoAnao.onWidget ? tenyHoAnao.situations : [];
@@ -121,18 +156,22 @@ export const syncDailyVerseWidget = async (): Promise<void> => {
         days[isoDay(date)] = {...CHECK_IN_CARD, url: TENY_HO_ANAO_URL, dateLabel: dateLabel(date)};
         continue;
       }
-      const verse = await verseForDate(date, schedule[i][0]?.ref);
+      const planned = schedule[i][0];
+      const verse = await verseForDate(date, planned?.ref);
       if (verse) {
         days[isoDay(date)] = {
           ref: verse.ref,
           text: verse.body,
           url: verseDeepLink(verse),
           dateLabel: dateLabel(date),
+          ...(planned ? {label: planLabel(planned.situationId, situations, date, tenyHoAnao.since)} : {}),
         };
       }
     }
     const stored = await readStoredLook();
     const look = stored ?? lookForColor((await getStoredPrimaryColor()) ?? PRIMARY_COLOR_OPTIONS[0].hex);
+    // A photo keeps its dark scrim day and night.
+    const night = !stored?.image && (await getWidgetFollowDark()) ? nightLook(look) : null;
     const payload = {
       generatedAt: new Date().toISOString(),
       look: {
@@ -141,6 +180,7 @@ export const syncDailyVerseWidget = async (): Promise<void> => {
         accent: look.accent,
         image: stored?.image ? WIDGET_IMAGE_NAME : null,
       },
+      lookDark: night && {background: night.background, text: night.text, accent: night.accent, image: null},
       label: 'Sakafom-panahy', // placeholder — user-owned MG copy
       translation: TRANSLATION,
       days,
