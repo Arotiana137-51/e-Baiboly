@@ -1,10 +1,12 @@
 import React, {useEffect, useState} from 'react';
-import {BackHandler, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {BackHandler, Image, Platform, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
-import {LookPicker} from '../components/LookPicker';
+import {LookGrid} from '../components/LookPicker';
+import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
+import {SheetButton} from '../components/SheetModal';
 import {bibleDatabaseService} from '../services/database/DatabaseService';
 import {verseForDate, type DailyVerse} from '../services/reminders/readingReminder';
 import {getWidgetLook, setWidgetLook} from '../services/widget/dailyVerseWidget';
@@ -14,8 +16,8 @@ import type {RootStackParamList} from '../navigation/RootNavigator';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type WidgetLookRouteProp = RouteProp<RootStackParamList, 'WidgetLook'>;
 
-// The home-screen widget's look: a live preview, the share card's swatches
-// and a "done" button. Reached from the widget's own Loko shortcut
+// The home-screen widget's look: a live preview pinned on top, every look
+// in a grid under it, and a "done" button. Reached from the widget's own Loko shortcut
 // (fromWidget) or from Safidio ny loko. Every pick is saved and pushed to the
 // real widget immediately (setWidgetLook), so the preview and the widget
 // change together.
@@ -84,14 +86,14 @@ const WidgetLookScreen = () => {
     }
   };
 
-  const accent = theme.colors.accentBlue;
-
   return (
     <SafeAreaView
       edges={['bottom']}
       style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      {/* The preview stays in view while the grid scrolls, so every pick
+          shows on it at once. */}
+      <View style={styles.top}>
         {/* Placeholder MG copy — user-owned. */}
         <Text style={[styles.hint, {color: theme.colors.textSecondary}]}>
           Safidio ny lokon'ny andinin-teny eo amin'ny écran fandraisana.
@@ -117,21 +119,35 @@ const WidgetLookScreen = () => {
             </View>
           </View>
         ) : null}
+      </View>
 
-        {look ? <LookPicker look={look} photoUri={photoUri} onSelect={apply} onPickPhoto={pickPhoto} /> : null}
+      <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
+        {look ? <LookGrid look={look} photoUri={photoUri} onSelect={apply} onPickPhoto={pickPhoto} /> : null}
+      </ScrollViewWithThumb>
 
-        <Pressable onPress={done} style={[styles.doneButton, {backgroundColor: accent}]} accessibilityRole="button">
-          <Text style={styles.doneText}>Vita</Text>
-        </Pressable>
-      </ScrollView>
+      <View style={[styles.footer, {borderTopColor: theme.colors.divider}]}>
+        <SheetButton label="Vita" onPress={done} variant="filled" />
+      </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {flex: 1},
-  scroll: {padding: 16, paddingBottom: 32},
-  hint: {fontSize: 14, lineHeight: 20, marginBottom: 16},
+  // Same 560pt column as Teny ho anao on tablets and sideways phones.
+  top: {width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8},
+  list: {flex: 1},
+  scroll: {width: '100%', maxWidth: 560, alignSelf: 'center', padding: 16, paddingBottom: 24},
+  footer: {
+    flexDirection: 'row',
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  hint: {fontSize: 14, lineHeight: 20, marginBottom: 12},
   preview: {borderRadius: 24, overflow: 'hidden', minHeight: 150},
   previewImage: {...StyleSheet.absoluteFillObject, width: undefined, height: undefined, resizeMode: 'cover'},
   previewScrim: {...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.45)'},
@@ -154,8 +170,6 @@ const styles = StyleSheet.create({
   },
   previewRule: {height: StyleSheet.hairlineWidth, marginTop: 10},
   previewRef: {fontSize: 12, fontWeight: '700', marginTop: 6},
-  doneButton: {borderRadius: 999, paddingVertical: 14, alignItems: 'center', marginTop: 8},
-  doneText: {color: '#FFFFFF', fontSize: 16, fontWeight: '700'},
 });
 
 export default WidgetLookScreen;

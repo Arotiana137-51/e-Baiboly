@@ -145,3 +145,28 @@ export const readableAccent = (accent: string, ground: string): string => {
   }
   return color;
 };
+
+// Hue in degrees (0–360), saturation and lightness (0–1) of a hex color.
+export const toHsl = (hex: string): {h: number; s: number; l: number} => {
+  const p = parseHex(hex) ?? {r: 0, g: 0, b: 0};
+  const [r, g, b] = [p.r / 255, p.g / 255, p.b / 255];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return {h: 0, s: 0, l};
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return {h: h * 60, s, l};
+};
+
+// Rainbow order for a palette: red, orange, yellow, green, blue, violet,
+// pink, each 30° band light to dark, then the greys light to dark.
+export const byHue = (a: string, b: string): number => {
+  const x = toHsl(a);
+  const y = toHsl(b);
+  const grey = (c: {s: number}) => c.s < 0.12;
+  if (grey(x) !== grey(y)) return grey(x) ? 1 : -1;
+  const band = (c: {h: number}) => Math.floor(((c.h + 15) % 360) / 30);
+  return (grey(x) ? 0 : band(x) - band(y)) || y.l - x.l;
+};
