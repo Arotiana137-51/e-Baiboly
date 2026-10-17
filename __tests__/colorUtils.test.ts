@@ -3,7 +3,7 @@ import {PRIMARY_COLOR_OPTIONS} from '../src/theme/personalizationPalette';
 
 // Teny ho anao takes its accent from the reader's theme color, so every color
 // of the palette has to give readable buttons and links on the earth grounds.
-const GROUNDS = ['#F3ECE2', '#FBF7F1', '#1E1A16', '#2A241F'];
+const GROUNDS = ['#F3ECE2', '#FBF7F1', '#F1E8DC', '#EADFD1', '#1E1A16', '#2A241F', '#332C25', '#3A3129'];
 
 describe('accent colors', () => {
   it.each(PRIMARY_COLOR_OPTIONS.map(o => [o.name, o.hex]))('%s fills a readable button', (_name, hex) => {
