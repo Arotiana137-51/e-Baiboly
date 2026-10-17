@@ -43,6 +43,12 @@ const THEME_DOT: Record<SituationTheme, string> = {
   faith: '#8F9A63',
 };
 
+// Under the feeling question (MG1865 text, as in the reader).
+const INVITATION = {
+  body: 'Mankanesa aty amiko, ianareo rehetra izay miasa fatratra sy mavesatra entana, fa Izaho no hanome anareo fitsaharana.',
+  ref: 'Matio 11:28',
+};
+
 type Step = 'intro' | 'feeling' | 'choose' | 'order';
 type Feeling = (typeof FEELINGS)[number];
 
@@ -154,7 +160,15 @@ const StepFooter = ({
 );
 
 // A verse in the phone's serif, its reference after a short accent rule.
-const VerseQuote = ({verse, earth, large}: {verse: DailyVerse; earth: EarthTheme; large?: boolean}) => (
+const VerseQuote = ({
+  verse,
+  earth,
+  large,
+}: {
+  verse: Pick<DailyVerse, 'body' | 'ref'>;
+  earth: EarthTheme;
+  large?: boolean;
+}) => (
   <View style={styles.verse}>
     <Text style={[large ? styles.verseLarge : styles.verseText, {color: earth.ink, fontFamily: earth.serif}]}>
       {verse.body}
@@ -409,9 +423,7 @@ const TenyHoAnaoScreen = () => {
           <Text style={[styles.headingLarge, {color: earth.ink, fontFamily: earth.serif}]}>
             Manahoana ny toe-ponao ankehitriny?
           </Text>
-          <Text style={[styles.lead, {color: earth.muted}]}>
-            Ara-dalàna ny mahatsiaro ho mavesatra. Tsy voatery hanazava zavatra ianao.
-          </Text>
+          <VerseQuote verse={INVITATION} earth={earth} />
           {/* Optional: a feeling brings what may fit to the top, ticks nothing. */}
           <View style={styles.tiles}>
             {FEELINGS.map(f => (

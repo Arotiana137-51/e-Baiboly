@@ -1195,5 +1195,5 @@ export const FEELINGS: ReadonlyArray<{
   },
   {id: 'angry', label: 'Tezitra', situations: ['anger', 'injustice', 'conflict', 'betrayed', 'family']},
   {id: 'ashamed', label: 'Menatra', situations: ['shame', 'guilt', 'temptation', 'prison', 'addictedrelative']},
-  {id: 'thankful', label: 'Mankasitraka', situations: ['thanks', 'newfaith']},
+  {id: 'thankful', label: 'Faly', situations: ['thanks', 'newfaith']},
 ];
