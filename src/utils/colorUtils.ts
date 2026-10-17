@@ -137,17 +137,11 @@ export const accentFill = (accent: string, ink = WARM_INK): {fill: string; text:
 };
 
 // A theme color used as text or an outline on `ground`: darkened (on a light
-// ground) or lightened (on a dark one) just until it reads. `lighten` forces
-// the direction, for a mid-tone ground where the text beside it is white;
-// `target` lowers the bar for short bold text (3:1).
-export const readableAccent = (
-  accent: string,
-  ground: string,
-  lighten = getRelativeLuminance(ground) <= 0.4,
-  target = READABLE,
-): string => {
+// ground) or lightened (on a dark one) just until it reads.
+export const readableAccent = (accent: string, ground: string): string => {
+  const lighten = getRelativeLuminance(ground) <= 0.4;
   let color = accent;
-  for (let step = 1; contrastRatio(color, ground) < target && step <= 20; step += 1) {
+  for (let step = 1; contrastRatio(color, ground) < READABLE && step <= 20; step += 1) {
     color = lighten ? lightenHex(accent, step / 20) : darkenHex(accent, step / 20);
   }
   return color;

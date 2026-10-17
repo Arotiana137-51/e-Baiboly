@@ -4,7 +4,7 @@ import * as RNFS from 'react-native-fs';
 import {bibleDatabaseService} from '../database/DatabaseService';
 import {reportSchedulingFailure, verseForDate} from '../reminders/readingReminder';
 import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
-import {PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
+import {findPrimaryColorOption, PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {lookForColor, nightLook, type ShareCardLook} from '../../utils/shareCard';
 import {isoDay} from '../../utils/isoDay';
 import {isCheckInDay, planPosition, situationSchedule, type ActiveSituation} from '../../utils/lifeSituations';
@@ -83,10 +83,15 @@ const dateLabel = (date: Date): string =>
 const widgetDir = async (): Promise<string> =>
   Platform.OS === 'ios' ? await RNFS.pathForGroup(IOS_APP_GROUP) : RNFS.DocumentDirectoryPath;
 
+// A palette colour is saved with the ink of its day; recomputing it keeps an
+// older choice in step with lookForColor (white on dark, black on light).
+const withCurrentInk = (stored: StoredLook): StoredLook =>
+  !stored.image && findPrimaryColorOption(stored.background) ? {...stored, ...lookForColor(stored.background)} : stored;
+
 const readStoredLook = async (): Promise<StoredLook | null> => {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY_LOOK);
-    return raw ? (JSON.parse(raw) as StoredLook) : null;
+    return raw ? withCurrentInk(JSON.parse(raw) as StoredLook) : null;
   } catch {
     return null;
   }

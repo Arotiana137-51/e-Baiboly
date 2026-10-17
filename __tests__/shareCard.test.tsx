@@ -113,15 +113,14 @@ test('background colour picks readable ink; a photo always gets the light ink', 
   expect(lookForImage('file:///bg.jpg')).toMatchObject({text: '#FFFFFF', imageUri: 'file:///bg.jpg'});
 });
 
-test.each(PRIMARY_COLOR_OPTIONS.map(o => [o.name, o.hex]))(
-  '%s: the reference reads (3:1, short bold text) in a shade of the colour',
-  (_name, hex) => {
-    const look = lookForColor(hex);
-    const textContrast = contrastRatio(look.text, hex);
-    expect(textContrast).toBeGreaterThanOrEqual(3); // verse text is large
-    expect(contrastRatio(look.accent, hex)).toBeGreaterThanOrEqual(Math.min(3, textContrast) - 0.05);
-  },
-);
+test.each(PRIMARY_COLOR_OPTIONS.map(o => [o.name, o.hex]))('%s: white on dark, black on light', (_name, hex) => {
+  const look = lookForColor(hex);
+  const other = look.text === '#FFFFFF' ? '#1B1B1B' : '#FFFFFF';
+  expect(['#FFFFFF', '#1B1B1B']).toContain(look.text);
+  expect(contrastRatio(look.text, hex)).toBeGreaterThanOrEqual(contrastRatio(other, hex));
+  expect(look.accent).toBe(look.text);
+  expect(contrastRatio(look.text, hex)).toBeGreaterThanOrEqual(3); // verse text is large
+});
 
 test.each([...PRESET_LOOKS, ...PRIMARY_COLOR_OPTIONS.map(o => lookForColor(o.hex))].map(l => [l.background, l]))(
   'night look of %s is dark and readable',
@@ -129,7 +128,7 @@ test.each([...PRESET_LOOKS, ...PRIMARY_COLOR_OPTIONS.map(o => lookForColor(o.hex
     const night = nightLook(look);
     expect(getRelativeLuminance(night.background)).toBeLessThan(0.2);
     expect(contrastRatio(night.text, night.background)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(night.accent, night.background)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(night.accent, night.background)).toBeGreaterThanOrEqual(4.5);
   },
 );
 

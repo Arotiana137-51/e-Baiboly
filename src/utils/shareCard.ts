@@ -5,7 +5,7 @@ import {launchImageLibrary} from 'react-native-image-picker';
 import type {BibleVerse} from '../hooks/useBibleData';
 import type {HymnVerse} from '../hooks/useHymnsData';
 import {buildHymnDisplay, buildVerseDisplay, type ChapterDisplay} from './chapterMarks';
-import {contrastRatio, getRelativeLuminance, mixHex, readableAccent, toHsl} from './colorUtils';
+import {contrastRatio, getRelativeLuminance, mixHex} from './colorUtils';
 
 export type ShareCardItem = {label: string; text: string};
 
@@ -43,33 +43,20 @@ export const PRESET_LOOKS: ShareCardLook[] = [
 const WHITE = '#FFFFFF';
 const DARK_TEXT = '#1B1B1B';
 const LIGHT_INK = {text: WHITE, accent: '#FFD60A'};
-// The reference is short and bold, so 3:1 (WCAG's bar for large text) is
-// enough, and it leaves room for the colour's own hue.
-const REF_CONTRAST = 3;
 
-// How colourful a colour is (0 grey … 1 pure hue), lightness aside.
-const chroma = (hex: string): number => {
-  const {s, l} = toHsl(hex);
-  return s * (1 - Math.abs(2 * l - 1));
-};
-
-// A palette colour as a card: white or near-black text, whichever reads
-// better on it (sky, cyan or amber were white and hard to read), and the
-// reference in a shade of the colour itself instead of one yellow for all.
+// A palette colour as a card: white on a dark colour, black on a light one
+// (whichever reads better), for the verse and the reference alike.
 export const lookForColor = (hex: string): ShareCardLook => {
-  const text = contrastRatio(hex, WHITE) >= contrastRatio(hex, DARK_TEXT) ? WHITE : DARK_TEXT;
-  return {background: hex, text, accent: readableAccent(hex, hex, text === WHITE, REF_CONTRAST)};
+  const ink = contrastRatio(hex, WHITE) >= contrastRatio(hex, DARK_TEXT) ? WHITE : DARK_TEXT;
+  return {background: hex, text: ink, accent: ink};
 };
 
 // The night version of a flat look, for a widget that follows the phone's
-// dark mode: the same hue, deep, with light ink, and the reference taken from
-// whichever of the look's two colours is the more vivid. Dark looks and
-// photos (under their dark scrim) stay as they are.
+// dark mode: the same hue, deep, in white. Dark looks and photos (under their
+// dark scrim) stay as they are.
 export const nightLook = (look: ShareCardLook): ShareCardLook => {
   if (look.imageUri || getRelativeLuminance(look.background) < 0.1) return look;
-  const background = mixHex(look.background, '#121212', 0.85);
-  const seed = chroma(look.accent) >= chroma(look.background) ? look.accent : look.background;
-  return {background, text: '#F2EDE6', accent: readableAccent(seed, background, true, REF_CONTRAST)};
+  return {background: mixHex(look.background, '#121212', 0.85), text: WHITE, accent: WHITE};
 };
 
 export const lookForImage = (imageUri: string): ShareCardLook => ({
