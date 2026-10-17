@@ -101,3 +101,47 @@ export const getRelativeLuminance = (hex: string): number => {
   };
   return 0.2126 * channel(parsed.r) + 0.7152 * channel(parsed.g) + 0.0722 * channel(parsed.b);
 };
+
+// WCAG contrast between two hex colors, from 1 (none) to 21.
+export const contrastRatio = (a: string, b: string): number => {
+  const x = getRelativeLuminance(a);
+  const y = getRelativeLuminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+
+// Mix a toward b; t is 0..1 (0 = a, 1 = b).
+export const mixHex = (a: string, b: string, t: number): string => {
+  const p = parseHex(a);
+  const q = parseHex(b);
+  if (!p || !q) return a;
+  return toHex(p.r + (q.r - p.r) * t, p.g + (q.g - p.g) * t, p.b + (q.b - p.b) * t);
+};
+
+const READABLE = 4.5;
+const WARM_INK = '#2E2924';
+
+// A theme color as a button fill, with text that reads on it: white when the
+// color allows it, the warm ink on light colors (gold, sky…), and a mid tone
+// that neither reaches (terracotta) darkened just enough for white. Every
+// color of the personalization palette, and any added later, comes out
+// readable.
+export const accentFill = (accent: string, ink = WARM_INK): {fill: string; text: string} => {
+  if (contrastRatio(accent, '#FFFFFF') >= READABLE) return {fill: accent, text: '#FFFFFF'};
+  if (contrastRatio(accent, ink) >= READABLE) return {fill: accent, text: ink};
+  let fill = accent;
+  for (let t = 0.05; contrastRatio(fill, '#FFFFFF') < READABLE && t <= 1; t += 0.05) {
+    fill = darkenHex(accent, t);
+  }
+  return {fill, text: '#FFFFFF'};
+};
+
+// A theme color used as text or an outline on `ground`: darkened (on a light
+// ground) or lightened (on a dark one) just until it reads.
+export const readableAccent = (accent: string, ground: string): string => {
+  const lightGround = getRelativeLuminance(ground) > 0.4;
+  let color = accent;
+  for (let t = 0.05; contrastRatio(color, ground) < READABLE && t <= 1; t += 0.05) {
+    color = lightGround ? darkenHex(accent, t) : lightenHex(accent, t);
+  }
+  return color;
+};

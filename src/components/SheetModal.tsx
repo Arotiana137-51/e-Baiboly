@@ -3,7 +3,7 @@ import {Modal, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'rea
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../contexts/ThemeContext';
 import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
-import {hexToRgba} from '../utils/colorUtils';
+import {accentFill, hexToRgba, readableAccent} from '../utils/colorUtils';
 import {t} from '../i18n/strings';
 
 const EDGE = 24;
@@ -81,7 +81,10 @@ type SheetButtonProps = {
 // One footer button; several share the footer row equally.
 export const SheetButton = ({label, onPress, variant = 'outline', disabled}: SheetButtonProps) => {
   const {theme} = useTheme();
-  const accent = theme.colors.accentBlue;
+  // Light theme colors (gold, sky…) would leave white text or a pale outline
+  // unreadable, so both are adjusted to reach 4.5:1.
+  const fill = accentFill(theme.colors.accentBlue);
+  const accent = readableAccent(theme.colors.accentBlue, theme.colors.backgroundSecondary);
   const filled = variant === 'filled';
   return (
     <Pressable
@@ -91,12 +94,12 @@ export const SheetButton = ({label, onPress, variant = 'outline', disabled}: She
       accessibilityState={{disabled: !!disabled}}
       style={({pressed}) => [
         styles.button,
-        filled ? {backgroundColor: accent} : [styles.outline, {borderColor: accent}],
+        filled ? {backgroundColor: fill.fill} : [styles.outline, {borderColor: accent}],
         pressed && (filled ? styles.pressed : {backgroundColor: hexToRgba(accent, 0.08)}),
         disabled && styles.disabled,
       ]}
     >
-      <Text style={[styles.buttonText, filled ? styles.filledText : {color: accent}]}>{label}</Text>
+      <Text style={[styles.buttonText, {color: filled ? fill.text : accent}]}>{label}</Text>
     </Pressable>
   );
 };
@@ -170,5 +173,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  filledText: {color: '#FFFFFF'},
 });
