@@ -127,7 +127,7 @@ private func fallbackEntry(_ date: Date) -> VerseEntry {
 private let sampleEntry = VerseEntry(
   date: Date(),
   dateLabel: "Tal 15 Sep",
-  label: "Sakafom-panahy",
+  label: "",
   translation: "MG1865",
   ref: "Salamo 23:1",
   text: "Jehovah no Mpiandry ahy, tsy hanan-java-mahory aho.",

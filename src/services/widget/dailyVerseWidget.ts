@@ -186,7 +186,9 @@ export const syncDailyVerseWidget = async (): Promise<void> => {
         image: stored?.image ? WIDGET_IMAGE_NAME : null,
       },
       lookDark: night && {background: night.background, text: night.text, accent: night.accent, image: null},
-      label: 'Sakafom-panahy', // placeholder — user-owned MG copy
+      // No title over the verse: the widget plainly shows a Bible verse. Only
+      // a plan day has a label (its own). Kept as "", the iOS widget needs the key.
+      label: '',
       translation: TRANSLATION,
       days,
     };

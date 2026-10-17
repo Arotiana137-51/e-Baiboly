@@ -127,9 +127,11 @@ const WidgetLookScreen = () => {
               </>
             ) : null}
             <View style={styles.previewContent}>
-              <Text style={[styles.previewBadge, {color: shown.text, backgroundColor: shown.text + '26'}]}>
-                {verse ? verse.ref.toUpperCase() : 'SAKAFOM-PANAHY'}
-              </Text>
+              {verse ? (
+                <Text style={[styles.previewBadge, {color: shown.text, backgroundColor: shown.text + '26'}]}>
+                  {verse.ref.toUpperCase()}
+                </Text>
+              ) : null}
               <Text style={[styles.previewVerse, {color: shown.text}]} numberOfLines={4}>
                 {verse ? `“${verse.body}”` : ''}
               </Text>
