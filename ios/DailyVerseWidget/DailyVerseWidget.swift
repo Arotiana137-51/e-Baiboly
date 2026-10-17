@@ -10,7 +10,8 @@ import WidgetKit
 // Look: the share card's — a flat colour with matching ink, or a photo (copied
 // next to the feed) under a dark scrim — behind a serif verse, a date badge on
 // top, reference + translation tag on the bottom line; small, medium and large
-// families.
+// families. With "follow dark mode" the feed adds a night look, used while the
+// phone is in dark mode. From iOS 16 the lock screen gets the words alone.
 
 private let appGroup = "group.com.ebaiboly.app"
 // One-tap shortcut to the look picker (App.tsx routes it to Safidio ny loko).
@@ -28,6 +29,8 @@ private struct FeedLook: Decodable {
 
 private struct Feed: Decodable {
   let look: FeedLook?
+  // Night version of `look`; null when the widget ignores dark mode.
+  let lookDark: FeedLook?
   let label: String
   let translation: String?
   let days: [String: Day]
@@ -47,6 +50,8 @@ private struct Day: Decodable {
   let text: String
   let url: String
   let dateLabel: String?
+  // A Teny ho anao plan day's own label, shown instead of the feed's.
+  let label: String?
 }
 
 struct VerseEntry: TimelineEntry {
@@ -58,6 +63,7 @@ struct VerseEntry: TimelineEntry {
   let text: String
   let url: URL?
   let look: Look
+  let night: Look?
 }
 
 private let dayKey: DateFormatter = {
@@ -113,7 +119,8 @@ private func fallbackEntry(_ date: Date) -> VerseEntry {
     ref: nil,
     text: "Sokafy ny e-Baiboly hahitana ny andinin-teny androany.",
     url: nil,
-    look: .fallback
+    look: .fallback,
+    night: nil
   )
 }
 
@@ -125,7 +132,8 @@ private let sampleEntry = VerseEntry(
   ref: "Salamo 23:1",
   text: "Jehovah no Mpiandry ahy, tsy hanan-java-mahory aho.",
   url: nil,
-  look: .fallback
+  look: .fallback,
+  night: nil
 )
 
 /// One entry per day in the feed from today on, each dated at local midnight,
@@ -133,6 +141,7 @@ private let sampleEntry = VerseEntry(
 private func entries(from now: Date) -> [VerseEntry] {
   guard let feed = readFeed() else { return [] }
   let look = makeLook(feed.look)
+  let night = feed.lookDark.map { makeLook($0) }
   let calendar = Calendar.current
   let today = calendar.startOfDay(for: now)
   return feed.days.keys.sorted().compactMap { key -> VerseEntry? in
@@ -142,12 +151,13 @@ private func entries(from now: Date) -> [VerseEntry] {
     return VerseEntry(
       date: midnight == today ? now : midnight,
       dateLabel: day.dateLabel ?? key,
-      label: feed.label,
+      label: day.label ?? feed.label,
       translation: feed.translation ?? "",
       ref: day.ref,
       text: day.text,
       url: URL(string: day.url),
-      look: look
+      look: look,
+      night: night
     )
   }
 }
@@ -168,7 +178,26 @@ struct DailyVerseProvider: TimelineProvider {
 
 struct DailyVerseView: View {
   @Environment(\.widgetFamily) private var family
+  @Environment(\.colorScheme) private var colorScheme
   let entry: VerseEntry
+
+  // The lock screen families only exist from iOS 16, hence the checks.
+  private var isLockScreen: Bool {
+    if #available(iOSApplicationExtension 16.0, *) {
+      return family == .accessoryRectangular || family == .accessoryInline
+    }
+    return false
+  }
+
+  private var isInline: Bool {
+    if #available(iOSApplicationExtension 16.0, *) {
+      return family == .accessoryInline
+    }
+    return false
+  }
+
+  // WidgetKit redraws the view when the phone switches appearance.
+  private var look: Look { colorScheme == .dark ? (entry.night ?? entry.look) : entry.look }
 
   private var isSmall: Bool { family == .systemSmall }
   // Largest size, which a short verse keeps; a long verse shrinks to fit
@@ -190,9 +219,19 @@ struct DailyVerseView: View {
     }
   }
 
-  private var ink: Color { entry.look.text }
+  private var ink: Color { look.text }
 
   var body: some View {
+    if isLockScreen {
+      LockScreenVerse(entry: entry, inline: isInline)
+        .widgetBackground(Color.clear)
+        .widgetURL(entry.url)
+    } else {
+      card
+    }
+  }
+
+  private var card: some View {
     VStack(alignment: .leading, spacing: 0) {
       HStack(alignment: .center) {
         Text(entry.dateLabel.uppercased())
@@ -230,7 +269,7 @@ struct DailyVerseView: View {
         HStack(spacing: 4) {
           Text(ref)
             .font(.system(size: isSmall ? 11 : 12, weight: .semibold))
-            .foregroundColor(entry.look.accent)
+            .foregroundColor(look.accent)
             .lineLimit(1)
           if !entry.translation.isEmpty {
             Text(entry.translation.uppercased())
@@ -266,8 +305,35 @@ struct DailyVerseView: View {
       }
     }
     .padding(isSmall ? 12 : 14)
-    .widgetBackground(CardBackground(look: entry.look))
+    .widgetBackground(CardBackground(look: look))
     .widgetURL(entry.url)
+  }
+}
+
+// Lock screen: the system draws it in its own tinted style, so only the words
+// travel. Rectangular: the reference over the start of the verse; inline: one
+// line next to the date.
+struct LockScreenVerse: View {
+  let entry: VerseEntry
+  let inline: Bool
+
+  var body: some View {
+    if inline {
+      Text(entry.ref.map { "\($0) · \(entry.text)" } ?? entry.text)
+    } else {
+      VStack(alignment: .leading, spacing: 1) {
+        if let ref = entry.ref {
+          Text(ref)
+            .font(.system(size: 13, weight: .semibold))
+            .lineLimit(1)
+        }
+        Text(entry.text)
+          .font(.system(size: 13, design: .serif))
+          .lineLimit(entry.ref == nil ? 3 : 2)
+          .minimumScaleFactor(0.85)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
   }
 }
 
@@ -298,12 +364,21 @@ struct DailyVerseWidget: Widget {
     // Placeholder MG copy — user-owned.
     .configurationDisplayName("Sakafom-panahy")
     .description("Andinin-teny iray isan'andro eo amin'ny écran.")
-    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    .verseFamilies()
     .ownContentMargins()
   }
 }
 
 private extension WidgetConfiguration {
+  // The home screen sizes, plus the lock screen ones from iOS 16.
+  func verseFamilies() -> some WidgetConfiguration {
+    if #available(iOSApplicationExtension 16.0, *) {
+      return supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular, .accessoryInline])
+    } else {
+      return supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    }
+  }
+
   // iOS 17 adds its own content margins around every widget; the view already
   // pads itself, so without this the verse sits ~30pt in from each edge.
   func ownContentMargins() -> some WidgetConfiguration {
