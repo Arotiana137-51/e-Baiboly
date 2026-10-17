@@ -143,3 +143,18 @@ export const rebaseSituations = (
     .filter(active => isLive(active, today))
     .map(active => ({...active, shown: shown.get(active.id) ?? 0}));
 };
+
+/**
+ * How far a plan has got by the end of `today`: verses shown so far, and the
+ * plan length (undefined for long plans, which have none).
+ */
+export const planPosition = (
+  id: SituationId,
+  actives: ReadonlyArray<ActiveSituation>,
+  today: Date,
+  since?: string,
+): {shown: number; days?: number} => {
+  const days = situationById(id)?.days;
+  const shown = walk(actives, since, dayNumber(today) + 1).get(id) ?? 0;
+  return {shown: days ? Math.min(shown, days) : shown, days};
+};
