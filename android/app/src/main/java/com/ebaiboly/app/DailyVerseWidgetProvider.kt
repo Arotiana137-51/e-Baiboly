@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -39,7 +40,12 @@ import java.util.Locale
  * The look is the share card's: a flat colour with matching ink, or a photo
  * (copied next to the feed) under a dark scrim with light ink. RemoteViews
  * can only set solid colours, so the card is painted into a bitmap sized to
- * the placed widget.
+ * the placed widget: the photo, or plain white tinted with the look's colour.
+ *
+ * With "follow dark mode" the feed also has a night look. Android 12+ gets
+ * both colours for every view (setColorInt) and the launcher switches them
+ * itself when the phone's dark mode changes; older versions get the colours
+ * of the mode at render time, so they follow within updatePeriodMillis.
  *
  * One layout, three size classes (see Size): the verse grows with the card and
  * the small class drops the secondary lines. On Android 12+ the launcher gets
@@ -104,6 +110,9 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
 
     private data class Feed(
         val look: Look,
+        // Night version of `look`; null when the widget ignores dark mode.
+        val night: Look?,
+        // The day's own label (a Teny ho anao plan day), else the feed's.
         val label: String,
         val translation: String,
         val dateLabel: String,
@@ -119,15 +128,10 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             val root = JSONObject(file.readText())
             val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
             val entry = root.getJSONObject("days").optJSONObject(key) ?: return null
-            val look = root.optJSONObject("look")
             Feed(
-                look = Look(
-                    background = parseColor(look?.optString("background", ""), DEFAULT_ACCENT),
-                    text = parseColor(look?.optString("text", ""), Color.WHITE),
-                    accent = parseColor(look?.optString("accent", ""), Color.WHITE),
-                    image = look?.optString("image", null)?.takeIf { it.isNotEmpty() && it != "null" },
-                ),
-                label = root.optString("label", ""),
+                look = parseLook(root.optJSONObject("look")),
+                night = root.optJSONObject("lookDark")?.let { parseLook(it) },
+                label = entry.optString("label", "").ifEmpty { root.optString("label", "") },
                 translation = root.optString("translation", ""),
                 dateLabel = entry.optString("dateLabel", ""),
                 ref = entry.optString("ref", ""),
@@ -139,10 +143,40 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    private fun parseLook(look: JSONObject?) = Look(
+        background = parseColor(look?.optString("background", ""), DEFAULT_ACCENT),
+        text = parseColor(look?.optString("text", ""), Color.WHITE),
+        accent = parseColor(look?.optString("accent", ""), Color.WHITE),
+        image = look?.optString("image", null)?.takeIf { it.isNotEmpty() && it != "null" },
+    )
+
     private fun build(context: Context, feed: Feed?, widthDp: Float, heightDp: Float): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_daily_verse)
-        val look = feed?.look ?: Look(DEFAULT_ACCENT, Color.WHITE, Color.WHITE, null)
-        views.setImageViewBitmap(R.id.widget_bg, paintCard(context, look, widthDp, heightDp))
+        val day = feed?.look ?: Look(DEFAULT_ACCENT, Color.WHITE, Color.WHITE, null)
+        val night = feed?.night ?: day
+        val nightNow = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+
+        // Day and night colour for one view property (see the class comment).
+        fun color(id: Int, method: String, dayColor: Int, nightColor: Int) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                views.setColorInt(id, method, dayColor, nightColor)
+            } else {
+                views.setInt(id, method, if (nightNow) nightColor else dayColor)
+            }
+        }
+        fun ink(look: Look, alpha: Int) = ColorUtils.setAlphaComponent(look.text, alpha)
+
+        val (card, isPhoto) = paintCard(context, day.image, widthDp, heightDp)
+        views.setImageViewBitmap(R.id.widget_bg, card)
+        // A transparent filter is no tint: views are re-applied over the
+        // previous ones, so an earlier colour's tint has to be cleared.
+        color(
+            R.id.widget_bg,
+            "setColorFilter",
+            if (isPhoto) Color.TRANSPARENT else day.background,
+            if (isPhoto) Color.TRANSPARENT else night.background,
+        )
 
         val size = Size.of(widthDp, heightDp)
         views.setTextViewTextSize(R.id.widget_text, TypedValue.COMPLEX_UNIT_SP, size.verseSp)
@@ -153,18 +187,27 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
 
         // Ink: the look's text colour at full strength for the verse and badge,
         // dimmed for the secondary lines; the reference takes the accent.
-        val ink = look.text
-        val lightInk = ColorUtils.calculateLuminance(ink) > 0.5
-        views.setTextColor(R.id.widget_date, ColorUtils.setAlphaComponent(ink, 230))
-        views.setTextColor(R.id.widget_label, ColorUtils.setAlphaComponent(ink, 179))
-        views.setTextColor(R.id.widget_text, ink)
-        views.setTextColor(R.id.widget_ref, look.accent)
-        views.setTextColor(R.id.widget_translation, ColorUtils.setAlphaComponent(ink, 153))
-        views.setInt(R.id.widget_divider, "setBackgroundColor", ColorUtils.setAlphaComponent(ink, 51))
-        views.setInt(R.id.widget_date, "setBackgroundResource", if (lightInk) R.drawable.widget_badge else R.drawable.widget_badge_dark)
-        views.setInt(R.id.widget_translation, "setBackgroundResource", if (lightInk) R.drawable.widget_tag else R.drawable.widget_tag_dark)
-        views.setInt(R.id.widget_settings_icon, "setColorFilter", ColorUtils.setAlphaComponent(ink, 179))
-        views.setTextColor(R.id.widget_settings_label, ColorUtils.setAlphaComponent(ink, 179))
+        color(R.id.widget_date, "setTextColor", ink(day, 230), ink(night, 230))
+        color(R.id.widget_label, "setTextColor", ink(day, 179), ink(night, 179))
+        color(R.id.widget_text, "setTextColor", day.text, night.text)
+        color(R.id.widget_ref, "setTextColor", day.accent, night.accent)
+        color(R.id.widget_translation, "setTextColor", ink(day, 153), ink(night, 153))
+        color(R.id.widget_divider, "setBackgroundColor", ink(day, 51), ink(night, 51))
+        color(R.id.widget_settings_icon, "setColorFilter", ink(day, 179), ink(night, 179))
+        color(R.id.widget_settings_label, "setTextColor", ink(day, 179), ink(night, 179))
+
+        // Pills behind the date and the translation, for light or dark ink. A
+        // light look whose night version has light ink gets the *_auto ones:
+        // the launcher picks their drawable-night version itself.
+        val lightDay = ColorUtils.calculateLuminance(day.text) > 0.5
+        val lightNight = ColorUtils.calculateLuminance(night.text) > 0.5
+        val (badge, tag) = when {
+            lightDay -> R.drawable.widget_badge to R.drawable.widget_tag
+            lightNight -> R.drawable.widget_badge_auto to R.drawable.widget_tag_auto
+            else -> R.drawable.widget_badge_dark to R.drawable.widget_tag_dark
+        }
+        views.setInt(R.id.widget_date, "setBackgroundResource", badge)
+        views.setInt(R.id.widget_translation, "setBackgroundResource", tag)
 
         if (feed == null) {
             // No feed yet (fresh install, or the app hasn't been opened in two
@@ -212,8 +255,11 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         return views
     }
 
-    /** Rounded card: the look's photo (centre-cropped, scrimmed) or its flat colour. */
-    private fun paintCard(context: Context, look: Look, widthDp: Float, heightDp: Float): Bitmap {
+    /**
+     * Rounded card: the photo (centre-cropped, scrimmed), or plain white for
+     * build() to tint with the look's colour. The flag says which it is.
+     */
+    private fun paintCard(context: Context, image: String?, widthDp: Float, heightDp: Float): Pair<Bitmap, Boolean> {
         val density = context.resources.displayMetrics.density
         val width = (widthDp * density).toInt().coerceIn(1, MAX_BITMAP_EDGE)
         val height = (heightDp * density).toInt().coerceIn(1, MAX_BITMAP_EDGE)
@@ -224,7 +270,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
         canvas.clipPath(Path().apply { addRoundRect(bounds, radius, radius, Path.Direction.CW) })
 
-        val photo = look.image?.let { decodePhoto(File(context.filesDir, it), width, height) }
+        val photo = image?.let { decodePhoto(File(context.filesDir, it), width, height) }
         if (photo != null) {
             // Centre-crop the photo, then the share card's 45% scrim.
             val scale = maxOf(width.toFloat() / photo.width, height.toFloat() / photo.height)
@@ -235,9 +281,9 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             canvas.drawBitmap(photo, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
             canvas.drawColor(SCRIM)
         } else {
-            canvas.drawColor(look.background)
+            canvas.drawColor(Color.WHITE)
         }
-        return bitmap
+        return bitmap to (photo != null)
     }
 
     // Decodes at the smallest power-of-two sample that still covers the card.
