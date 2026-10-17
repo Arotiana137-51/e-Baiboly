@@ -19,6 +19,7 @@ import {
 import {todaysWidgetRef, useVerse} from '../hooks/useSituationVerse';
 import type {DailyVerse} from '../services/reminders/readingReminder';
 import {planPosition, situationById, type ActiveSituation} from '../utils/lifeSituations';
+import {mixHex} from '../utils/colorUtils';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 // All copy on this screen is placeholder MG — user-owned.
@@ -31,7 +32,6 @@ const FEELING_ART: Record<FeelingId, ImageSourcePropType> = {
   ashamed: require('../components/shared/illustrations/feeling-ashamed.png'),
   thankful: require('../components/shared/illustrations/feeling-thankful.png'),
 };
-const SUNRISE: ImageSourcePropType = require('../components/shared/illustrations/sunrise.png');
 
 // Earth tones taken from the illustrations, one per theme.
 const THEME_DOT: Record<SituationTheme, string> = {
@@ -85,6 +85,32 @@ const Pill = ({
     >
       <Text style={[styles.pillText, {color}]}>{label}</Text>
     </Pressable>
+  );
+};
+
+// Top half of a circle: an outline, or filled.
+const HalfCircle = ({r, color, filled}: {r: number; color: string; filled?: boolean}) => (
+  <View style={[styles.half, {left: 80 - r, width: 2 * r, height: r}]}>
+    <View
+      style={[
+        {width: 2 * r, height: 2 * r, borderRadius: r},
+        filled ? {backgroundColor: color} : [styles.halfLine, {borderColor: color}],
+      ]}
+    />
+  </View>
+);
+
+// The intro's rising sun, washed from the theme color into the ground so it
+// belongs to whatever color the reader picked.
+const Sunrise = ({earth}: {earth: EarthTheme}) => {
+  const tone = (t: number) => mixHex(earth.ground, earth.accentText, t);
+  return (
+    <View style={styles.sunrise}>
+      <HalfCircle r={75} color={tone(0.25)} />
+      <HalfCircle r={55} color={tone(0.45)} />
+      <HalfCircle r={32} color={tone(0.3)} filled />
+      <View style={[styles.horizon, {backgroundColor: tone(0.45)}]} />
+    </View>
   );
 };
 
@@ -357,7 +383,7 @@ const TenyHoAnaoScreen = () => {
     return (
       <SafeAreaView edges={['bottom']} style={ground}>
         <ScrollView contentContainerStyle={styles.introScroll}>
-          <Image source={SUNRISE} style={styles.sunrise} />
+          <Sunrise earth={earth} />
           <Text style={[styles.introTitle, {color: earth.ink, fontFamily: earth.serif}]}>Teny ho anao</Text>
           <Text style={[styles.introText, {color: earth.ink}]}>
             Eto no misafidy ny teny hiseho ao amin'ny widget. Teny ampaherezana anao
@@ -381,7 +407,7 @@ const TenyHoAnaoScreen = () => {
       <SafeAreaView edges={['bottom']} style={ground}>
         <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
           <Text style={[styles.headingLarge, {color: earth.ink, fontFamily: earth.serif}]}>
-            Manao ahoana ny fonao ankehitriny?
+            Manahoana ny toe-ponao ankehitriny?
           </Text>
           <Text style={[styles.lead, {color: earth.muted}]}>
             Ara-dalàna ny mahatsiaro ho mavesatra. Tsy voatery hanazava zavatra ianao.
@@ -706,6 +732,9 @@ const styles = StyleSheet.create({
   backText: {fontSize: 16, fontWeight: '600'},
   introScroll: {flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, gap: 18},
   sunrise: {width: 160, height: 92, marginBottom: 12},
+  half: {position: 'absolute', bottom: 1.5, overflow: 'hidden'},
+  halfLine: {borderWidth: 1.5},
+  horizon: {position: 'absolute', left: 0, right: 0, bottom: 0, height: 1.5},
   introTitle: {fontSize: 34, lineHeight: 40, fontWeight: '600', textAlign: 'center'},
   introText: {fontSize: 18, lineHeight: 28, textAlign: 'center'},
   tiles: {flexDirection: 'row', flexWrap: 'wrap', gap: 12},
