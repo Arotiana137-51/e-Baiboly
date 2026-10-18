@@ -168,6 +168,8 @@ export const syncDailyVerseWidget = async (): Promise<void> => {
     const night = !stored?.image && (await getWidgetFollowDark()) ? nightLook(look) : null;
     const payload = {
       generatedAt: new Date().toISOString(),
+      // The widget's stripe and reference: the app's own colour.
+      accent: (await getStoredPrimaryColor()) ?? PRIMARY_COLOR_OPTIONS[0].hex,
       look: {
         background: look.background,
         text: look.text,
