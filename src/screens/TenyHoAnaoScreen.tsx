@@ -45,9 +45,8 @@ const THEME_DOT: Record<SituationTheme, string> = {
   joy: '#E2B07A',
 };
 
-// Above the feeling question, as an epigraph: Christ's invitation, then the
-// question, then the answers with nothing between them (MG1865 text, as in
-// the reader).
+// Under the feeling question, small and in italics so the answers still
+// follow the question closely (MG1865 text, as in the reader).
 const INVITATION = {
   body: 'Mankanesa aty amiko, ianareo rehetra izay miasa fatratra sy mavesatra entana, fa Izaho no hanome anareo fitsaharana.',
   ref: 'Matio 11:28',
@@ -187,8 +186,9 @@ const VerseQuote = ({
   </View>
 );
 
-// A choice on the feeling step: a picture and its word, ticked when chosen.
-// `hint` makes it a full-width row, as for "Misafidy ny tsy hilaza".
+// A choice on the feeling step: a picture and its word, centred, ticked in
+// the corner when chosen. `hint` makes it full width, as for "Misafidy ny tsy
+// hilaza".
 const FeelingTile = ({
   label,
   art,
@@ -203,42 +203,25 @@ const FeelingTile = ({
   on: boolean;
   onPress: () => void;
   earth: EarthTheme;
-}) => {
-  const tick = on ? <Text style={[styles.tileTick, {color: earth.accentText}]}>✓</Text> : null;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{selected: on}}
-      style={[
-        styles.tile,
-        hint ? styles.tileWide : null,
-        on
-          ? {borderColor: earth.accentText, backgroundColor: earth.accentTint}
-          : {borderColor: earth.line, backgroundColor: earth.card},
-      ]}
-    >
-      {hint ? (
-        <>
-          {art}
-          <View style={styles.flex}>
-            <Text style={[styles.tileLabel, {color: earth.ink}]}>{label}</Text>
-            <Text style={[styles.tileHint, {color: earth.muted}]}>{hint}</Text>
-          </View>
-          {tick}
-        </>
-      ) : (
-        <>
-          <View style={styles.tileTop}>
-            {art}
-            {tick}
-          </View>
-          <Text style={[styles.tileLabel, {color: earth.ink}]}>{label}</Text>
-        </>
-      )}
-    </Pressable>
-  );
-};
+}) => (
+  <Pressable
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityState={{selected: on}}
+    style={[
+      styles.tile,
+      hint ? styles.tileWide : null,
+      on
+        ? {borderColor: earth.accentText, backgroundColor: earth.accentTint}
+        : {borderColor: earth.line, backgroundColor: earth.card},
+    ]}
+  >
+    {art}
+    <Text style={[styles.tileLabel, {color: earth.ink}]}>{label}</Text>
+    {hint ? <Text style={[styles.tileHint, {color: earth.muted}]}>{hint}</Text> : null}
+    {on ? <Text style={[styles.tileTick, {color: earth.accentText}]}>✓</Text> : null}
+  </Pressable>
+);
 
 // One situation to choose, as its own card or as a row in a theme. The top
 // ticks it; "Ohatra" is its own button (so it doesn't tick) and opens the
@@ -457,11 +440,11 @@ const TenyHoAnaoScreen = () => {
     return (
       <SafeAreaView edges={['bottom']} style={ground}>
         <ScrollViewWithThumb style={styles.list} contentContainerStyle={[styles.scroll, styles.scrollTight]}>
-          <Text style={[styles.epigraph, {color: earth.muted, fontFamily: earth.serif}]}>
-            “{INVITATION.body}” <Text style={styles.epigraphRef}>{INVITATION.ref}</Text>
-          </Text>
           <Text style={[styles.headingLarge, {color: earth.ink, fontFamily: earth.serif}]}>
             Manahoana ny toe-ponao ankehitriny?
+          </Text>
+          <Text style={[styles.epigraph, {color: earth.muted, fontFamily: earth.serif}]}>
+            “{INVITATION.body}” <Text style={styles.epigraphRef}>{INVITATION.ref}</Text>
           </Text>
           {/* People know how they feel; some choose not to say, and that
               choice comes first. Only before a first choice, so it never
@@ -794,7 +777,7 @@ const styles = StyleSheet.create({
   scrollTight: {paddingBottom: 12, gap: 10},
   headingLarge: {fontSize: 25, lineHeight: 31, fontWeight: '600'},
   epigraph: {fontSize: 13, lineHeight: 19, fontStyle: 'italic'},
-  epigraphRef: {fontStyle: 'normal', fontWeight: '700'},
+  epigraphRef: {fontWeight: '700'},
   heading: {fontSize: 23, lineHeight: 30, fontWeight: '600'},
   lead: {fontSize: 16, lineHeight: 24, marginBottom: 8},
   hint: {fontSize: 14, lineHeight: 19},
@@ -826,14 +809,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
-  tileTop: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
   tileArt: {width: 40, height: 40},
-  tileTick: {fontSize: 18, fontWeight: '700'},
-  tileLabel: {fontSize: 17, lineHeight: 22, fontWeight: '700'},
-  tileWide: {flexBasis: 'auto', minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8},
-  tileHint: {fontSize: 13, lineHeight: 17},
+  tileTick: {position: 'absolute', top: 6, right: 10, fontSize: 18, fontWeight: '700'},
+  tileLabel: {fontSize: 17, lineHeight: 22, fontWeight: '700', textAlign: 'center'},
+  tileWide: {flexBasis: 'auto', minHeight: 0, paddingVertical: 10, paddingHorizontal: 28},
+  tileHint: {fontSize: 13, lineHeight: 17, textAlign: 'center'},
   feelingChip: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
