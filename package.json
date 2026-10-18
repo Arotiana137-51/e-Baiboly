@@ -19,7 +19,6 @@
     "check:db": "node scripts/checkDevDb.js",
     "bump:db-version": "node scripts/bumpDbVersion.js",
     "build:patch": "node scripts/buildPatch.js",
-    "build:illustrations": "node scripts/renderIllustrations.js",
     "generate:theme-colors": "node scripts/generateAndroidThemeColors.js"
   },
   "dependencies": {
@@ -60,7 +59,6 @@
     "@react-native/eslint-config": "0.83.10",
     "@react-native/metro-config": "0.83.10",
     "@react-native/typescript-config": "0.83.10",
-    "@resvg/resvg-js": "^2.6.2",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^29.5.13",
     "@types/node": "^20.0.0",

@@ -11,7 +11,7 @@ const COLOR_LOOKS = [...PRIMARY_COLOR_OPTIONS]
   .map(option => ({name: option.name, look: lookForColor(option.hex)}));
 
 // The designed looks first, then the palette.
-export const SWATCH_LOOKS: ShareCardLook[] = [...PRESET_LOOKS, ...COLOR_LOOKS.map(c => c.look)];
+const SWATCH_LOOKS: ShareCardLook[] = [...PRESET_LOOKS, ...COLOR_LOOKS.map(c => c.look)];
 
 type LookPickerProps = {
   look: ShareCardLook;

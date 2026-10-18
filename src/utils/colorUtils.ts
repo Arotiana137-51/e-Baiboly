@@ -148,7 +148,7 @@ export const readableAccent = (accent: string, ground: string): string => {
 };
 
 // Hue in degrees (0–360), saturation and lightness (0–1) of a hex color.
-export const toHsl = (hex: string): {h: number; s: number; l: number} => {
+const toHsl = (hex: string): {h: number; s: number; l: number} => {
   const p = parseHex(hex) ?? {r: 0, g: 0, b: 0};
   const [r, g, b] = [p.r / 255, p.g / 255, p.b / 255];
   const max = Math.max(r, g, b);
