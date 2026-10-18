@@ -65,6 +65,31 @@ export const lookForImage = (imageUri: string): ShareCardLook => ({
   imageUri,
 });
 
+// The widget's text contrast: the look's own ink, or white, or dark ink.
+export type WidgetInk = 'auto' | 'white' | 'dark';
+
+// A veil laid over a photo so the text on it reads.
+export type Veil = {color: string; alpha: number};
+
+// The widget's look with the chosen text contrast. On a colour, white or
+// dark text over that colour darkened or lightened just until it reads
+// (4.5:1); on a photo, a dark or light veil. 'auto' keeps the look's ink.
+export const widgetInk = (look: ShareCardLook, ink: WidgetInk): ShareCardLook & {veil?: Veil} => {
+  if (look.imageUri) {
+    return ink === 'dark'
+      ? {...look, text: DARK_TEXT, accent: DARK_TEXT, veil: {color: WHITE, alpha: 0.6}}
+      : {...look, ...(ink === 'white' ? {accent: WHITE} : {}), veil: {color: '#000000', alpha: 0.45}};
+  }
+  if (ink === 'auto') return look;
+  const text = ink === 'white' ? WHITE : DARK_TEXT;
+  const toward = ink === 'white' ? '#000000' : WHITE;
+  let background = look.background;
+  for (let step = 1; contrastRatio(text, background) < 4.5 && step <= 20; step += 1) {
+    background = mixHex(look.background, toward, step / 20);
+  }
+  return {background, text, accent: text};
+};
+
 export const MAX_SHARE_ITEMS = 5;
 
 // Output size of the shared PNG (Instagram/Facebook story native size).
