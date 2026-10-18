@@ -1,0 +1,56 @@
+diff --git a/node_modules/react-native-worklets/src/runLoop/uiRuntime/requestAnimationFrame.ts b/node_modules/react-native-worklets/src/runLoop/uiRuntime/requestAnimationFrame.ts
+index 405e034..355adcc 100644
+--- a/node_modules/react-native-worklets/src/runLoop/uiRuntime/requestAnimationFrame.ts
++++ b/node_modules/react-native-worklets/src/runLoop/uiRuntime/requestAnimationFrame.ts
+@@ -13,6 +13,17 @@ export function setupRequestAnimationFrame() {
+   let flushedCallbacksBegin = 0;
+   let flushedCallbacksEnd = 0;
+ 
++  // A frame is requested only while something waits for one, so an idle app
++  // doesn't wake the main thread on every vsync.
++  let frameRequested = false;
++
++  function scheduleFrame() {
++    if (!frameRequested) {
++      frameRequested = true;
++      nativeRequestAnimationFrame(nativeFlushQueue);
++    }
++  }
++
+   function executeQueue(timestamp: number) {
+     flushedCallbacks = queuedCallbacks;
+     queuedCallbacks = [];
+@@ -35,6 +46,7 @@ export function setupRequestAnimationFrame() {
+   ): number {
+     const handle = queuedCallbacksEnd++;
+     queuedCallbacks.push(callback);
++    scheduleFrame();
+     return handle;
+   }
+ 
+@@ -51,10 +63,8 @@ export function setupRequestAnimationFrame() {
+   }
+ 
+   function nativeFlushQueue(timestamp: number) {
++    frameRequested = false;
+     flushQueue(timestamp);
+-
+-    /* Schedule next frame */
+-    nativeRequestAnimationFrame(nativeFlushQueue);
+   }
+ 
+   function flushQueue(timestamp: number) {
+@@ -72,6 +82,11 @@ export function setupRequestAnimationFrame() {
+     flushQueue(eventTimestamp);
+   };
+ 
+-  /* Start the loop */
+-  nativeRequestAnimationFrame(nativeFlushQueue);
++  // Microtasks queued outside a frame still drain on the next one, as they
++  // did with the always-on loop.
++  const enqueueMicrotask = globalThis.queueMicrotask;
++  globalThis.queueMicrotask = (callback: () => void) => {
++    enqueueMicrotask(callback);
++    scheduleFrame();
++  };
+ }
