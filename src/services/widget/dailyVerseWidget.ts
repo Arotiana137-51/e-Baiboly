@@ -73,7 +73,7 @@ const CHECK_IN_CARD = {
 
 // The mode shown next to the translation tag on a calendar day.
 // Placeholder MG copy — user-owned.
-const CALENDAR_LABEL = 'Fampaherezana';
+export const CALENDAR_LABEL = 'Fampaherezana';
 
 // A plan day's label, so the person knows the verse is from their plan.
 // Never the situation's name, for the same reason as the check-in card.
@@ -95,10 +95,10 @@ export const verseDeepLink = (v: {bookId: number; bookName: string; chapter: num
 // screen; months are the standard Malagasy names, abbreviated.
 const DAY_SHORT = ['Alh', 'Alt', 'Tal', 'Alr', 'Alk', 'Zom', 'Sab'];
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mey', 'Jon', 'Jol', 'Aog', 'Sep', 'Okt', 'Nov', 'Des'];
-const TRANSLATION = 'MG1865';
+export const TRANSLATION = 'MG1865';
 
 // "Tal 15 Sep" — shown in the widget's date badge.
-const dateLabel = (date: Date): string =>
+export const dateLabel = (date: Date): string =>
   `${DAY_SHORT[date.getDay()]} ${date.getDate()} ${MONTH_SHORT[date.getMonth()]}`;
 
 // "19:23:1" or "20:3:5-6": how the widget and the app name a verse for the heart.
