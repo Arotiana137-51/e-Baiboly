@@ -20,7 +20,6 @@ export interface BibleVerse {
 }
 
 export interface BibleCrossReference {
-  id: number;
   votes: number;
   to_book: number;
   to_chapter: number;
@@ -150,33 +149,24 @@ export const useBibleData = () => {
       try {
         await bibleDatabaseService.initDatabase();
 
-        const { rows: canonicalRows } = await bibleDatabaseService.executeQuery<{
-          canonical_book: number;
-        }>('SELECT canonical_book FROM BookCanonicalMap WHERE book_id = ?', [bookId]);
-
-        if (canonicalRows.length === 0) {
-          return [];
-        }
-
-        const canonicalBook = canonicalRows[0].canonical_book;
-
+        // Built from OpenBible.info and already in MG numbering (see
+        // importCrossReferences in scripts/buildBibleDatabase.js), with book
+        // ids as stored in Books.
         const { rows } = await bibleDatabaseService.executeQuery<BibleCrossReference>(
           `SELECT
-             cr.id,
              cr.votes,
              cr.to_book,
              cr.to_chapter,
              cr.to_verse_start,
              cr.to_verse_end,
-             bcm_to.book_id as to_book_id,
+             b_to.id as to_book_id,
              b_to.name as to_book_name
            FROM CrossReferences cr
-           JOIN BookCanonicalMap bcm_to ON bcm_to.canonical_book = cr.to_book
-           JOIN Books b_to ON b_to.id = bcm_to.book_id
+           JOIN Books b_to ON b_to.id = cr.to_book
            WHERE cr.from_book = ? AND cr.from_chapter = ? AND cr.from_verse = ?
            ORDER BY cr.votes DESC
            LIMIT ?`,
-          [canonicalBook, chapter, verseNumber, limit]
+          [bookId, chapter, verseNumber, limit]
         );
 
         return rows;

@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState, useRef} from 'react';
 import {
-  Modal,
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -30,6 +30,8 @@ import VerseActionPopover from '../components/VerseActionPopover';
 import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
 import NoteBubble, {type NoteBubbleTarget} from '../components/NoteBubble';
+import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
+import {SheetButton, SheetModal} from '../components/SheetModal';
 import {UndoBar} from '../components/UndoBar';
 import {ShareCardModal} from '../components/ShareCardModal';
 import {
@@ -242,7 +244,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     loadHymnVerses,
     isLoading: isHymnsLoading,
   } = useHymnsData();
-  const { addToFavorites: addToBibleFavorites } = useFavorites();
+  const { addToFavorites: addToBibleFavorites, favorites: bibleFavorites } = useFavorites();
   const { addToFavorites: addToHymnFavorites } = useHymnFavorites();
   const { logAccess: logBibleAccess } = useBibleHistory();
   const { logAccess: logHymnAccess } = useHymnHistory();
@@ -989,6 +991,16 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     () => (mode === 'hymnal' && currentHymnId ? hymnNotes(notes, currentHymnId) : []),
     [notes, mode, currentHymnId],
   );
+  // This chapter's favourite verses, which the reader frames.
+  const favoriteVerseNumbers = useMemo(
+    () =>
+      new Set(
+        bibleFavorites
+          .filter(f => f.book_id === currentBook?.id && f.chapter === currentChapter)
+          .map(f => f.verse_number),
+      ),
+    [bibleFavorites, currentBook?.id, currentChapter],
+  );
 
   const bibleNoteTarget = useCallback(
     (anchor: NoteAnchor, existing: Note | null): NoteBubbleTarget => ({
@@ -1570,6 +1582,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               currentBookName={currentBook?.name ?? null}
               onClearRange={() => setSelectedVerseRange(null)}
               onTopVerseChange={handleTopVerseChange}
+              favoriteVerses={favoriteVerseNumbers}
             />
           ) : (
             <HymnReaderView
@@ -1683,59 +1696,56 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         }}
       />
 
-      <Modal
+      <SheetModal
         visible={crossRefModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeCrossReferences}
+        title={
+          selectedVerse
+            ? `${currentBook?.name ?? ''} ${selectedVerse.chapter}:${selectedVerse.verse_number}`
+            : 'Cross references'
+        }
+        onClose={closeCrossReferences}
+        footer={<SheetButton label={t('common.close')} onPress={closeCrossReferences} />}
       >
-        <Pressable style={[styles.modalBackdrop]} onPress={closeCrossReferences}>
-          <Pressable
-            style={[
-              styles.modalCard,
-              {backgroundColor: theme.colors.backgroundSecondary},
-            ]}
-            onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, {color: theme.colors.textPrimary}]}> 
-                {selectedVerse
-                  ? `${currentBook?.name ?? ''} ${selectedVerse.chapter}:${selectedVerse.verse_number}`
-                  : 'Cross references'}
-              </Text>
-              <Pressable onPress={closeCrossReferences}>
-                <Text style={[styles.modalClose, {color: theme.colors.accentBlue}]}>HIDY</Text>
-              </Pressable>
-            </View>
-
-            {isCrossRefsLoading ? (
-              <Text style={[styles.modalHint, {color: theme.colors.readerText}]}>Mitady...</Text>
-            ) : crossRefs.length === 0 ? (
-              <Text style={[styles.modalHint, {color: theme.colors.readerText}]}>Tsy misy cross-reference.</Text>
-            ) : (
-              <View>
-                {crossRefs.slice(0, 200).map(ref => {
-                  const rangeText =
-                    ref.to_verse_start === ref.to_verse_end
-                      ? `${ref.to_verse_start}`
-                      : `${ref.to_verse_start}-${ref.to_verse_end}`;
-                  return (
-                    <Pressable
-                      key={ref.id}
-                      style={[styles.crossRefRow, {borderTopColor: theme.colors.divider}]}
-                      onPress={() => handleCrossRefPress(ref)}
-                    >
-                      <Text style={[styles.crossRefText, {color: theme.colors.readerText}]}> 
-                        {ref.to_book_name} {ref.to_chapter}:{rangeText}
-                      </Text>
-                      <Text style={[styles.crossRefVotes, {color: theme.colors.textSecondary}]}>{ref.votes}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+        {isCrossRefsLoading ? (
+          <View style={styles.modalState}>
+            <ActivityIndicator color={theme.colors.navBackground} />
+            <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Mitady...</Text>
+          </View>
+        ) : crossRefs.length === 0 ? (
+          <View style={styles.modalState}>
+            <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Tsy misy cross-reference.</Text>
+          </View>
+        ) : (
+          <ScrollViewWithThumb
+            style={styles.crossRefList}
+            contentContainerStyle={styles.crossRefListContent}
+          >
+            {crossRefs.slice(0, 200).map((ref, index) => {
+              const rangeText =
+                ref.to_verse_start === ref.to_verse_end
+                  ? `${ref.to_verse_start}`
+                  : `${ref.to_verse_start}-${ref.to_verse_end}`;
+              return (
+                <Pressable
+                  key={`${ref.to_book}:${ref.to_chapter}:${ref.to_verse_start}-${ref.to_verse_end}`}
+                  style={({pressed}) => [
+                    styles.crossRefRow,
+                    index > 0 && [styles.crossRefRowDivider, {borderTopColor: theme.colors.divider}],
+                    pressed && {backgroundColor: hexToRgba(theme.colors.navBackground, 0.08)},
+                  ]}
+                  onPress={() => handleCrossRefPress(ref)}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.crossRefText, {color: theme.colors.readerText}]}>
+                    {ref.to_book_name} {ref.to_chapter}:{rangeText}
+                  </Text>
+                  <Text style={[styles.crossRefChevron, {color: theme.colors.textSecondary}]}>›</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollViewWithThumb>
+        )}
+      </SheetModal>
 
       <HamburgerMenuPopover
         visible={isMenuOpen}
@@ -1913,56 +1923,42 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#FFFFFF',
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  modalCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
+  modalState: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111',
-    flex: 1,
-    paddingRight: 12,
-  },
-  modalClose: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#005a9e',
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    gap: 10,
   },
   modalHint: {
-    paddingVertical: 12,
-    color: '#444',
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  // Sized by its rows when they fit; shrinks between header and footer when
+  // they don't, and scrolls.
+  crossRefList: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  crossRefListContent: {
+    paddingVertical: 4,
   },
   crossRefRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    minHeight: 52,
+    paddingHorizontal: 20,
+  },
+  crossRefRowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e5e5e5',
   },
   crossRefText: {
     flex: 1,
-    color: '#111',
+    fontSize: 16,
     paddingRight: 12,
   },
-  crossRefVotes: {
-    color: '#666',
-    fontVariant: ['tabular-nums'],
+  crossRefChevron: {
+    fontSize: 24,
+    lineHeight: 26,
   },
 });
 

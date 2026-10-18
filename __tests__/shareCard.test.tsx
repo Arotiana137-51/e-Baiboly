@@ -16,10 +16,14 @@ import {
   lookForColor,
   lookForImage,
   MAX_SHARE_ITEMS,
+  nightLook,
   PRESET_LOOKS,
+  widgetInk,
   type ShareCardData,
 } from '../src/utils/shareCard';
 import {buildChapterDisplay} from '../src/utils/chapterMarks';
+import {contrastRatio, getRelativeLuminance} from '../src/utils/colorUtils';
+import {PRIMARY_COLOR_OPTIONS} from '../src/theme/personalizationPalette';
 import type {BibleVerse} from '../src/hooks/useBibleData';
 import type {HymnVerse} from '../src/hooks/useHymnsData';
 
@@ -109,6 +113,45 @@ test('background colour picks readable ink; a photo always gets the light ink', 
   expect(lookForColor('#F6EBD9').text).toBe('#1B1B1B');
   expect(lookForImage('file:///bg.jpg')).toMatchObject({text: '#FFFFFF', imageUri: 'file:///bg.jpg'});
 });
+
+test.each(PRIMARY_COLOR_OPTIONS.map(o => [o.name, o.hex]))('%s: white on dark, black on light', (_name, hex) => {
+  const look = lookForColor(hex);
+  const other = look.text === '#FFFFFF' ? '#1B1B1B' : '#FFFFFF';
+  expect(['#FFFFFF', '#1B1B1B']).toContain(look.text);
+  expect(contrastRatio(look.text, hex)).toBeGreaterThanOrEqual(contrastRatio(other, hex));
+  expect(look.accent).toBe(look.text);
+  expect(contrastRatio(look.text, hex)).toBeGreaterThanOrEqual(3); // verse text is large
+});
+
+test.each(
+  [...PRESET_LOOKS, ...PRIMARY_COLOR_OPTIONS.map(o => lookForColor(o.hex))].flatMap(l => [
+    [l.background, 'white', l] as const,
+    [l.background, 'dark', l] as const,
+  ]),
+)('%s in %s text reads at 4.5:1 on its adjusted colour', (_bg, ink, look) => {
+  const inked = widgetInk(look, ink);
+  expect(inked.text).toBe(ink === 'white' ? '#FFFFFF' : '#1B1B1B');
+  expect(inked.accent).toBe(inked.text);
+  expect(contrastRatio(inked.text, inked.background)).toBeGreaterThanOrEqual(4.5);
+});
+
+test('auto keeps a colour look as it is; a photo gets a veil matching its ink', () => {
+  const look = lookForColor('#007991');
+  expect(widgetInk(look, 'auto')).toEqual(look);
+  const photo = lookForImage('file:///bg.jpg');
+  expect(widgetInk(photo, 'auto')).toMatchObject({text: '#FFFFFF', veil: {color: '#000000', alpha: 0.45}});
+  expect(widgetInk(photo, 'dark')).toMatchObject({text: '#1B1B1B', veil: {color: '#FFFFFF', alpha: 0.6}});
+});
+
+test.each([...PRESET_LOOKS, ...PRIMARY_COLOR_OPTIONS.map(o => lookForColor(o.hex))].map(l => [l.background, l]))(
+  'night look of %s is dark and readable',
+  (_bg, look) => {
+    const night = nightLook(look);
+    expect(getRelativeLuminance(night.background)).toBeLessThan(0.2);
+    expect(contrastRatio(night.text, night.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(night.accent, night.background)).toBeGreaterThanOrEqual(4.5);
+  },
+);
 
 test('card on a photo paints the image under a scrim', () => {
   const data = bibleData(1);

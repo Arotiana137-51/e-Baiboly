@@ -1,8 +1,9 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {BackHandler, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {BackHandler, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions} from 'react-native';
 import {useTheme} from '../contexts/ThemeContext';
 import {useNotes} from '../contexts/NotesContext';
 import {useTutorial, useTutorialTarget} from '../contexts/TutorialContext';
+import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
 import {formatNoteDate, generateNoteId, type Note, type NoteAnchor} from '../types/notes';
 import {shareText} from '../utils/shareCard';
 import {t} from '../i18n/strings';
@@ -33,6 +34,17 @@ type Props = {
 
 const sameAnchor = (a: NoteAnchor, b: NoteAnchor) => JSON.stringify(a) === JSON.stringify(b);
 
+// The writing field's height: at least 3 lines, at most 16% of the window
+// (about 5 lines on a big phone), and no more than fits above the keyboard.
+const FIELD_MIN = 92;
+const FIELD_SHARE = 0.16;
+// What sits above the keyboard besides the field once the reader has scrolled
+// the bubble to its top: the app's top bar and the bubble's other rows, plus a
+// margin. NOTE: an estimate kept on the safe side so Tahirizo never ends up
+// under the keyboard; measuring those rows would give the field the last few
+// points. Below ~650pt of screen even the minimum field can't fit.
+const AROUND_FIELD = 300;
+
 // A note shown right above its verse (or stanza), pointing at it like a
 // speech bubble: read it, edit it in place, save. Rendered inside the reading
 // list, so it scrolls with the text and never covers it.
@@ -46,6 +58,13 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
   const {saveNote, removeNote} = useNotes();
   const tutorial = useTutorial();
   const inputRef = useTutorialTarget('noteInput');
+  const {height: windowHeight} = useWindowDimensions();
+  // Until the keyboard reports its size, assume a typical one (~40% of the
+  // window), so the field doesn't jump when it opens.
+  const keyboardHeight = useKeyboardHeight() || windowHeight * 0.4;
+  const fieldHeight = Math.round(
+    Math.max(FIELD_MIN, Math.min(windowHeight * FIELD_SHARE, windowHeight - keyboardHeight - AROUND_FIELD)),
+  );
   const [text, setText] = useState(() => target.existing?.text ?? '');
   const [anchor, setAnchor] = useState<NoteAnchor>(() => target.existing?.anchor ?? target.anchor);
   // An existing note opens for reading (× closes, "Ovay" or a tap on the text
@@ -123,6 +142,8 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
 
   const bibleAnchor = anchor.kind === 'bible' ? anchor : null;
   const maxVerse = target.maxVerse;
+  const canShrink = bibleAnchor !== null && bibleAnchor.verseEnd > bibleAnchor.verseStart;
+  const canGrow = bibleAnchor !== null && typeof maxVerse === 'number' && bibleAnchor.verseEnd < maxVerse;
   const stepEnd = (delta: number) => {
     if (!bibleAnchor || typeof maxVerse !== 'number') return;
     setAnchor({
@@ -179,6 +200,7 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
               style={[
                 styles.input,
                 {
+                  height: fieldHeight,
                   color: theme.colors.textPrimary,
                   backgroundColor: theme.colors.readerBackground,
                   borderColor: theme.colors.divider,
@@ -194,22 +216,30 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
 
         {editing && bibleAnchor && typeof maxVerse === 'number' ? (
           <View style={styles.stepper}>
+            {/* The whole range as a sentence, "Andininy 16 hatramin'ny − 18 +",
+                so the start stays in view next to the end the buttons move. */}
             <Text style={[styles.stepLabel, {color: theme.colors.textSecondary}]}>
+              {t('notes.fromVerse')}{' '}
+              <Text style={[styles.stepNumber, {color: theme.colors.textPrimary}]}>
+                {bibleAnchor.verseStart}
+              </Text>{' '}
               {t('notes.untilVerse')}
             </Text>
             <Pressable
-              style={[styles.stepButton, {borderColor: theme.colors.divider}]}
+              style={[styles.stepButton, {borderColor: theme.colors.divider}, !canShrink && styles.disabled]}
               onPress={() => stepEnd(-1)}
-              disabled={bibleAnchor.verseEnd <= bibleAnchor.verseStart}
+              disabled={!canShrink}
+              hitSlop={4}
               accessibilityRole="button"
             >
               <Text style={[styles.stepText, {color: theme.colors.textPrimary}]}>−</Text>
             </Pressable>
             <Text style={[styles.stepValue, {color: theme.colors.textPrimary}]}>{bibleAnchor.verseEnd}</Text>
             <Pressable
-              style={[styles.stepButton, {borderColor: theme.colors.divider}]}
+              style={[styles.stepButton, {borderColor: theme.colors.divider}, !canGrow && styles.disabled]}
               onPress={() => stepEnd(1)}
-              disabled={bibleAnchor.verseEnd >= maxVerse}
+              disabled={!canGrow}
+              hitSlop={4}
               accessibilityRole="button"
             >
               <Text style={[styles.stepText, {color: theme.colors.textPrimary}]}>+</Text>
@@ -319,7 +349,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeText: {fontSize: 28, lineHeight: 30},
-  readText: {marginTop: 8, fontSize: 16, lineHeight: 23},
+  readText: {marginTop: 8, fontSize: 17, lineHeight: 24},
   mainButton: {
     minHeight: 44,
     minWidth: 110,
@@ -334,29 +364,29 @@ const styles = StyleSheet.create({
   pressed: {opacity: 0.7},
   input: {
     marginTop: 10,
-    minHeight: 64,
-    maxHeight: 200,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 16,
-    lineHeight: 22,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 17,
+    lineHeight: 24,
   },
   footer: {flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 12},
   spacer: {flex: 1},
   date: {fontSize: 12, marginTop: 2},
   stepper: {flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10},
   stepLabel: {flex: 1, fontSize: 14},
+  // Drawn at 36 so the row stays light; hitSlop brings the touch area to 44.
   stepButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepText: {fontSize: 20, lineHeight: 22},
+  stepNumber: {fontSize: 16, fontWeight: '700'},
   stepValue: {minWidth: 28, textAlign: 'center', fontSize: 16, fontWeight: '700'},
   iconButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   disabled: {opacity: 0.4},

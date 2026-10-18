@@ -5,7 +5,8 @@ import {
   copyDatabaseFromAssets,
   fileExistsSafe,
   getDatabaseAssetPath,
-  excludeDatabaseDirFromBackup
+  excludeDatabaseDirFromBackup,
+  isTruncatedDatabase
 } from '../../utils/paths';
 import * as FileSystem from 'react-native-fs';
 import { BIBLE_DB_VERSION, HYMNS_DB_VERSION } from './dbVersions';
@@ -147,6 +148,15 @@ class DatabaseService {
 
         let exists = await fileExistsSafe(dbPath);
 
+        // Copies cut short before the copy became atomic (app killed, phone
+        // full) kept a valid header, so they passed the version check below
+        // and stayed broken for good.
+        if (exists && (await isTruncatedDatabase(dbPath))) {
+          console.warn(`[${this.dbName}] truncated writable copy; refreshing from assets`);
+          await this.deleteWritableDb(dbPath);
+          exists = false;
+        }
+
         // If a writable copy already exists, check whether the bundled asset
         // is newer (content version stamped via PRAGMA user_version at build
         // time). Strictly `<`: if the on-disk version is *equal or greater*,
@@ -177,6 +187,17 @@ class DatabaseService {
           } catch (error) {
             console.error('Failed to copy database from assets:', error);
             throw error;
+          }
+
+          // contentVersion comes with the JS, the DB file with the native
+          // build. A JS-only reload after `yarn build:bible`, or a release
+          // whose constant was bumped without rebuilding the DB, copies an
+          // older file than announced, and copies it again on every launch.
+          const copied = await this.readOnDiskContentVersion();
+          if (copied < this.contentVersion) {
+            console.warn(
+              `[${this.dbName}] this build ships DB ${copied} but dbVersions.ts expects ${this.contentVersion}: rebuild the native app so it packages the new DB`
+            );
           }
         }
 

@@ -1,13 +1,14 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BibleVerse } from '../hooks/useBibleData';
+import { FAVORITES_KEY } from '../constants/favorites';
+import { onWidgetHearts, readWidgetHearts, syncDailyVerseWidget } from '../services/widget/dailyVerseWidget';
 
 export interface FavoriteVerse extends BibleVerse {
   bookName: string;
   addedAt: string;
 }
-
-const FAVORITES_KEY = 'favorites_verses';
 
 type FavoritesContextValue = {
   favorites: FavoriteVerse[];
@@ -121,6 +122,44 @@ export const FavoritesProvider: React.FC<{children: React.ReactNode}> = ({childr
   useEffect(() => {
     loadFavorites();
   }, [loadFavorites]);
+
+  // Hearts tapped on the home-screen widget: folded in once the stored list
+  // is loaded (an earlier write would replace it), then each time the app
+  // comes back to the front or records one itself (the iOS 15-16 link).
+  // Adding or removing is idempotent, so overlapping runs are harmless; the
+  // next feed clears the hearts it shows.
+  useEffect(() => {
+    if (isLoading) return;
+    const applyWidgetHearts = async () => {
+      for (const heart of await readWidgetHearts()) {
+        for (const verse of heart.verses) {
+          if (heart.on) await addToFavorites(verse, verse.bookName);
+          else await removeFromFavorites(verse);
+        }
+      }
+    };
+    applyWidgetHearts();
+    const appState = AppState.addEventListener('change', state => {
+      if (state === 'active') applyWidgetHearts();
+    });
+    const stopListening = onWidgetHearts(applyWidgetHearts);
+    return () => {
+      appState.remove();
+      stopListening();
+    };
+  }, [isLoading, addToFavorites, removeFromFavorites]);
+
+  // The widget's heart follows the list, whichever side changed it. The
+  // first load needs no rebuild: the app already syncs the widget on launch.
+  const loadedOnce = useRef(false);
+  useEffect(() => {
+    if (isLoading) return;
+    if (!loadedOnce.current) {
+      loadedOnce.current = true;
+      return;
+    }
+    syncDailyVerseWidget();
+  }, [favorites, isLoading]);
 
   const value = useMemo(
     () => ({

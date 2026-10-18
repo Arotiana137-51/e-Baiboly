@@ -1,11 +1,18 @@
 import path from 'path';
-import {LIFE_SITUATIONS, type SituationId} from '../src/constants/lifeSituations';
+import {
+  FEELINGS,
+  LIFE_SITUATIONS,
+  SITUATION_THEME,
+  SITUATION_THEMES,
+  type SituationId,
+} from '../src/constants/lifeSituations';
 import type {VerseRef} from '../src/constants/dailyVerses';
 import {
   CHECK_IN_GRACE_DAYS,
   checkInsDue,
   isCheckInDay,
   isLive,
+  planPosition,
   situationSchedule,
   versesForDate,
   type ActiveSituation,
@@ -35,12 +42,15 @@ const plusDays = (iso: string, n: number) => {
 // rules in constants/lifeSituations.ts).
 const COMFORT_ONLY: SituationId[] = [
   'fear', 'guidance', 'thanks', 'grief', 'discouraged', 'doubt', 'work', 'illness', 'lonely',
+  'children', 'betrayed', 'waiting', 'insecurity', 'studies', 'ageing', 'disaster', 'faraway',
+  'shame', 'injustice', 'divorce', 'babyloss', 'journey', 'newtask',
+  'prison', 'disability', 'heartbreak', 'caregiver', 'insomnia', 'pregnancy', 'addictedrelative',
 ];
 
 describe('lifeSituations content', () => {
-  it('has the 13 agreed plans with their shapes', () => {
-    expect(LIFE_SITUATIONS).toHaveLength(13);
-    expect(new Set(LIFE_SITUATIONS.map(s => s.id)).size).toBe(13);
+  it('has the 43 agreed plans with their shapes', () => {
+    expect(LIFE_SITUATIONS).toHaveLength(43);
+    expect(new Set(LIFE_SITUATIONS.map(s => s.id)).size).toBe(43);
     for (const s of LIFE_SITUATIONS) {
       if (s.kind === 'long') {
         expect(s.days).toBeUndefined();
@@ -54,6 +64,15 @@ describe('lifeSituations content', () => {
     }
   });
 
+  it('groups every plan under a theme that is shown, and lists the plans of a feeling once', () => {
+    for (const {theme} of SITUATION_THEMES) {
+      expect(LIFE_SITUATIONS.filter(s => SITUATION_THEME[s.id] === theme).length).toBeGreaterThan(0);
+    }
+    for (const feeling of FEELINGS) {
+      expect(new Set(feeling.situations).size).toBe(feeling.situations.length);
+    }
+  });
+
   it('keeps correction verses out of the comfort plans', () => {
     for (const id of COMFORT_ONLY) {
       expect(byId(id).verses.filter(v => v.correction)).toEqual([]);
@@ -61,7 +80,9 @@ describe('lifeSituations content', () => {
   });
 
   // Same check as dailyVerses.test.ts, against the DB the app bundles.
-  it('every ref resolves and carries no Psalm heading', async () => {
+  // A verse has to read on its own on a small widget: at most 250 characters
+  // (the longest of the first 13 plans was 249).
+  it('every ref resolves, carries no Psalm heading and fits the widget', async () => {
     const sqlite3 = require('sqlite3');
     const db = new sqlite3.Database(
       path.join(__dirname, '../assets/data/dev/BibleMG65.db'),
@@ -80,8 +101,9 @@ describe('lifeSituations content', () => {
     for (const s of LIFE_SITUATIONS) {
       for (const v of s.verses) {
         const texts = await rows(v);
-        const headed = /mpiventy hira|Tonon-kira|Miktama|Maskila|Fihirana fiakarana|nataon'i Davida/i;
-        if (texts.length !== (v.to ?? v.v) - v.v + 1 || headed.test(texts.join(' '))) {
+        const headed = /mpiventy hira|Tonon-kira|Miktama|Maskila|Fihirana fiakarana|nataon'i Davida|Salamon'i/i;
+        const text = texts.join(' ');
+        if (texts.length !== (v.to ?? v.v) - v.v + 1 || headed.test(text) || text.length > 250) {
           bad.push(`${s.id} ${key(v)}`);
         }
       }
@@ -162,6 +184,14 @@ describe('lifeSituations schedule', () => {
   it('keeps a long plan going without an answer', () => {
     expect(isLive(work, plusDays('2026-10-01', 200))).toBe(true);
     expect(checkInsDue(plusDays('2026-10-01', 15), [work])).toEqual([work]);
+  });
+
+  it('counts the verses a plan has shown, today included', () => {
+    expect(planPosition('grief', [grief], day('2026-10-03'))).toEqual({shown: 3, days: byId('grief').days});
+    // Two plans take turns, so each moves at half speed.
+    expect(planPosition('grief', [grief, work], day('2026-10-04')).shown).toBe(2);
+    expect(planPosition('work', [grief, work], day('2026-10-04'))).toEqual({shown: 2, days: undefined});
+    expect(planPosition('grief', [grief], day('2026-09-30')).shown).toBe(0);
   });
 
   it('"Mbola eo" moves the next check-in forward', () => {

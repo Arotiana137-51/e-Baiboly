@@ -5,7 +5,7 @@ import {launchImageLibrary} from 'react-native-image-picker';
 import type {BibleVerse} from '../hooks/useBibleData';
 import type {HymnVerse} from '../hooks/useHymnsData';
 import {buildHymnDisplay, buildVerseDisplay, type ChapterDisplay} from './chapterMarks';
-import {getRelativeLuminance} from './colorUtils';
+import {contrastRatio, getRelativeLuminance, mixHex} from './colorUtils';
 
 export type ShareCardItem = {label: string; text: string};
 
@@ -35,21 +35,60 @@ export type ShareCardLook = {
 export const PRESET_LOOKS: ShareCardLook[] = [
   {background: '#F6EBD9', text: '#2B2116', accent: '#007991'},
   {background: '#0B0B0C', text: '#F2E6D5', accent: '#FFD60A'},
+  // The earth tones of Teny ho anao: sand, then dark brown.
+  {background: '#F6F0E7', text: '#2E2924', accent: '#9C5A3C'},
+  {background: '#4A3F35', text: '#F3ECE2', accent: '#E0B99C'},
 ];
 
-const LIGHT_INK = {text: '#FFFFFF', accent: '#FFD60A'};
-const DARK_INK = {text: '#1B1B1B', accent: '#004E64'};
+const WHITE = '#FFFFFF';
+const DARK_TEXT = '#1B1B1B';
+const LIGHT_INK = {text: WHITE, accent: '#FFD60A'};
 
-export const lookForColor = (hex: string): ShareCardLook => ({
-  background: hex,
-  ...(getRelativeLuminance(hex) < 0.4 ? LIGHT_INK : DARK_INK),
-});
+// A palette colour as a card: white on a dark colour, black on a light one
+// (whichever reads better), for the verse and the reference alike.
+export const lookForColor = (hex: string): ShareCardLook => {
+  const ink = contrastRatio(hex, WHITE) >= contrastRatio(hex, DARK_TEXT) ? WHITE : DARK_TEXT;
+  return {background: hex, text: ink, accent: ink};
+};
+
+// The night version of a flat look, for a widget that follows the phone's
+// dark mode: the same hue, deep, in white. Dark looks and photos (under their
+// dark scrim) stay as they are.
+export const nightLook = (look: ShareCardLook): ShareCardLook => {
+  if (look.imageUri || getRelativeLuminance(look.background) < 0.1) return look;
+  return {background: mixHex(look.background, '#121212', 0.85), text: WHITE, accent: WHITE};
+};
 
 export const lookForImage = (imageUri: string): ShareCardLook => ({
   background: '#000000',
   ...LIGHT_INK,
   imageUri,
 });
+
+// The widget's text contrast: the look's own ink, or white, or dark ink.
+export type WidgetInk = 'auto' | 'white' | 'dark';
+
+// A veil laid over a photo so the text on it reads.
+export type Veil = {color: string; alpha: number};
+
+// The widget's look with the chosen text contrast. On a colour, white or
+// dark text over that colour darkened or lightened just until it reads
+// (4.5:1); on a photo, a dark or light veil. 'auto' keeps the look's ink.
+export const widgetInk = (look: ShareCardLook, ink: WidgetInk): ShareCardLook & {veil?: Veil} => {
+  if (look.imageUri) {
+    return ink === 'dark'
+      ? {...look, text: DARK_TEXT, accent: DARK_TEXT, veil: {color: WHITE, alpha: 0.6}}
+      : {...look, ...(ink === 'white' ? {accent: WHITE} : {}), veil: {color: '#000000', alpha: 0.45}};
+  }
+  if (ink === 'auto') return look;
+  const text = ink === 'white' ? WHITE : DARK_TEXT;
+  const toward = ink === 'white' ? '#000000' : WHITE;
+  let background = look.background;
+  for (let step = 1; contrastRatio(text, background) < 4.5 && step <= 20; step += 1) {
+    background = mixHex(look.background, toward, step / 20);
+  }
+  return {background, text, accent: text};
+};
 
 export const MAX_SHARE_ITEMS = 5;
 

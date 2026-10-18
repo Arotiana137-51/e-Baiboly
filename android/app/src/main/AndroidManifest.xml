@@ -81,5 +81,9 @@
           android:name="android.appwidget.provider"
           android:resource="@xml/widget_daily_verse_info" />
       </receiver>
+      <!-- The widget's heart: not exported, so no other app can change the favorites. -->
+      <receiver
+        android:name=".WidgetHeartReceiver"
+        android:exported="false" />
     </application>
 </manifest>
