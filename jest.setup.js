@@ -17,6 +17,7 @@ jest.mock('react-native-fs', () => {
     MainBundlePath: '/mock/bundle',
     readFileAssets: jest.fn(async () => ''),
     readFile: jest.fn(async () => ''),
+    read: jest.fn(async () => ''),
     writeFile: jest.fn(async () => undefined),
     pathForGroup: jest.fn(async () => '/mock/group'),
     readDirAssets: jest.fn(async () => []),

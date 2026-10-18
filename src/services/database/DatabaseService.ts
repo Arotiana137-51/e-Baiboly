@@ -5,7 +5,8 @@ import {
   copyDatabaseFromAssets,
   fileExistsSafe,
   getDatabaseAssetPath,
-  excludeDatabaseDirFromBackup
+  excludeDatabaseDirFromBackup,
+  isTruncatedDatabase
 } from '../../utils/paths';
 import * as FileSystem from 'react-native-fs';
 import { BIBLE_DB_VERSION, HYMNS_DB_VERSION } from './dbVersions';
@@ -146,6 +147,15 @@ class DatabaseService {
         await excludeDatabaseDirFromBackup();
 
         let exists = await fileExistsSafe(dbPath);
+
+        // Copies cut short before the copy became atomic (app killed, phone
+        // full) kept a valid header, so they passed the version check below
+        // and stayed broken for good.
+        if (exists && (await isTruncatedDatabase(dbPath))) {
+          console.warn(`[${this.dbName}] truncated writable copy; refreshing from assets`);
+          await this.deleteWritableDb(dbPath);
+          exists = false;
+        }
 
         // If a writable copy already exists, check whether the bundled asset
         // is newer (content version stamped via PRAGMA user_version at build
