@@ -56,7 +56,7 @@ import java.util.Locale
  * of the mode at render time, so they follow within updatePeriodMillis.
  *
  * The heart adds the verse to the app's favorites, or takes it out, without
- * opening the app: onReceive records the wanted state in
+ * opening the app: WidgetHeartReceiver records the wanted state in
  * widgetFavorites.json, the widget shows it at once, and the app folds it
  * into its favorites the next time it comes to the front.
  *
@@ -69,16 +69,6 @@ import java.util.Locale
  * and explicitly by DailyVerseWidgetModule.refresh() after the file changes.
  */
 class DailyVerseWidgetProvider : AppWidgetProvider() {
-
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == ACTION_HEART) {
-            val key = intent.getStringExtra(EXTRA_KEY) ?: return
-            recordHeart(context, key, intent.getBooleanExtra(EXTRA_ON, true))
-            refreshAll(context)
-            return
-        }
-        super.onReceive(context, intent)
-    }
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         val feed = readFeed(context)
@@ -320,8 +310,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             R.id.widget_heart,
             if (feed.favorite) R.drawable.ic_widget_heart_filled else R.drawable.ic_widget_heart,
         )
-        val toggle = Intent(context, DailyVerseWidgetProvider::class.java).apply {
-            action = ACTION_HEART
+        val toggle = Intent(context, WidgetHeartReceiver::class.java).apply {
             putExtra(EXTRA_KEY, key)
             putExtra(EXTRA_ON, !feed.favorite)
         }
@@ -384,9 +373,8 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         const val FILE_NAME = "dailyVerse.json"
         // Hearts tapped on the widget, {"19:23:1": true}; read and cleared by the app.
         private const val HEARTS_FILE_NAME = "widgetFavorites.json"
-        private const val ACTION_HEART = "com.ebaiboly.app.TOGGLE_FAVORITE"
-        private const val EXTRA_KEY = "key"
-        private const val EXTRA_ON = "on"
+        const val EXTRA_KEY = "key"
+        const val EXTRA_ON = "on"
         private const val SETTINGS_URL = "ebaiboly://widget-look"
         // Same as DEFAULT_PRIMARY_COLOR_ID's hex in src/theme/personalizationPalette.ts.
         private const val DEFAULT_ACCENT = 0xFF007991.toInt()
@@ -405,7 +393,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        private fun recordHeart(context: Context, key: String, on: Boolean) {
+        fun recordHeart(context: Context, key: String, on: Boolean) {
             val hearts = readHearts(context).put(key, on)
             File(context.filesDir, HEARTS_FILE_NAME).writeText(hearts.toString())
         }
