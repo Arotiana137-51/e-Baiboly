@@ -45,7 +45,9 @@ const THEME_DOT: Record<SituationTheme, string> = {
   joy: '#E2B07A',
 };
 
-// Under the feeling question (MG1865 text, as in the reader).
+// Above the feeling question, as an epigraph: Christ's invitation, then the
+// question, then the answers with nothing between them (MG1865 text, as in
+// the reader).
 const INVITATION = {
   body: 'Mankanesa aty amiko, ianareo rehetra izay miasa fatratra sy mavesatra entana, fa Izaho no hanome anareo fitsaharana.',
   ref: 'Matio 11:28',
@@ -196,7 +198,7 @@ const FeelingTile = ({
   earth,
 }: {
   label: string;
-  art: React.ReactNode;
+  art?: React.ReactNode;
   hint?: string;
   on: boolean;
   onPress: () => void;
@@ -455,10 +457,12 @@ const TenyHoAnaoScreen = () => {
     return (
       <SafeAreaView edges={['bottom']} style={ground}>
         <ScrollViewWithThumb style={styles.list} contentContainerStyle={[styles.scroll, styles.scrollTight]}>
+          <Text style={[styles.epigraph, {color: earth.muted, fontFamily: earth.serif}]}>
+            “{INVITATION.body}” <Text style={styles.epigraphRef}>{INVITATION.ref}</Text>
+          </Text>
           <Text style={[styles.headingLarge, {color: earth.ink, fontFamily: earth.serif}]}>
             Manahoana ny toe-ponao ankehitriny?
           </Text>
-          <VerseQuote verse={INVITATION} earth={earth} size="small" />
           {/* People know how they feel; some choose not to say, and that
               choice comes first. Only before a first choice, so it never
               drops plans already chosen. MG copy is the user's. */}
@@ -466,11 +470,6 @@ const TenyHoAnaoScreen = () => {
             <FeelingTile
               label="Misafidy ny tsy hilaza"
               hint="Ny programa tsotra no hiseho eo amin'ny widget."
-              art={
-                <View style={[styles.unsureArt, {backgroundColor: earth.chip}]}>
-                  <Text style={[styles.unsureMark, {color: earth.muted, fontFamily: earth.serif}]}>?</Text>
-                </View>
-              }
               on={feeling === 'unsure'}
               earth={earth}
               onPress={() => setFeeling(feeling === 'unsure' ? null : 'unsure')}
@@ -794,6 +793,8 @@ const styles = StyleSheet.create({
   // The feeling step is meant to fit a usual phone without scrolling.
   scrollTight: {paddingBottom: 12, gap: 10},
   headingLarge: {fontSize: 25, lineHeight: 31, fontWeight: '600'},
+  epigraph: {fontSize: 13, lineHeight: 19, fontStyle: 'italic'},
+  epigraphRef: {fontStyle: 'normal', fontWeight: '700'},
   heading: {fontSize: 23, lineHeight: 30, fontWeight: '600'},
   lead: {fontSize: 16, lineHeight: 24, marginBottom: 8},
   hint: {fontSize: 14, lineHeight: 19},
@@ -833,8 +834,6 @@ const styles = StyleSheet.create({
   tileLabel: {fontSize: 17, lineHeight: 22, fontWeight: '700'},
   tileWide: {flexBasis: 'auto', minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8},
   tileHint: {fontSize: 13, lineHeight: 17},
-  unsureArt: {width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center'},
-  unsureMark: {fontSize: 20, fontWeight: '600'},
   feelingChip: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
@@ -856,7 +855,6 @@ const styles = StyleSheet.create({
   sampleText: {fontSize: 14, fontWeight: '700'},
   quoteBox: {borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, marginTop: 4, marginBottom: 6},
   verse: {gap: 10},
-  verseSmall: {fontSize: 15, lineHeight: 22},
   verseText: {fontSize: 17, lineHeight: 26},
   verseLarge: {fontSize: 23, lineHeight: 33},
   refRow: {flexDirection: 'row', alignItems: 'center', gap: 10},
@@ -900,6 +898,6 @@ const styles = StyleSheet.create({
   linkRow: {flexDirection: 'row', alignItems: 'center', minHeight: 56},
 });
 
-const VERSE_SIZE = {small: styles.verseSmall, medium: styles.verseText, large: styles.verseLarge};
+const VERSE_SIZE = {medium: styles.verseText, large: styles.verseLarge};
 
 export default TenyHoAnaoScreen;
