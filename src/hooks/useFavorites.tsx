@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BibleVerse } from '../hooks/useBibleData';
 import { FAVORITES_KEY } from '../constants/favorites';
-import { onWidgetHearts, syncDailyVerseWidget, takeWidgetHearts } from '../services/widget/dailyVerseWidget';
+import { onWidgetHearts, readWidgetHearts, syncDailyVerseWidget } from '../services/widget/dailyVerseWidget';
 
 export interface FavoriteVerse extends BibleVerse {
   bookName: string;
@@ -126,10 +126,12 @@ export const FavoritesProvider: React.FC<{children: React.ReactNode}> = ({childr
   // Hearts tapped on the home-screen widget: folded in once the stored list
   // is loaded (an earlier write would replace it), then each time the app
   // comes back to the front or records one itself (the iOS 15-16 link).
+  // Adding or removing is idempotent, so overlapping runs are harmless; the
+  // next feed clears the hearts it shows.
   useEffect(() => {
     if (isLoading) return;
     const applyWidgetHearts = async () => {
-      for (const heart of await takeWidgetHearts()) {
+      for (const heart of await readWidgetHearts()) {
         for (const verse of heart.verses) {
           if (heart.on) await addToFavorites(verse, verse.bookName);
           else await removeFromFavorites(verse);

@@ -7,7 +7,7 @@ import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
 import {findPrimaryColorOption, PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {lookForColor, nightLook, widgetInk, type ShareCardLook, type WidgetInk} from '../../utils/shareCard';
 import {isoDay} from '../../utils/isoDay';
-import {isCheckInDay, planPosition, situationSchedule, type ActiveSituation} from '../../utils/lifeSituations';
+import {isCheckInDay, planPosition, situationById, situationSchedule, type ActiveSituation} from '../../utils/lifeSituations';
 import {dailyVerseFor, type VerseRef} from '../../constants/dailyVerses';
 import type {BibleVerse} from '../../hooks/useBibleData';
 import {FAVORITES_KEY} from '../../constants/favorites';
@@ -33,7 +33,8 @@ import {loadTenyHoAnao} from '../lifeSituations/situationStore';
  *
  * The widget's heart writes the wanted state of a verse into
  * WIDGET_FAVORITES_NAME, next to the feed; the app folds it into its
- * favorites (takeWidgetHearts) and the next feed carries the new `fav`.
+ * favorites (readWidgetHearts), and a heart leaves the file only once a feed
+ * built from the favorites shows it, so none is lost on the way.
  *
  * NOTE: 60-day window — a phone that doesn't open the app for two months
  * shows the widget's built-in "open the app" fallback until the next launch.
@@ -41,7 +42,7 @@ import {loadTenyHoAnao} from '../lifeSituations/situationStore';
 
 export const WIDGET_FILE_NAME = 'dailyVerse.json';
 export const WIDGET_IMAGE_NAME = 'widgetBackground.jpg';
-export const WIDGET_FAVORITES_NAME = 'widgetFavorites.json';
+const WIDGET_FAVORITES_NAME = 'widgetFavorites.json';
 export const IOS_APP_GROUP = 'group.com.ebaiboly.app';
 const WIDGET_WINDOW_DAYS = 60;
 const STORAGE_KEY_LOOK = 'settings.widget.look';
@@ -75,17 +76,12 @@ const CHECK_IN_CARD = {
 // Placeholder MG copy — user-owned.
 export const CALENDAR_LABEL = 'Fampaherezana';
 
-// A plan day's label, so the person knows the verse is from their plan.
-// Never the situation's name, for the same reason as the check-in card.
-// Placeholder MG copy — user-owned.
-const planLabel = (
-  id: ActiveSituation['id'],
-  situations: ReadonlyArray<ActiveSituation>,
-  date: Date,
-  since?: string,
-): string => {
-  const {shown, days} = planPosition(id, situations, date, since);
-  return days ? `Teny ho anao · ${shown}/${days}` : 'Teny ho anao';
+// A plan day's label, `shown` being the plan verses shown up to that day, so
+// the person knows the verse is from their plan. Never the situation's name,
+// for the same reason as the check-in card. Placeholder MG copy — user-owned.
+const planLabel = (id: ActiveSituation['id'], shown: number): string => {
+  const days = situationById(id)?.days;
+  return days ? `Teny ho anao · ${Math.min(shown, days)}/${days}` : 'Teny ho anao';
 };
 
 export const verseDeepLink = (v: {bookId: number; bookName: string; chapter: number; verse: number}) =>
@@ -211,9 +207,32 @@ const versesIn = (ref: VerseRef): number[] =>
 const heartsPath = async () => `${await widgetDir()}/${WIDGET_FAVORITES_NAME}`;
 
 const readHearts = async (): Promise<Record<string, boolean>> => {
-  const path = await heartsPath();
-  if (!(await RNFS.exists(path))) return {};
-  return JSON.parse(await RNFS.readFile(path, 'utf8')) as Record<string, boolean>;
+  try {
+    const path = await heartsPath();
+    if (!(await RNFS.exists(path))) return {};
+    return JSON.parse(await RNFS.readFile(path, 'utf8')) as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+};
+
+// Drops the hearts the favorites already show; the others wait for the app.
+const forgetShownHearts = async (favorites: Set<string>): Promise<void> => {
+  try {
+    const hearts = await readHearts();
+    if (Object.keys(hearts).length === 0) return;
+    const waiting = Object.fromEntries(
+      Object.entries(hearts).filter(([key, on]) => {
+        const ref = parseVerseKey(key);
+        return !!ref && versesIn(ref).some(v => favorites.has(`${ref.b}:${ref.c}:${v}`) !== on);
+      }),
+    );
+    const path = await heartsPath();
+    if (Object.keys(waiting).length === 0) await RNFS.unlink(path);
+    else await RNFS.writeFile(path, JSON.stringify(waiting), 'utf8');
+  } catch (error) {
+    reportSchedulingFailure('widgetHearts', error);
+  }
 };
 
 // Lets the favorites provider fold in a heart the app itself recorded (the
@@ -240,16 +259,16 @@ export const recordWidgetHeart = async (key: string, on: boolean): Promise<void>
 export type WidgetHeart = {on: boolean; verses: Array<BibleVerse & {bookName: string}>};
 
 /**
- * Hearts tapped on the widget since the app last looked, read once and
- * cleared, with each verse resolved against the bundled Bible so the
- * favorites list stores what the reader would.
+ * Hearts tapped on the widget and not yet shown by a feed, with each verse
+ * resolved against the bundled Bible so the favorites list stores what the
+ * reader would. Reading leaves them in place (see forgetShownHearts), so
+ * applying one twice is harmless and a failed or interrupted run loses none.
  */
-export const takeWidgetHearts = async (): Promise<WidgetHeart[]> => {
+export const readWidgetHearts = async (): Promise<WidgetHeart[]> => {
   try {
     const hearts = await readHearts();
     const keys = Object.keys(hearts);
     if (keys.length === 0) return [];
-    await RNFS.unlink(await heartsPath());
     await bibleDatabaseService.initDatabase();
     const out: WidgetHeart[] = [];
     for (const key of keys) {
@@ -263,12 +282,12 @@ export const takeWidgetHearts = async (): Promise<WidgetHeart[]> => {
     }
     return out;
   } catch (error) {
-    reportSchedulingFailure('takeWidgetHearts', error);
+    reportSchedulingFailure('readWidgetHearts', error);
     return [];
   }
 };
 
-type FeedDay = {
+export type WidgetDay = {
   ref: string;
   text: string;
   url: string;
@@ -282,12 +301,19 @@ type FeedDay = {
 
 const writeFeed = async (): Promise<void> => {
   await bibleDatabaseService.initDatabase(); // idempotent
-  const days: Record<string, FeedDay> = {};
+  const days: Record<string, WidgetDay> = {};
   const today = new Date();
   const tenyHoAnao = await loadTenyHoAnao();
   const situations = tenyHoAnao.onWidget ? tenyHoAnao.situations : [];
   const schedule = situationSchedule(situations, today, WIDGET_WINDOW_DAYS, tenyHoAnao.since);
   const favorites = await favoriteVerses();
+  // Plan verses shown up to yesterday, then counted on day by day: one
+  // replay of the plans instead of one per day.
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const shown = new Map(
+    situations.map(s => [s.id, planPosition(s.id, situations, yesterday, tenyHoAnao.since).shown]),
+  );
   for (let i = 0; i < WIDGET_WINDOW_DAYS; i += 1) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
@@ -305,7 +331,7 @@ const writeFeed = async (): Promise<void> => {
         text: verse.body,
         url: verseDeepLink(verse),
         dateLabel: dateLabel(date),
-        label: planned ? planLabel(planned.situationId, situations, date, tenyHoAnao.since) : CALENDAR_LABEL,
+        label: planned ? planLabel(planned.situationId, countShown(shown, planned.situationId)) : CALENDAR_LABEL,
         key,
         fav: versesIn(ref).every(v => favorites.has(`${ref.b}:${ref.c}:${v}`)),
         favUrl: `${FAVORITE_URL}?key=${key}&name=${encodeURIComponent(verse.bookName)}`,
@@ -335,29 +361,48 @@ const writeFeed = async (): Promise<void> => {
     days,
   };
   await RNFS.writeFile(`${await widgetDir()}/${WIDGET_FILE_NAME}`, JSON.stringify(payload), 'utf8');
+  await forgetShownHearts(favorites);
   // Absent where there is no native widget module (jest, unsupported platform).
   await NativeModules.DailyVerseWidget?.refresh?.();
 };
 
-// One rebuild at a time: calls during a run fold into one more run, so an
-// older feed (say, a heart not yet counted) never lands after a newer one.
-let syncing = false;
-let syncAgain = false;
+const countShown = (shown: Map<ActiveSituation['id'], number>, id: ActiveSituation['id']): number => {
+  const count = (shown.get(id) ?? 0) + 1;
+  shown.set(id, count);
+  return count;
+};
 
-export const syncDailyVerseWidget = async (): Promise<void> => {
-  if (syncing) {
-    syncAgain = true;
-    return;
-  }
-  syncing = true;
+/** Today's entry of the feed, as the widget shows it; null before the first sync. */
+export const getWidgetToday = async (): Promise<WidgetDay | null> => {
   try {
-    do {
-      syncAgain = false;
-      await writeFeed();
-    } while (syncAgain);
-  } catch (error) {
-    reportSchedulingFailure('widgetSync', error);
-  } finally {
-    syncing = false;
+    const feed = JSON.parse(await RNFS.readFile(`${await widgetDir()}/${WIDGET_FILE_NAME}`, 'utf8'));
+    return feed.days?.[isoDay(new Date())] ?? null;
+  } catch {
+    return null;
   }
+};
+
+// One rebuild at a time, so an older feed (say, a heart not yet counted)
+// never lands after a newer one. A call during a rebuild queues one more
+// run, shared by every caller meanwhile, and resolves once that run has
+// written the feed: awaiting it always means "written".
+let running: Promise<void> | null = null;
+let queued: Promise<void> | null = null;
+
+const runSync = (): Promise<void> => {
+  running = writeFeed()
+    .catch(error => reportSchedulingFailure('widgetSync', error))
+    .finally(() => {
+      running = null;
+    });
+  return running;
+};
+
+export const syncDailyVerseWidget = (): Promise<void> => {
+  if (!running) return runSync();
+  queued ??= running.then(() => {
+    queued = null;
+    return runSync();
+  });
+  return queued;
 };

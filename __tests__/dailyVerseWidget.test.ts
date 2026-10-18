@@ -4,9 +4,10 @@ import {
   DEFAULT_WIDGET_TEXT,
   parseVerseKey,
   recordWidgetHeart,
+  readWidgetHearts,
+  setWidgetLook,
   setWidgetText,
   syncDailyVerseWidget,
-  takeWidgetHearts,
   verseKey,
 } from '../src/services/widget/dailyVerseWidget';
 import {FAVORITES_KEY} from '../src/constants/favorites';
@@ -108,16 +109,39 @@ test('text settings reach the feed, and a chosen contrast inks the look', async 
   expect(feed().look.text).toBe('#1B1B1B');
 });
 
-test('hearts from the widget are read once, resolved against the Bible, then cleared', async () => {
+test('hearts from the widget are resolved against the Bible and kept until a feed shows them', async () => {
   await recordWidgetHeart('20:3:5-6', true);
   await recordWidgetHeart('19:23:1', false);
 
-  const hearts = await takeWidgetHearts();
+  const hearts = await readWidgetHearts();
   expect(hearts).toHaveLength(2);
   expect(hearts[0].on).toBe(true);
   expect(hearts[0].verses.map(v => v.verse_number)).toEqual([5, 6]);
   expect(hearts[0].verses[0]).toMatchObject({book_id: 20, chapter: 3, bookName: 'Salamo'});
   expect(hearts[1]).toMatchObject({on: false});
+  // Reading again finds them all: nothing is dropped before the favorites have it.
+  expect(await readWidgetHearts()).toHaveLength(2);
 
-  expect(await takeWidgetHearts()).toEqual([]);
+  // Only 20:3:5 is a favorite yet: the range heart waits, the "off" heart is shown.
+  await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify([{book_id: 20, chapter: 3, verse_number: 5}]));
+  await syncDailyVerseWidget();
+  expect(JSON.parse(files.get('/mock/group/widgetFavorites.json') as string)).toEqual({'20:3:5-6': true});
+
+  await AsyncStorage.setItem(
+    FAVORITES_KEY,
+    JSON.stringify([5, 6].map(v => ({book_id: 20, chapter: 3, verse_number: v}))),
+  );
+  await syncDailyVerseWidget();
+  expect(files.has('/mock/group/widgetFavorites.json')).toBe(false);
+});
+
+test('a sync asked during another resolves once the newer feed is written', async () => {
+  const first = syncDailyVerseWidget();
+  const second = setWidgetText({scale: 1.15, font: 'sans', ink: 'auto'});
+  const third = setWidgetLook({background: '#0B0B0C', text: '#F2E6D5', accent: '#FFD60A'});
+  await second;
+  expect(feed().text).toEqual({scale: 1.15, font: 'sans'});
+  await third;
+  expect(feed().look.background).toBe('#0B0B0C');
+  await first;
 });
