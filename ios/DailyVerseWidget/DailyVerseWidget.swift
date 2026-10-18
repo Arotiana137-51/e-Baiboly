@@ -125,24 +125,6 @@ private func readFeed() -> Feed? {
   return try? JSONDecoder().decode(Feed.self, from: data)
 }
 
-private func readHearts() -> [String: Bool] {
-  guard
-    let dir = groupDir(),
-    let data = try? Data(contentsOf: dir.appendingPathComponent(heartsFileName)),
-    let hearts = try? JSONDecoder().decode([String: Bool].self, from: data)
-  else { return [:] }
-  return hearts
-}
-
-private func recordHeart(key: String, on: Bool) {
-  guard let dir = groupDir() else { return }
-  var hearts = readHearts()
-  hearts[key] = on
-  if let data = try? JSONEncoder().encode(hearts) {
-    try? data.write(to: dir.appendingPathComponent(heartsFileName), options: .atomic)
-  }
-}
-
 // Widgets get ~30 MB; a gallery photo decoded at full size would blow that,
 // so it is scaled down to a card-sized bitmap once per timeline.
 private func loadPhoto(named name: String?) -> UIImage? {
@@ -165,6 +147,24 @@ private func makeLook(_ feed: FeedLook?) -> Look {
     photo: loadPhoto(named: feed.image),
     veil: feed.veil.map { Color(hex: $0.color).opacity($0.alpha) } ?? Color.black.opacity(0.45)
   )
+}
+
+private func readHearts() -> [String: Bool] {
+  guard
+    let dir = groupDir(),
+    let data = try? Data(contentsOf: dir.appendingPathComponent(heartsFileName)),
+    let hearts = try? JSONDecoder().decode([String: Bool].self, from: data)
+  else { return [:] }
+  return hearts
+}
+
+private func recordHeart(key: String, on: Bool) {
+  guard let dir = groupDir() else { return }
+  var hearts = readHearts()
+  hearts[key] = on
+  if let data = try? JSONEncoder().encode(hearts) {
+    try? data.write(to: dir.appendingPathComponent(heartsFileName), options: .atomic)
+  }
 }
 
 // No feed yet (fresh install, or the app hasn't been opened in two months).
