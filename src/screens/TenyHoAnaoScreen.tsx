@@ -186,7 +186,7 @@ const VerseQuote = ({
 );
 
 // A choice on the feeling step: a picture and its word, ticked when chosen.
-// `hint` makes it a full-width row, as for "Tsy fantatro".
+// `hint` makes it a full-width row, as for "Misafidy ny tsy hilaza".
 const FeelingTile = ({
   label,
   art,
@@ -221,7 +221,7 @@ const FeelingTile = ({
           {art}
           <View style={styles.flex}>
             <Text style={[styles.tileLabel, {color: earth.ink}]}>{label}</Text>
-            <Text style={[styles.hint, {color: earth.muted}]}>{hint}</Text>
+            <Text style={[styles.tileHint, {color: earth.muted}]}>{hint}</Text>
           </View>
           {tick}
         </>
@@ -379,7 +379,7 @@ const TenyHoAnaoScreen = () => {
   } = useTenyHoAnao();
   const [step, setStep] = useState<Exclude<Step, 'intro'>>('feeling');
   const [confirmClear, setConfirmClear] = useState(false);
-  // 'unsure': "Tsy fantatro", which keeps the Fampaherezana tsotra.
+  // 'unsure': "Misafidy ny tsy hilaza", which keeps the Fampaherezana tsotra.
   const [feeling, setFeeling] = useState<FeelingId | 'unsure' | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [openTheme, setOpenTheme] = useState<SituationTheme | null>(null);
@@ -459,12 +459,12 @@ const TenyHoAnaoScreen = () => {
             Manahoana ny toe-ponao ankehitriny?
           </Text>
           <VerseQuote verse={INVITATION} earth={earth} size="small" />
-          {/* Nobody has to name what hurts, so "Tsy fantatro" comes first.
-              Only before a first choice, so it never drops plans already
-              chosen. Placeholder MG copy — user-owned. */}
+          {/* People know how they feel; some choose not to say, and that
+              choice comes first. Only before a first choice, so it never
+              drops plans already chosen. MG copy is the user's. */}
           {state.situations.length === 0 ? (
             <FeelingTile
-              label="Tsy fantatro"
+              label="Misafidy ny tsy hilaza"
               hint="Ny programa tsotra no hiseho eo amin'ny widget."
               art={
                 <View style={[styles.unsureArt, {backgroundColor: earth.chip}]}>
@@ -496,7 +496,7 @@ const TenyHoAnaoScreen = () => {
         <StepFooter
           earth={earth}
           dots={dots('feeling')}
-          // "Tsy fantatro" ends here, keeping the Fampaherezana tsotra.
+          // Choosing not to say ends here, keeping the Fampaherezana tsotra.
           nextLabel={feeling === 'unsure' ? 'Vita' : 'Manaraka'}
           onNext={() => {
             if (feeling !== 'unsure') {
@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
   list: {flex: 1},
   scroll: {...COLUMN, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32, gap: 12},
   // The feeling step is meant to fit a usual phone without scrolling.
-  scrollTight: {paddingBottom: 12},
+  scrollTight: {paddingBottom: 12, gap: 10},
   headingLarge: {fontSize: 25, lineHeight: 31, fontWeight: '600'},
   heading: {fontSize: 23, lineHeight: 30, fontWeight: '600'},
   lead: {fontSize: 16, lineHeight: 24, marginBottom: 8},
@@ -820,20 +820,21 @@ const styles = StyleSheet.create({
   tile: {
     flexBasis: '45%',
     flexGrow: 1,
-    minHeight: 88,
+    minHeight: 76,
     borderWidth: 2,
     borderRadius: 18,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     justifyContent: 'space-between',
   },
   tileTop: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
-  tileArt: {width: 44, height: 44},
+  tileArt: {width: 40, height: 40},
   tileTick: {fontSize: 18, fontWeight: '700'},
   tileLabel: {fontSize: 17, lineHeight: 22, fontWeight: '700'},
-  tileWide: {flexBasis: 'auto', minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12},
-  unsureArt: {width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center'},
-  unsureMark: {fontSize: 24, fontWeight: '600'},
+  tileWide: {flexBasis: 'auto', minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8},
+  tileHint: {fontSize: 13, lineHeight: 17},
+  unsureArt: {width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center'},
+  unsureMark: {fontSize: 20, fontWeight: '600'},
   feelingChip: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
