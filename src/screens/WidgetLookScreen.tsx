@@ -8,7 +8,8 @@ import {LookGrid} from '../components/LookPicker';
 import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
 import {SheetButton} from '../components/SheetModal';
 import {bibleDatabaseService} from '../services/database/DatabaseService';
-import {verseForDate, type DailyVerse} from '../services/reminders/readingReminder';
+import {verseForDate} from '../services/reminders/readingReminder';
+import {dailyVerseFor} from '../constants/dailyVerses';
 import {
   CALENDAR_LABEL,
   DEFAULT_WIDGET_TEXT,
@@ -18,9 +19,12 @@ import {
   getWidgetFollowDark,
   getWidgetLook,
   getWidgetText,
+  getWidgetToday,
   setWidgetFollowDark,
   setWidgetLook,
   setWidgetText,
+  verseKey,
+  type WidgetDay,
   type WidgetFont,
   type WidgetText,
 } from '../services/widget/dailyVerseWidget';
@@ -71,7 +75,9 @@ const WidgetLookScreen = () => {
   const [look, setLookState] = useState<ShareCardLook | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
-  const [verse, setVerse] = useState<DailyVerse | null>(null);
+  // What the widget shows today: its own feed entry, so a Teny ho anao plan
+  // day or a check-in previews as it is on the home screen.
+  const [today, setToday] = useState<Pick<WidgetDay, 'ref' | 'text' | 'label' | 'key' | 'fav'> | null>(null);
   const [followDark, setFollowDark] = useState(false);
   const [text, setTextState] = useState<WidgetText>(DEFAULT_WIDGET_TEXT);
   const scheme = useColorScheme();
@@ -89,11 +95,21 @@ const WidgetLookScreen = () => {
     getWidgetText().then(stored => {
       if (!cancelled) setTextState(stored);
     });
-    bibleDatabaseService
-      .initDatabase()
-      .then(() => verseForDate(new Date()))
-      .then(today => {
-        if (!cancelled) setVerse(today);
+    // Before the first sync there is no feed yet: the calendar verse.
+    getWidgetToday()
+      .then(
+        async day =>
+          day ??
+          bibleDatabaseService
+            .initDatabase()
+            .then(() => verseForDate(new Date()))
+            .then(verse => {
+              const key = verseKey(dailyVerseFor(new Date()));
+              return verse && {ref: verse.ref, text: verse.body, label: CALENDAR_LABEL, key, fav: false};
+            }),
+      )
+      .then(day => {
+        if (!cancelled) setToday(day);
       })
       .catch(() => {});
     return () => {
@@ -186,7 +202,7 @@ const WidgetLookScreen = () => {
                 <Text style={[styles.badge, {color: shown.text, backgroundColor: hexToRgba(shown.text, 0.15)}]}>
                   {dateLabel(new Date()).toUpperCase()}
                 </Text>
-                <Text style={[styles.heart, {color: shown.text}]}>♡</Text>
+                {today?.key ? <Text style={[styles.heart, {color: shown.text}]}>{today.fav ? '♥' : '♡'}</Text> : null}
               </View>
               <Text
                 style={[
@@ -196,16 +212,16 @@ const WidgetLookScreen = () => {
                 ]}
                 numberOfLines={4}
               >
-                {verse ? `“${verse.body}”` : ''}
+                {today ? (today.key ? `“${today.text}”` : today.text) : ''}
               </Text>
               <View style={[styles.previewRule, {backgroundColor: hexToRgba(shown.text, 0.2)}]} />
               <View style={styles.previewBottom}>
-                <Text style={[styles.previewRef, {color: shown.accent}]}>{verse?.ref ?? ''}</Text>
+                <Text style={[styles.previewRef, {color: shown.accent}]}>{today?.ref ?? ''}</Text>
                 <Text style={[styles.tag, {color: shown.text, backgroundColor: hexToRgba(shown.text, 0.1)}]}>
                   {TRANSLATION}
                 </Text>
                 <Text style={[styles.mode, {color: hexToRgba(shown.text, 0.7)}]} numberOfLines={1}>
-                  {CALENDAR_LABEL.toUpperCase()}
+                  {today?.label.toUpperCase()}
                 </Text>
                 <Text style={[styles.gear, {color: hexToRgba(shown.text, 0.7)}]}>⚙</Text>
               </View>
@@ -261,7 +277,7 @@ const WidgetLookScreen = () => {
               accessibilityLabel={`${Math.round(scale * 100)}%`}
               accessibilityState={{selected: text.scale === scale}}
             >
-              <Text style={[styles.choiceText, {color: theme.colors.textPrimary, fontSize: 13 + i * 2}]}>
+              <Text style={[styles.choiceText, SIZE_STYLES[i], {color: theme.colors.textPrimary}]}>
                 {SIZE_LABELS[i]}
               </Text>
             </Pressable>
@@ -320,6 +336,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   choiceText: {fontSize: 15, fontWeight: '600'},
+  size0: {fontSize: 13},
+  size1: {fontSize: 15},
+  size2: {fontSize: 17},
+  size3: {fontSize: 19},
   swatch: {width: 16, height: 16, borderRadius: 8, borderWidth: 1},
   tile: {flexGrow: 1, flexBasis: '28%', alignItems: 'center', paddingVertical: 10, borderRadius: 14, borderWidth: 1.5},
   tileSample: {fontSize: 20},
@@ -354,5 +374,8 @@ const styles = StyleSheet.create({
   mode: {flex: 1, fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textAlign: 'right'},
   gear: {fontSize: 12},
 });
+
+// "A−" to "A++", each drawn a step larger.
+const SIZE_STYLES = [styles.size0, styles.size1, styles.size2, styles.size3];
 
 export default WidgetLookScreen;
