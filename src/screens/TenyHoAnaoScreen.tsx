@@ -465,7 +465,7 @@ const TenyHoAnaoScreen = () => {
           {state.situations.length === 0 ? (
             <FeelingTile
               label="Tsy fantatro"
-              hint="Ny « Fampaherezana tsotra » no hiseho eo amin'ny widget."
+              hint="Ny programa tsotra no hiseho eo amin'ny widget."
               art={
                 <View style={[styles.unsureArt, {backgroundColor: earth.chip}]}>
                   <Text style={[styles.unsureMark, {color: earth.muted, fontFamily: earth.serif}]}>?</Text>
