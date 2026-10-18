@@ -31,6 +31,8 @@ export const ScrollViewWithThumb = ({
   children,
   onLayout,
   onContentSizeChange,
+  onScroll,
+  scrollEventThrottle = 16,
   ...rest
 }: Props) => {
   const [viewHeight, setViewHeight] = useState(0);
@@ -52,9 +54,11 @@ export const ScrollViewWithThumb = ({
         ref={ref}
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
+        scrollEventThrottle={scrollEventThrottle}
+        // The thumb follows natively; a caller's own onScroll still runs.
         onScroll={Animated.event([{nativeEvent: {contentOffset: {y: scrollY}}}], {
           useNativeDriver: true,
+          listener: onScroll,
         })}
         onLayout={e => {
           setViewHeight(e.nativeEvent.layout.height);
