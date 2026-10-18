@@ -17,6 +17,7 @@ import {
   type SituationTheme,
 } from '../constants/lifeSituations';
 import {todaysWidgetRef, useVerse} from '../hooks/useSituationVerse';
+import {dailyVerseFor} from '../constants/dailyVerses';
 import type {DailyVerse} from '../services/reminders/readingReminder';
 import {planPosition, situationById, type ActiveSituation} from '../utils/lifeSituations';
 import {mixHex} from '../utils/colorUtils';
@@ -218,7 +219,8 @@ const FeelingTile = ({
 // ticks it; "Ohatra" is its own button (so it doesn't tick) and opens the
 // plan's first verse underneath, outside the tick area.
 const SituationChoice = ({
-  situation,
+  label,
+  hint,
   chosen,
   sample,
   onToggle,
@@ -226,7 +228,8 @@ const SituationChoice = ({
   earth,
   framed,
 }: {
-  situation: LifeSituation;
+  label: string;
+  hint: string;
   chosen: boolean;
   // undefined: closed; null: open, the verse still loading.
   sample: DailyVerse | null | undefined;
@@ -249,8 +252,8 @@ const SituationChoice = ({
       accessibilityState={{checked: chosen}}
     >
       <View style={styles.flex}>
-        <Text style={[styles.itemTitle, {color: earth.ink}]}>{situation.label}</Text>
-        <Text style={[styles.hint, {color: earth.muted}]}>{lengthLabel(situation)}</Text>
+        <Text style={[styles.itemTitle, {color: earth.ink}]}>{label}</Text>
+        <Text style={[styles.hint, {color: earth.muted}]}>{hint}</Text>
       </View>
       <View
         style={[
@@ -346,6 +349,7 @@ const TenyHoAnaoScreen = () => {
     draft,
     startEditing,
     cancelEditing,
+    clearDraft,
     toggleDraft,
     moveDraft,
     commitDraft,
@@ -355,8 +359,11 @@ const TenyHoAnaoScreen = () => {
   const [feeling, setFeeling] = useState<FeelingId | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [openTheme, setOpenTheme] = useState<SituationTheme | null>(null);
-  const [sampleId, setSampleId] = useState<SituationId | null>(null);
-  const sample = useVerse(sampleId ? situationById(sampleId)?.verses[0] ?? null : null);
+  // 'default': the Fampaherezana tsotra card, whose sample is today's calendar verse.
+  const [sampleId, setSampleId] = useState<SituationId | 'default' | null>(null);
+  const sample = useVerse(
+    sampleId === 'default' ? dailyVerseFor(new Date()) : sampleId ? situationById(sampleId)?.verses[0] ?? null : null,
+  );
   // Only the summary shows it.
   const todayVerse = useVerse(loaded && !draft && state.situations.length > 0 ? todaysWidgetRef(state) : null);
 
@@ -456,7 +463,7 @@ const TenyHoAnaoScreen = () => {
             >
               <Text style={[styles.unsureTitle, {color: earth.accentText}]}>Tsy fantatro</Text>
               <Text style={[styles.hint, {color: earth.muted}]}>
-                Ny teny isan'andro mahazatra no hiseho eo amin'ny widget.
+                Ny « Fampaherezana tsotra » no hiseho eo amin'ny widget.
               </Text>
             </Pressable>
           ) : null}
@@ -480,7 +487,8 @@ const TenyHoAnaoScreen = () => {
     const renderChoice = (situation: LifeSituation, framed: boolean) => (
       <SituationChoice
         key={situation.id}
-        situation={situation}
+        label={situation.label}
+        hint={lengthLabel(situation)}
         chosen={chosen.has(situation.id)}
         sample={sampleId === situation.id ? sample : undefined}
         onToggle={() => toggleDraft(situation.id)}
@@ -496,6 +504,19 @@ const TenyHoAnaoScreen = () => {
             Safidio ny karazana teny fampaherezana tianao hiseho eo amin'ny widget
           </Text>
           <Text style={[styles.lead, {color: earth.muted}]}>Azonao atao ny misafidy maromaro.</Text>
+
+          {/* The general calendar: ticked until a situation is chosen, and
+              ticking it again clears them. Placeholder MG copy — user-owned. */}
+          <SituationChoice
+            label="Fampaherezana tsotra"
+            hint="Andininy iray isan'andro"
+            chosen={count === 0}
+            sample={sampleId === 'default' ? sample : undefined}
+            onToggle={clearDraft}
+            onSample={() => setSampleId(id => (id === 'default' ? null : 'default'))}
+            earth={earth}
+            framed
+          />
 
           {picked ? (
             <>
@@ -552,8 +573,15 @@ const TenyHoAnaoScreen = () => {
           dots={dots('choose')}
           // With one situation there is nothing to order: finish here.
           nextLabel={count > 1 ? 'Manaraka' : 'Vita'}
-          onNext={() => (count > 1 ? setStep('order') : commitDraft())}
-          nextDisabled={count === 0}
+          onNext={() => {
+            if (count > 1) {
+              setStep('order');
+              return;
+            }
+            commitDraft();
+            // Fampaherezana tsotra: no plan to sum up, back where the person came from.
+            if (count === 0) leave();
+          }}
           backLabel="Hiverina"
           onBack={() => setStep('feeling')}
         />

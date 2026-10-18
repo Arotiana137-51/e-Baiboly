@@ -98,6 +98,8 @@ export const useTenyHoAnao = () => {
     setDraft(draftBase.current);
   }, []);
   const cancelEditing = useCallback(() => setDraft(null), []);
+  // Back to the default choice, the general calendar ("Fampaherezana tsotra").
+  const clearDraft = useCallback(() => setDraft(d => d && {...d, situations: []}), []);
   const toggleDraft = useCallback(
     (id: SituationId) =>
       setDraft(d => {
@@ -138,6 +140,7 @@ export const useTenyHoAnao = () => {
     draft,
     startEditing,
     cancelEditing,
+    clearDraft,
     toggleDraft,
     moveDraft,
     commitDraft,
