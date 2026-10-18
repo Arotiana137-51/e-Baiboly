@@ -48,9 +48,9 @@ const COMFORT_ONLY: SituationId[] = [
 ];
 
 describe('lifeSituations content', () => {
-  it('has the 36 agreed plans with their shapes', () => {
-    expect(LIFE_SITUATIONS).toHaveLength(36);
-    expect(new Set(LIFE_SITUATIONS.map(s => s.id)).size).toBe(36);
+  it('has the 43 agreed plans with their shapes', () => {
+    expect(LIFE_SITUATIONS).toHaveLength(43);
+    expect(new Set(LIFE_SITUATIONS.map(s => s.id)).size).toBe(43);
     for (const s of LIFE_SITUATIONS) {
       if (s.kind === 'long') {
         expect(s.days).toBeUndefined();

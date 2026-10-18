@@ -54,7 +54,14 @@ export type SituationId =
   | 'caregiver'
   | 'insomnia'
   | 'pregnancy'
-  | 'addictedrelative';
+  | 'addictedrelative'
+  | 'rejoice'
+  | 'answered'
+  | 'healed'
+  | 'success'
+  | 'newborn'
+  | 'wedding'
+  | 'birthday';
 
 export type SituationKind = 'short' | 'season' | 'long';
 
@@ -1111,12 +1118,178 @@ export const LIFE_SITUATIONS: ReadonlyArray<LifeSituation> = [
       {b: 20, c: 3, v: 5}, // Ohabolana 3:5
     ],
   },
+  // Glad moments: Scripture asks to rejoice at all times (Filipiana 4:4), so
+  // gladness has its plans too. They may share verses with the calendar.
+  // Placeholder MG labels — user-owned.
+  {
+    id: 'rejoice',
+    label: 'Fifaliana mandrakariva',
+    kind: 'long',
+    checkEvery: 14,
+    verses: [
+      {b: 50, c: 4, v: 4}, // Filipiana 4:4
+      {b: 52, c: 5, v: 16, to: 18}, // 1 Tesaloniana 5:16-18
+      {b: 19, c: 118, v: 24}, // Salamo 118:24
+      {b: 35, c: 3, v: 18}, // Habakoka 3:18
+      {b: 19, c: 16, v: 11}, // Salamo 16:11
+      {b: 43, c: 15, v: 11}, // Jaona 15:11
+      {b: 45, c: 15, v: 13}, // Romana 15:13
+      {b: 19, c: 100, v: 2}, // Salamo 100:2
+      {b: 19, c: 126, v: 3}, // Salamo 126:3
+      {b: 36, c: 3, v: 17}, // Zefania 3:17
+      {b: 19, c: 34, v: 3}, // Salamo 34:3
+      {b: 19, c: 32, v: 11}, // Salamo 32:11
+      {b: 19, c: 5, v: 11}, // Salamo 5:11
+      {b: 19, c: 28, v: 7}, // Salamo 28:7
+      {b: 19, c: 63, v: 3}, // Salamo 63:3
+      {b: 19, c: 92, v: 4}, // Salamo 92:4
+      {b: 19, c: 95, v: 1}, // Salamo 95:1
+      {b: 19, c: 98, v: 4}, // Salamo 98:4
+      {b: 19, c: 145, v: 2}, // Salamo 145:2
+      {b: 19, c: 146, v: 2}, // Salamo 146:2
+      {b: 19, c: 150, v: 6}, // Salamo 150:6
+      {b: 23, c: 12, v: 3}, // Isaia 12:3
+      {b: 23, c: 55, v: 12}, // Isaia 55:12
+      {b: 43, c: 16, v: 22}, // Jaona 16:22
+      {b: 43, c: 16, v: 24}, // Jaona 16:24
+      {b: 19, c: 4, v: 7}, // Salamo 4:7
+      {b: 19, c: 19, v: 8}, // Salamo 19:8
+      {b: 19, c: 33, v: 1}, // Salamo 33:1
+      {b: 19, c: 68, v: 3}, // Salamo 68:3
+      {b: 19, c: 104, v: 33}, // Salamo 104:33
+      {b: 20, c: 17, v: 22}, // Ohabolana 17:22
+      {b: 45, c: 12, v: 12}, // Romana 12:12
+      {b: 47, c: 9, v: 15}, // 2 Korintiana 9:15
+      {b: 19, c: 97, v: 12}, // Salamo 97:12
+      {b: 19, c: 149, v: 4}, // Salamo 149:4
+    ],
+  },
+  {
+    id: 'answered',
+    label: 'Vavaka voavaly',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 116, v: 1, to: 2}, // Salamo 116:1-2
+      {b: 19, c: 66, v: 19, to: 20}, // Salamo 66:19-20
+      {b: 19, c: 118, v: 21}, // Salamo 118:21
+      {b: 19, c: 138, v: 3}, // Salamo 138:3
+      {b: 19, c: 34, v: 4}, // Salamo 34:4
+      {b: 19, c: 28, v: 6}, // Salamo 28:6
+      {b: 19, c: 40, v: 1}, // Salamo 40:1
+      // spares
+      {b: 24, c: 33, v: 3}, // Jeremia 33:3
+      {b: 19, c: 6, v: 9}, // Salamo 6:9
+      {b: 62, c: 5, v: 14}, // 1 Jaona 5:14
+    ],
+  },
+  {
+    id: 'healed',
+    label: 'Sitrana',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 30, v: 2}, // Salamo 30:2
+      {b: 19, c: 103, v: 2, to: 3}, // Salamo 103:2-3
+      {b: 19, c: 107, v: 20}, // Salamo 107:20
+      {b: 23, c: 38, v: 17}, // Isaia 38:17
+      {b: 19, c: 116, v: 8}, // Salamo 116:8
+      {b: 19, c: 118, v: 17}, // Salamo 118:17
+      {b: 24, c: 17, v: 14}, // Jeremia 17:14
+      // spares
+      {b: 19, c: 30, v: 11, to: 12}, // Salamo 30:11-12
+      {b: 19, c: 116, v: 12}, // Salamo 116:12
+      {b: 39, c: 3, v: 20}, // Malakia 3:20
+    ],
+  },
+  {
+    id: 'success',
+    label: 'Fahombiazana',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 115, v: 1}, // Salamo 115:1
+      {b: 59, c: 1, v: 17}, // Jakoba 1:17
+      {b: 46, c: 15, v: 57}, // 1 Korintiana 15:57
+      {b: 19, c: 118, v: 23}, // Salamo 118:23
+      {b: 20, c: 16, v: 3}, // Ohabolana 16:3
+      {b: 51, c: 3, v: 17}, // Kolosiana 3:17
+      {b: 19, c: 90, v: 17}, // Salamo 90:17
+      // spares
+      {b: 13, c: 29, v: 12}, // 1 Tantara 29:12
+      {b: 19, c: 37, v: 4}, // Salamo 37:4
+      {b: 50, c: 4, v: 13}, // Filipiana 4:13
+    ],
+  },
+  {
+    id: 'newborn',
+    label: 'Zaza vao teraka',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 127, v: 3}, // Salamo 127:3
+      {b: 19, c: 139, v: 13, to: 14}, // Salamo 139:13-14
+      {b: 43, c: 16, v: 21}, // Jaona 16:21
+      {b: 9, c: 1, v: 27}, // 1 Samoela 1:27
+      {b: 4, c: 6, v: 24, to: 26}, // Nomery 6:24-26
+      {b: 23, c: 54, v: 13}, // Isaia 54:13
+      {b: 40, c: 19, v: 14}, // Matio 19:14
+      // spares
+      {b: 19, c: 128, v: 3}, // Salamo 128:3
+      {b: 20, c: 22, v: 6}, // Ohabolana 22:6
+      {b: 42, c: 1, v: 58}, // Lioka 1:58
+    ],
+  },
+  {
+    id: 'wedding',
+    label: 'Mpivady vao',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 1, c: 2, v: 24}, // Genesisy 2:24
+      {b: 21, c: 4, v: 9}, // Mpitoriteny 4:9
+      {b: 19, c: 34, v: 3}, // Salamo 34:3
+      {b: 51, c: 3, v: 14}, // Kolosiana 3:14
+      {b: 62, c: 4, v: 7}, // 1 Jaona 4:7
+      {b: 21, c: 4, v: 12}, // Mpitoriteny 4:12
+      {b: 41, c: 10, v: 9}, // Marka 10:9
+      // spares
+      {b: 45, c: 12, v: 10}, // Romana 12:10
+      {b: 60, c: 4, v: 8}, // 1 Petera 4:8
+      {b: 8, c: 1, v: 16}, // Rota 1:16
+    ],
+  },
+  {
+    id: 'birthday',
+    label: 'Tsingerin-taona',
+    kind: 'short',
+    days: 7,
+    checkEvery: 7,
+    verses: [
+      {b: 19, c: 118, v: 24}, // Salamo 118:24
+      {b: 19, c: 139, v: 16}, // Salamo 139:16
+      {b: 19, c: 90, v: 12}, // Salamo 90:12
+      {b: 19, c: 65, v: 11}, // Salamo 65:11
+      {b: 19, c: 23, v: 6}, // Salamo 23:6
+      {b: 19, c: 16, v: 6}, // Salamo 16:6
+      {b: 4, c: 6, v: 24, to: 26}, // Nomery 6:24-26
+      // spares
+      {b: 25, c: 3, v: 22, to: 23}, // Fitomaniana 3:22-23
+      {b: 24, c: 29, v: 11}, // Jeremia 29:11
+      {b: 19, c: 103, v: 2}, // Salamo 103:2
+    ],
+  },
 ];
 
 // The choice list is grouped by what a situation touches in a life, not by
 // how long its plan runs (that stays under each label). Titles are
 // placeholder MG copy — user-owned.
-export type SituationTheme = 'heart' | 'family' | 'health' | 'life' | 'hardship' | 'faith';
+export type SituationTheme = 'heart' | 'family' | 'health' | 'life' | 'hardship' | 'faith' | 'joy';
 
 export const SITUATION_THEMES: ReadonlyArray<{theme: SituationTheme; title: string}> = [
   {theme: 'heart', title: 'Ny ao am-po'},
@@ -1125,6 +1298,7 @@ export const SITUATION_THEMES: ReadonlyArray<{theme: SituationTheme; title: stri
   {theme: 'life', title: 'Fiainana andavanandro'},
   {theme: 'hardship', title: 'Loza, herisetra ary tsy rariny'},
   {theme: 'faith', title: 'Finoana'},
+  {theme: 'joy', title: 'Fifaliana sy fisaorana'},
 ];
 
 // Every situation in exactly one theme: a Record, so a new id that is left out
@@ -1165,7 +1339,14 @@ export const SITUATION_THEME: Record<SituationId, SituationTheme> = {
   faraway: 'faith',
   guilt: 'faith',
   temptation: 'faith',
-  thanks: 'faith',
+  thanks: 'joy',
+  rejoice: 'joy',
+  answered: 'joy',
+  healed: 'joy',
+  success: 'joy',
+  newborn: 'joy',
+  wedding: 'joy',
+  birthday: 'joy',
 };
 
 // "How is your heart?", above the list: a feeling, said without having to find
@@ -1195,5 +1376,9 @@ export const FEELINGS: ReadonlyArray<{
   },
   {id: 'angry', label: 'Tezitra', situations: ['anger', 'injustice', 'conflict', 'betrayed', 'family']},
   {id: 'ashamed', label: 'Menatra', situations: ['shame', 'guilt', 'temptation', 'prison', 'addictedrelative']},
-  {id: 'thankful', label: 'Faly', situations: ['thanks', 'newfaith']},
+  {
+    id: 'thankful',
+    label: 'Faly',
+    situations: ['rejoice', 'thanks', 'answered', 'healed', 'success', 'newborn', 'wedding', 'birthday', 'newfaith'],
+  },
 ];
