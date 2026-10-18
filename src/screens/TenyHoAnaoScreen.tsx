@@ -42,6 +42,7 @@ const THEME_DOT: Record<SituationTheme, string> = {
   life: '#B9A58C',
   hardship: '#B5735A',
   faith: '#8F9A63',
+  joy: '#E2B07A',
 };
 
 // Under the feeling question (MG1865 text, as in the reader).
@@ -55,7 +56,6 @@ const INVITATION = {
 const COLUMN = {width: '100%', maxWidth: 560, alignSelf: 'center'} as const;
 
 type Step = 'intro' | 'feeling' | 'choose' | 'order';
-type Feeling = (typeof FEELINGS)[number];
 
 const lengthLabel = (situation: LifeSituation): string =>
   situation.days
@@ -185,35 +185,58 @@ const VerseQuote = ({
   </View>
 );
 
+// A choice on the feeling step: a picture and its word, ticked when chosen.
+// `hint` makes it a full-width row, as for "Tsy fantatro".
 const FeelingTile = ({
-  feeling,
+  label,
+  art,
+  hint,
   on,
   onPress,
   earth,
 }: {
-  feeling: Feeling;
+  label: string;
+  art: React.ReactNode;
+  hint?: string;
   on: boolean;
   onPress: () => void;
   earth: EarthTheme;
-}) => (
-  <Pressable
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityState={{selected: on}}
-    style={[
-      styles.tile,
-      on
-        ? {borderColor: earth.accentText, backgroundColor: earth.accentTint}
-        : {borderColor: earth.line, backgroundColor: earth.card},
-    ]}
-  >
-    <View style={styles.tileTop}>
-      <Image source={FEELING_ART[feeling.id]} style={styles.tileArt} />
-      {on ? <Text style={[styles.tileTick, {color: earth.accentText}]}>✓</Text> : null}
-    </View>
-    <Text style={[styles.tileLabel, {color: earth.ink}]}>{feeling.label}</Text>
-  </Pressable>
-);
+}) => {
+  const tick = on ? <Text style={[styles.tileTick, {color: earth.accentText}]}>✓</Text> : null;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{selected: on}}
+      style={[
+        styles.tile,
+        hint ? styles.tileWide : null,
+        on
+          ? {borderColor: earth.accentText, backgroundColor: earth.accentTint}
+          : {borderColor: earth.line, backgroundColor: earth.card},
+      ]}
+    >
+      {hint ? (
+        <>
+          {art}
+          <View style={styles.flex}>
+            <Text style={[styles.tileLabel, {color: earth.ink}]}>{label}</Text>
+            <Text style={[styles.hint, {color: earth.muted}]}>{hint}</Text>
+          </View>
+          {tick}
+        </>
+      ) : (
+        <>
+          <View style={styles.tileTop}>
+            {art}
+            {tick}
+          </View>
+          <Text style={[styles.tileLabel, {color: earth.ink}]}>{label}</Text>
+        </>
+      )}
+    </Pressable>
+  );
+};
 
 // One situation to choose, as its own card or as a row in a theme. The top
 // ticks it; "Ohatra" is its own button (so it doesn't tick) and opens the
@@ -356,7 +379,8 @@ const TenyHoAnaoScreen = () => {
   } = useTenyHoAnao();
   const [step, setStep] = useState<Exclude<Step, 'intro'>>('feeling');
   const [confirmClear, setConfirmClear] = useState(false);
-  const [feeling, setFeeling] = useState<FeelingId | null>(null);
+  // 'unsure': "Tsy fantatro", which keeps the Fampaherezana tsotra.
+  const [feeling, setFeeling] = useState<FeelingId | 'unsure' | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [openTheme, setOpenTheme] = useState<SituationTheme | null>(null);
   // 'default': the Fampaherezana tsotra card, whose sample is today's calendar verse.
@@ -435,12 +459,30 @@ const TenyHoAnaoScreen = () => {
             Manahoana ny toe-ponao ankehitriny?
           </Text>
           <VerseQuote verse={INVITATION} earth={earth} size="small" />
+          {/* Nobody has to name what hurts, so "Tsy fantatro" comes first.
+              Only before a first choice, so it never drops plans already
+              chosen. Placeholder MG copy — user-owned. */}
+          {state.situations.length === 0 ? (
+            <FeelingTile
+              label="Tsy fantatro"
+              hint="Ny « Fampaherezana tsotra » no hiseho eo amin'ny widget."
+              art={
+                <View style={[styles.unsureArt, {backgroundColor: earth.chip}]}>
+                  <Text style={[styles.unsureMark, {color: earth.muted, fontFamily: earth.serif}]}>?</Text>
+                </View>
+              }
+              on={feeling === 'unsure'}
+              earth={earth}
+              onPress={() => setFeeling(feeling === 'unsure' ? null : 'unsure')}
+            />
+          ) : null}
           {/* Optional: a feeling brings what may fit to the top, ticks nothing. */}
           <View style={styles.tiles}>
             {FEELINGS.map(f => (
               <FeelingTile
                 key={f.id}
-                feeling={f}
+                label={f.label}
+                art={<Image source={FEELING_ART[f.id]} style={styles.tileArt} />}
                 on={feeling === f.id}
                 earth={earth}
                 onPress={() => {
@@ -450,29 +492,20 @@ const TenyHoAnaoScreen = () => {
               />
             ))}
           </View>
-          {/* Nobody has to name what hurts. Only before a first choice, so it
-              never drops plans already chosen. */}
-          {state.situations.length === 0 ? (
-            <Pressable
-              onPress={() => {
-                cancelEditing();
-                leave();
-              }}
-              style={styles.unsure}
-              accessibilityRole="button"
-            >
-              <Text style={[styles.unsureTitle, {color: earth.accentText}]}>Tsy fantatro</Text>
-              <Text style={[styles.hint, {color: earth.muted}]}>
-                Ny « Fampaherezana tsotra » no hiseho eo amin'ny widget.
-              </Text>
-            </Pressable>
-          ) : null}
         </ScrollViewWithThumb>
         <StepFooter
           earth={earth}
           dots={dots('feeling')}
-          nextLabel="Manaraka"
-          onNext={() => setStep('choose')}
+          // "Tsy fantatro" ends here, keeping the Fampaherezana tsotra.
+          nextLabel={feeling === 'unsure' ? 'Vita' : 'Manaraka'}
+          onNext={() => {
+            if (feeling !== 'unsure') {
+              setStep('choose');
+              return;
+            }
+            cancelEditing();
+            leave();
+          }}
           backLabel="Hiverina"
           onBack={cancelEditing}
         />
@@ -798,8 +831,9 @@ const styles = StyleSheet.create({
   tileArt: {width: 44, height: 44},
   tileTick: {fontSize: 18, fontWeight: '700'},
   tileLabel: {fontSize: 17, lineHeight: 22, fontWeight: '700'},
-  unsure: {paddingVertical: 4, gap: 3},
-  unsureTitle: {fontSize: 16, fontWeight: '700'},
+  tileWide: {flexBasis: 'auto', minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12},
+  unsureArt: {width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center'},
+  unsureMark: {fontSize: 24, fontWeight: '600'},
   feelingChip: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
