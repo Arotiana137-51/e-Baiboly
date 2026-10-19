@@ -298,7 +298,16 @@ const WidgetLookScreen = () => {
             thumbColor="#FFFFFF"
           />
         </View>
-        {look ? <LookGrid look={look} photoUri={photoUri} onSelect={apply} onPickPhoto={pickPhoto} /> : null}
+        {/* Placeholder MG copy — user-owned. */}
+        {look ? (
+          <LookGrid
+            look={look}
+            photoUri={photoUri}
+            onSelect={apply}
+            onPickPhoto={pickPhoto}
+            photoLabel="Atao sary ny fond ny widget"
+          />
+        ) : null}
       </ScrollViewWithThumb>
 
       <View style={[styles.footer, {borderTopColor: theme.colors.divider}]}>
