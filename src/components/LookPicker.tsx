@@ -1,6 +1,7 @@
 import React from 'react';
 import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useTheme} from '../contexts/ThemeContext';
+import {useEarthTheme} from '../hooks/useEarthTheme';
 import {PRIMARY_COLOR_OPTIONS} from '../theme/personalizationPalette';
 import {byHue} from '../utils/colorUtils';
 import {lookForColor, PRESET_LOOKS, type ShareCardLook} from '../utils/shareCard';
@@ -70,6 +71,7 @@ export const LookPicker = ({look, photoUri, onSelect, onPickPhoto}: LookPickerPr
 // Every look at once, for the widget screen: a labelled photo row, the
 // designed looks as small cards that show their text and reference colours,
 // then the whole palette as a grid of circles, like the app's own colour screen.
+// In the earth colours of Teny ho anao, like the screen it sits on.
 export const LookGrid = ({
   look,
   photoUri,
@@ -77,26 +79,26 @@ export const LookGrid = ({
   onPickPhoto,
   photoLabel,
 }: LookPickerProps & {photoLabel: string}) => {
-  const {theme} = useTheme();
+  const earth = useEarthTheme();
   const ring = (on: boolean) =>
-    on ? [styles.ringOn, {borderColor: theme.colors.accentBlue}] : {borderColor: theme.colors.divider};
+    on ? [styles.ringOn, {borderColor: earth.accentText}] : {borderColor: earth.line};
   return (
     <View style={styles.grid}>
       <Pressable
         onPress={onPickPhoto}
-        style={[styles.photoRow, {backgroundColor: theme.colors.backgroundSecondary}, ring(!!look.imageUri)]}
+        style={[styles.photoRow, {backgroundColor: earth.card}, ring(!!look.imageUri)]}
         accessibilityRole="button"
         accessibilityLabel={photoLabel}
         accessibilityState={{selected: !!look.imageUri}}
       >
-        <View style={[styles.photoRowThumb, {backgroundColor: theme.colors.backgroundTertiary}]}>
+        <View style={[styles.photoRowThumb, {backgroundColor: earth.chip}]}>
           {photoUri ? (
             <Image source={{uri: photoUri}} style={styles.photoThumb} />
           ) : (
-            <Text style={[styles.photoPlus, {color: theme.colors.textPrimary}]}>+</Text>
+            <Text style={[styles.photoPlus, {color: earth.ink}]}>+</Text>
           )}
         </View>
-        <Text style={[styles.photoRowLabel, {color: theme.colors.textPrimary}]}>{photoLabel}</Text>
+        <Text style={[styles.photoRowLabel, {color: earth.ink}]}>{photoLabel}</Text>
       </Pressable>
       <View style={styles.cards}>
         {PRESET_LOOKS.map(preset => (
