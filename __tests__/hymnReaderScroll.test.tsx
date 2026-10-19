@@ -6,6 +6,7 @@
  * must not turn either into a crash.
  */
 import React from 'react';
+import { FlatList } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
@@ -72,4 +73,66 @@ test('the retry of a failed scroll does not run against a hymn that got shorter'
     tree.update(reader(hymn(3), null));
   });
   expect(() => act(() => jest.advanceTimersByTime(1000))).not.toThrow();
+});
+
+test('an index equal to the new hymn length is refused as well', async () => {
+  await act(async () => {
+    tree = create(reader(hymn(12), 12));
+  });
+  // Stanza 12 is index 11, one past the end of an 11-stanza hymn.
+  await act(async () => {
+    tree.update(reader(hymn(11), null));
+  });
+  expect(() => act(() => jest.advanceTimersByTime(1000))).not.toThrow();
+});
+
+describe('while the stanza is still there, the scroll happens', () => {
+  let scroll: jest.SpyInstance;
+  beforeEach(() => {
+    scroll = jest
+      .spyOn(FlatList.prototype, 'scrollToIndex')
+      .mockImplementation(() => {});
+  });
+  afterEach(() => scroll.mockRestore());
+
+  test('to the bubble, the first stanza included', async () => {
+    await act(async () => {
+      tree = create(reader(hymn(12), 12));
+    });
+    act(() => jest.advanceTimersByTime(150));
+    expect(scroll).toHaveBeenLastCalledWith({
+      index: 11,
+      viewPosition: 0,
+      animated: true,
+    });
+    await act(async () => {
+      tree.update(reader(hymn(12), 1));
+    });
+    act(() => jest.advanceTimersByTime(150));
+    expect(scroll).toHaveBeenLastCalledWith({
+      index: 0,
+      viewPosition: 0,
+      animated: true,
+    });
+  });
+
+  test('again on the retry of a failed scroll', async () => {
+    await act(async () => {
+      tree = create(reader(hymn(12), null));
+    });
+    act(() =>
+      tree.root.findByType(FlatList).props.onScrollToIndexFailed({
+        index: 5,
+        highestMeasuredFrameIndex: 0,
+        averageItemLength: 0,
+      }),
+    );
+    expect(scroll).not.toHaveBeenCalled();
+    act(() => jest.advanceTimersByTime(220));
+    expect(scroll).toHaveBeenCalledWith({
+      index: 5,
+      viewPosition: 0,
+      animated: true,
+    });
+  });
 });

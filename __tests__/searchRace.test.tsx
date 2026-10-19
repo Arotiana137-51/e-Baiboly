@@ -105,6 +105,13 @@ describe('search screen', () => {
     expect(shows(LATE)).toBe(false);
   });
 
+  test('clearing the box removes the results it showed', async () => {
+    await type('fitiavana');
+    await settle('fitiavana', CURRENT);
+    await type('');
+    expect(shows(CURRENT)).toBe(false);
+  });
+
   test('results that arrive after the box was cleared are not shown', async () => {
     await type('fitia');
     await type('');
@@ -139,6 +146,13 @@ describe('book picker, searching verse words', () => {
     await type('fitiavana');
     await settle('fitiavana', result('current'));
     expect(shows('current')).toBe(true);
+  });
+
+  test('clearing the box removes the results it showed', async () => {
+    await type('fitiavana');
+    await settle('fitiavana', result('current'));
+    await type('');
+    expect(shows('current')).toBe(false);
   });
 
   test('a search that ends late does not replace the results of what is typed now', async () => {

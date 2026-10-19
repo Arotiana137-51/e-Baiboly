@@ -51,8 +51,13 @@ jest.mock('../src/services/database/DatabaseService', () => {
 
 let tree: ReactTestRenderer;
 
-afterAll(() => {
+afterEach(async () => {
   act(() => tree.unmount());
+  calls.length = 0;
+  await AsyncStorage.clear();
+});
+
+afterAll(() => {
   require('../src/services/database/DatabaseService').__closeAll();
 });
 
@@ -86,4 +91,31 @@ test('the last-read hymn is read once at launch', async () => {
       c.params[0] === 'ffpm_1',
   );
   expect(hymnVerseReads).toHaveLength(1);
+}, 60000);
+
+test('the last-read chapter is read once at launch, and no hymn', async () => {
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+  await AsyncStorage.multiSet([
+    ['privacy_policy_accepted_v1', 'true'],
+    ['@onboarding_done', 'true'],
+    ['last_read_mode', 'bible'],
+    [
+      'last_read_bible',
+      JSON.stringify({ bookId: 43, bookName: 'Jaona', chapter: 3 }),
+    ],
+  ]);
+  await act(async () => {
+    tree = create(<App />);
+  });
+  await settle();
+  const chapterReads = calls.filter(
+    c =>
+      c.sql.includes('FROM Verses WHERE book_id = ? AND chapter = ?') &&
+      c.params[0] === 43 &&
+      c.params[1] === 3,
+  );
+  expect(chapterReads).toHaveLength(1);
+  expect(
+    calls.filter(c => c.sql.includes('FROM HymnVerses WHERE hymn_id')),
+  ).toHaveLength(0);
 }, 60000);
