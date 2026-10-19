@@ -70,6 +70,9 @@ const AboutScreen = () => {
         lines: [
           `Version: ${appVersion || '-'}`,
           t('about.infoLinePlatforms'),
+          // The concordance data is OpenBible.info's, whose CC BY licence
+          // asks for this credit in the app.
+          'Concordance: OpenBible.info (CC BY)',
         ],
       },
       {
