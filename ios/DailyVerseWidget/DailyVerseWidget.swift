@@ -11,12 +11,11 @@ import AppIntents
 // The verse calendar itself lives in JS and is never duplicated.
 //
 // Look: the share card's — the chosen colour as a diagonal gradient with
-// matching ink, or a photo (copied next to the feed) under a veil — behind the verse in the chosen typeface and
-// size, a date badge and the heart on top, reference + translation tag + mode
+// matching ink, or a photo (copied next to the feed) under a veil — behind the
+// verse in the chosen typeface and size, a date badge and the heart on top, reference + translation tag + mode
 // on the bottom line; small, medium and large families. With "follow dark
 // mode" the feed adds a night look, used while the phone is in dark mode. From
-// iOS 16 the lock screen gets the words alone. On iOS 26 the date badge and
-// translation tag are Liquid Glass; earlier versions draw them translucent.
+// iOS 16 the lock screen gets the words alone.
 //
 // The heart adds the verse to the app's favorites, or takes it out: from iOS
 // 17 without opening the app (ToggleFavoriteIntent records the wanted state in
@@ -376,7 +375,8 @@ struct DailyVerseView: View {
           .foregroundColor(ink.opacity(0.9))
           .padding(.horizontal, 9)
           .padding(.vertical, 2)
-          .glassChip(Capsule(), ink: ink, fill: 0.15, stroke: 0.1)
+          .background(Capsule().fill(ink.opacity(0.15)))
+          .overlay(Capsule().stroke(ink.opacity(0.1), lineWidth: 1))
           .lineLimit(1)
         Spacer(minLength: 4)
         heart
@@ -409,7 +409,7 @@ struct DailyVerseView: View {
               .foregroundColor(ink.opacity(0.6))
               .padding(.horizontal, 3)
               .padding(.vertical, 1)
-              .glassChip(RoundedRectangle(cornerRadius: 4), ink: ink, fill: 0.1, stroke: nil)
+              .background(RoundedRectangle(cornerRadius: 4).fill(ink.opacity(0.1)))
           }
           Spacer(minLength: 6)
           // Small widgets only take one URL (widgetURL), so the mode and the
@@ -473,11 +473,6 @@ struct LockScreenVerse: View {
 struct CardBackground: View {
   let look: Look
 
-  // Light ink on a dark card takes the full shade, as the original accent card
-  // did; a light card only deepens a little so dark ink still reads at the
-  // bottom corner.
-  private var shade: Double { look.text.luminance > look.background.luminance ? 0.45 : 0.15 }
-
   var body: some View {
     if let photo = look.photo {
       ZStack {
@@ -488,7 +483,7 @@ struct CardBackground: View {
       }
     } else {
       LinearGradient(
-        colors: [look.background, look.background.darkened(shade)],
+        colors: [look.background, look.background.darkened(0.45)],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
       )
@@ -542,31 +537,6 @@ private extension View {
       self.background(background)
     }
   }
-
-  // Liquid Glass from iOS 26 (and an SDK that has it); before that the
-  // translucent ink fill and hairline it replaces.
-  @ViewBuilder
-  func glassChip<S: Shape>(_ shape: S, ink: Color, fill: Double, stroke: Double?) -> some View {
-    #if compiler(>=6.2)
-    if #available(iOS 26.0, *) {
-      glassEffect(.regular, in: shape)
-    } else {
-      translucentChip(shape, ink: ink, fill: fill, stroke: stroke)
-    }
-    #else
-    translucentChip(shape, ink: ink, fill: fill, stroke: stroke)
-    #endif
-  }
-
-  @ViewBuilder
-  private func translucentChip<S: Shape>(_ shape: S, ink: Color, fill: Double, stroke: Double?) -> some View {
-    let filled = background(shape.fill(ink.opacity(fill)))
-    if let stroke = stroke {
-      filled.overlay(shape.stroke(ink.opacity(stroke), lineWidth: 1))
-    } else {
-      filled
-    }
-  }
 }
 
 private extension Color {
@@ -590,12 +560,5 @@ private extension Color {
     ui.getRed(&r, green: &g, blue: &b, alpha: &a)
     let k = 1 - amount
     return Color(red: Double(r * k), green: Double(g * k), blue: Double(b * k))
-  }
-
-  // Rough perceived brightness, 0...1; only compared, never shown.
-  var luminance: Double {
-    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-    UIColor(self).getRed(&r, green: &g, blue: &b, alpha: &a)
-    return Double(0.299 * r + 0.587 * g + 0.114 * b)
   }
 }
