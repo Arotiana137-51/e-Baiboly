@@ -66,12 +66,33 @@ const TABS: ReadonlyArray<{key: Tab; label: string}> = [
   {key: 'soratra', label: 'Soratra'},
 ];
 
+// The widget's own settings glyph, the Material "tune" sliders of
+// android/.../drawable/ic_widget_tune.xml, as its nine rectangles on the same
+// 24-unit grid, so the preview shows what the widget shows.
+const TUNE_SIZE = 14;
+const TUNE_BARS = [
+  [3, 5, 10, 2], [15, 3, 2, 6], [17, 5, 4, 2],
+  [3, 11, 4, 2], [7, 9, 2, 6], [11, 11, 10, 2],
+  [3, 17, 6, 2], [11, 15, 2, 6], [13, 17, 8, 2],
+].map(([x, y, w, h]) => {
+  const unit = TUNE_SIZE / 24;
+  return {position: 'absolute' as const, left: x * unit, top: y * unit, width: w * unit, height: h * unit};
+});
+
+const TuneIcon = ({color}: {color: string}) => (
+  <View style={styles.tune}>
+    {TUNE_BARS.map((bar, i) => (
+      <View key={i} style={[bar, {backgroundColor: color}]} />
+    ))}
+  </View>
+);
+
 const fontStyleFor = (font: WidgetFont) =>
   font === 'sans' ? styles.sans : font === 'italic' ? styles.italic : styles.serif;
 
 // The home-screen widget's look: a live preview and the Fond / Soratra tabs
 // pinned on top, the chosen tab's settings under them, and a "done" button. Reached from the
-// widget's own ⚙ shortcut (fromWidget) or from Safidio ny loko. Every pick is
+// widget's own sliders shortcut (fromWidget) or from Safidio ny loko. Every pick is
 // saved and pushed to the real widget immediately, so the preview and the
 // widget change together.
 const WidgetLookScreen = () => {
@@ -237,7 +258,7 @@ const WidgetLookScreen = () => {
                 <Text style={[styles.mode, {color: hexToRgba(shown.text, 0.7)}]} numberOfLines={1}>
                   {today?.label.toUpperCase()}
                 </Text>
-                <Text style={[styles.gear, {color: hexToRgba(shown.text, 0.7)}]}>⚙</Text>
+                <TuneIcon color={hexToRgba(shown.text, 0.7)} />
               </View>
             </View>
           </View>
@@ -412,7 +433,7 @@ const styles = StyleSheet.create({
   previewRef: {fontSize: 12, fontWeight: '700'},
   tag: {fontSize: 9, fontWeight: '600', letterSpacing: 0.5, paddingHorizontal: 3, borderRadius: 4, overflow: 'hidden'},
   mode: {flex: 1, fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textAlign: 'right'},
-  gear: {fontSize: 12},
+  tune: {width: TUNE_SIZE, height: TUNE_SIZE},
 });
 
 // "A−" to "A++", each drawn a step larger.
