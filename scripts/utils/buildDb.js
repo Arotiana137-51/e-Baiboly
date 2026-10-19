@@ -188,7 +188,10 @@ function createZipFromDb(dbPath, zipPath) {
       if (err.code !== 'ENOENT') reject(err);
     });
     archive.pipe(output);
-    archive.file(dbPath, { name: path.basename(dbPath) });
+    // A fixed entry date (the ZIP minimum) instead of the fresh .db's mtime,
+    // so a rebuild with unchanged content gives the same bytes and git sees
+    // no change.
+    archive.file(dbPath, { name: path.basename(dbPath), date: new Date(1980, 0, 1) });
     archive.finalize();
   });
 }

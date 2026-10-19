@@ -14,6 +14,8 @@ import packageJson from '../../package.json';
 // release APK gets a silent no-op, so this can't be verified by side-loading.
 
 const ASKED_VERSION_KEY = 'review.askedVersion';
+const DAY_MS = 24 * 60 * 60 * 1000;
+export const REVIEW_DELAY_DAYS = 3;
 
 // Same semantics as PatchManager.isOnline: isInternetReachable is often null on
 // Android (unknown), and treating unknown as offline would suppress the prompt
@@ -37,8 +39,32 @@ const trace = (reason: string) => {
   }
 };
 
-export const maybeRequestReview = async (): Promise<void> => {
+// Home's NetInfo listener and About can both call in quick succession, before
+// the asked flag is written; only one flow may run at a time.
+let inFlight = false;
+
+const FIRST_SEEN_KEY = 'review.firstSeen';
+
+// Stamps the first call, then reports whether `days` have passed since.
+const usedForAtLeast = async (days: number): Promise<boolean> => {
+  const stored = await AsyncStorage.getItem(FIRST_SEEN_KEY);
+  if (stored === null) {
+    await AsyncStorage.setItem(FIRST_SEEN_KEY, String(Date.now()));
+    return false;
+  }
+  return Date.now() - Number(stored) >= days * DAY_MS;
+};
+
+// `minDays` keeps the automatic Home call away from brand-new users; About
+// (a deliberate visit) asks without it.
+export const maybeRequestReview = async (minDays = 0): Promise<void> => {
+  if (inFlight) return;
+  inFlight = true;
   try {
+    if (minDays > 0 && !(await usedForAtLeast(minDays))) {
+      trace(`skipped: installed less than ${minDays} days ago`);
+      return;
+    }
     const appVersion = String((packageJson as {version?: string}).version ?? '');
     const askedVersion = await AsyncStorage.getItem(ASKED_VERSION_KEY);
     if (askedVersion === appVersion) {
@@ -70,5 +96,7 @@ export const maybeRequestReview = async (): Promise<void> => {
   } catch (e: any) {
     // A rating prompt is never worth surfacing an error for.
     trace(`threw: ${e?.message ?? e}`);
+  } finally {
+    inFlight = false;
   }
 };

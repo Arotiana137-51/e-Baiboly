@@ -13,9 +13,11 @@ import {bibleDatabaseService} from '../database/DatabaseService';
 import {dailyVerseFor, type VerseRef} from '../../constants/dailyVerses';
 import {getBibleBookShortName} from '../../utils/bibleBookNames';
 import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
-import {getStoredJesusNameVariant, transformJesusName} from '../../utils/jesusName';
+import {getStoredJesusNameVariant, transformJesusName, type JesusNameVariant} from '../../utils/jesusName';
 import {PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {enqueueIssueReport} from '../reporting/issueReportQueue';
+import {loadTenyHoAnao} from '../lifeSituations/situationStore';
+import {situationSchedule} from '../../utils/lifeSituations';
 
 /**
  * "Ora famakiana tiana" — optional, on-device reminders to read the Bible,
@@ -71,7 +73,7 @@ export const DAILY_VERSE_SLOT_ID = 'daily-verse';
 // A repeating trigger has a fixed body, so verse slots are scheduled as
 // one-shot triggers for the next N occurrences and topped up on every launch
 // by ensureRemindersScheduled.
-// ponytail: 12-day window — if the app isn't opened for two weeks the verse
+// NOTE: 12-day window — if the app isn't opened for two weeks the verse
 // stops until next launch. Upgrade path: notifee onBackgroundEvent DELIVERED
 // → schedule the next one. 12 keeps 5 slots under iOS's cap of 64 pending.
 const VERSE_WINDOW_DAYS = 12;
@@ -178,13 +180,21 @@ const iosFor = (prominent: boolean): NotificationIOS =>
 // Inexact alarm that may still fire in Doze; no exact-alarm permission needed.
 const ALARM = {alarmManager: {type: AlarmType.SET_AND_ALLOW_WHILE_IDLE}};
 
-// Section headings (<n>[...]</n>) belong to the reader layout, not the verse.
+// Section headings (<n>[...]</n>) belong to the reader layout, not the verse;
+// so do translators' footnotes ("farany*. [*Hebreo: …]") and inline
+// cross-references like "(Sal. 55.22)".
 const plainVerseText = (text: string): string =>
   text
     .replace(/<n>\s*\[.*?\]\s*<\/n>/gis, '')
     .replace(/<[^>]*>/g, '')
+    .replace(/\s*\[\*[^\]]*\]/g, '')
+    .replace(/\*/g, '')
+    .replace(/\s*\([^()]*[A-Za-z][^()]*\d+\s*[.:]\s*\d+[^()]*\)/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+
+// A verse picked out of its sentence can start lowercase ("ary apetraho…").
+const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 const yyyymmdd = (date: Date): string =>
   `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
@@ -200,21 +210,30 @@ export type DailyVerse = {
 
 /**
  * The day's verse resolved against the bundled Bible DB — shared by the
- * notification scheduler and the home-screen widget file. Caller ensures
- * bibleDatabaseService.initDatabase() has run.
+ * notification scheduler and the home-screen widget file. `ref` overrides
+ * the calendar (a "Teny ho anao" plan). Loops pass `variant` so it is read
+ * once, not once per day. Caller ensures bibleDatabaseService.initDatabase()
+ * has run.
  */
-export const verseForDate = async (date: Date): Promise<DailyVerse | null> => {
-  const ref: VerseRef = dailyVerseFor(date);
+export const verseForDate = async (
+  date: Date,
+  ref: VerseRef = dailyVerseFor(date),
+  variant?: JesusNameVariant,
+): Promise<DailyVerse | null> => {
   const {rows} = await bibleDatabaseService.executeQuery<{text: string; name: string}>(
     'SELECT v.text, b.name FROM Verses v JOIN Books b ON b.id = v.book_id WHERE v.book_id = ? AND v.chapter = ? AND v.verse_number BETWEEN ? AND ? ORDER BY v.verse_number',
     [ref.b, ref.c, ref.v, ref.to ?? ref.v],
   );
   if (rows.length === 0) return null;
   const bookName = rows[0].name;
-  const variant = await getStoredJesusNameVariant();
   return {
     ref: `${getBibleBookShortName(bookName, ref.b)} ${ref.c}:${ref.v}${ref.to ? `-${ref.to}` : ''}`,
-    body: transformJesusName(rows.map(r => plainVerseText(r.text)).join(' '), variant),
+    body: capitalize(
+      transformJesusName(
+        rows.map(r => plainVerseText(r.text)).join(' '),
+        variant ?? (await getStoredJesusNameVariant()),
+      ),
+    ),
     bookId: ref.b,
     bookName,
     chapter: ref.c,
@@ -231,11 +250,17 @@ const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<voi
       : nextDailyOccurrence(slot.time),
   );
 
+  // "Teny ho anao" replaces the calendar verse on the days a plan is live.
+  const tenyHoAnao = await loadTenyHoAnao();
+  const situations = tenyHoAnao.inReminders ? tenyHoAnao.situations : [];
+  const schedule = situationSchedule(situations, first, VERSE_WINDOW_DAYS, tenyHoAnao.since);
+  const variant = await getStoredJesusNameVariant();
+
   for (let i = 0; i < VERSE_WINDOW_DAYS; i += step) {
     // setDate rather than adding ms so a DST change doesn't shift the hour.
     const when = new Date(first);
     when.setDate(first.getDate() + i);
-    const verse = await verseForDate(when);
+    const verse = await verseForDate(when, schedule[i][0]?.ref, variant);
     if (!verse) continue;
     const {ref: title, body, bookId, bookName, chapter, verse: verseNumber} = verse;
 
@@ -406,7 +431,11 @@ export const ensureRemindersScheduled = async (): Promise<void> => {
  * queue the crash reporter uses (flushed on reconnect) instead of vanishing.
  */
 export const reportSchedulingFailure = (where: string, error: unknown): void => {
-  if (__DEV__) console.warn(`[readingReminder] ${where} failed:`, error);
+  // Only release builds report (see recordFatalError).
+  if (__DEV__) {
+    console.warn(`[readingReminder] ${where} failed:`, error);
+    return;
+  }
   const err = error instanceof Error ? error : new Error(String(error));
   enqueueIssueReport({
     id: `crash-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

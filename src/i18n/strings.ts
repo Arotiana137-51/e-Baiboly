@@ -6,13 +6,31 @@ type TranslationKey =
   | 'menu.search'
   | 'menu.misc'
   | 'menu.about'
-  | 'menu.personalization'
   | 'menu.cultMode'
-  | 'menu.notes'
   | 'notes.title'
   | 'notes.empty'
-  | 'notes.removeTitle'
-  | 'notes.removeMessage'
+  | 'notes.open'
+  | 'notes.save'
+  | 'notes.edit'
+  | 'notes.placeholder'
+  | 'notes.fromVerse'
+  | 'notes.untilVerse'
+  | 'notes.editedOn'
+  | 'notes.deleted'
+  | 'notes.undo'
+  | 'notes.search'
+  | 'notes.noResults'
+  | 'notes.exportAll'
+  | 'notes.exportTitle'
+  | 'highlight.color'
+  | 'highlight.bold'
+  | 'highlight.italic'
+  | 'highlight.underline'
+  | 'highlight.erase'
+  | 'actions.noteAdd'
+  | 'actions.noteOpen'
+  | 'actions.hymnNoteAdd'
+  | 'actions.hymnNoteOpen'
   | 'cultMode.title'
   | 'cultMode.activate'
   | 'cultMode.deactivate'
@@ -20,14 +38,11 @@ type TranslationKey =
   | 'cultMode.emptyState'
   | 'cultMode.addBible'
   | 'cultMode.addHymn'
-  | 'cultMode.deleteTitle'
-  | 'cultMode.deleteMessage'
-  | 'cultMode.cannotActivateEmpty'
+  | 'cultMode.summary'
+  | 'cultMode.wholeChapter'
+  | 'cultMode.verses'
   | 'personalization.title'
-  | 'personalization.subtitle'
-  | 'personalization.reset'
   | 'personalization.brandBadge'
-  | 'personalization.chooseColor'
   | 'personalization.firstRunWelcome'
   | 'personalization.firstRunDesc'
   | 'personalization.hint'
@@ -50,10 +65,10 @@ type TranslationKey =
   | 'history.clearAll'
   | 'history.emptyBible'
   | 'history.emptyHymnal'
+  | 'history.emptyAll'
+  | 'history.filterAll'
   | 'search.placeholderBible'
-  | 'search.placeholderHymns'
   | 'search.noResultsBible'
-  | 'search.noResultsHymns'
   | 'search.resultCount'
   | 'search.categorized'
   | 'search.simple'
@@ -74,8 +89,6 @@ type TranslationKey =
   | 'share.image'
   | 'share.text'
   | 'report.title'
-  | 'report.reference'
-  | 'report.text'
   | 'report.comment'
   | 'report.placeholder'
   | 'report.note'
@@ -103,20 +116,8 @@ type TranslationKey =
   | 'about.rateAppHint'
   | 'about.rateButton'
   | 'about.paperBibleNote'
-  | 'bible.searchPlaceholder'
   | 'bible.oldTestament'
-  | 'bible.newTestament'
-  | 'bible.chaptersTitle'
-  | 'bible.readerPrev'
-  | 'bible.readerNext'
-  | 'bible.readerTitle'
-  | 'bible.booksTitle'
-  | 'bible.openBooks'
-  | 'bible.noResults'
-  | 'bible.loading'
-  | 'hymns.title'
-  | 'hymns.homeTitle'
-  | 'hymns.placeholder';
+  | 'bible.newTestament';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -135,29 +136,46 @@ const translations: Translations = {
     'menu.search': 'Fikarohana',
     'menu.misc': 'Fanekem-pinoana',
     'menu.about': 'Mombamomba',
-    'menu.personalization': 'Loko manokana',
     'menu.cultMode': 'Fotoam-pivavahana',
-    'menu.notes': 'Ireo Naoty',
     'notes.title': 'Ireo Naoty',
     'notes.empty': 'Mbola tsy misy naoty',
-    'notes.removeTitle': 'Esorina ny naoty',
-    'notes.removeMessage': 'Tena esorina ve ity naoty ity?',
+    'notes.open': 'Vakio ny naoty',
+    'notes.save': 'Tahirizo',
+    'notes.edit': 'Ovay',
+    'notes.placeholder': 'Soraty eto ny naotinao…',
+    'notes.fromVerse': 'Andininy',
+    'notes.untilVerse': "hatramin'ny",
+    'notes.editedOn': 'Novaina {{date}}',
+    'notes.deleted': 'Voafafa ny naoty',
+    'notes.undo': 'Averina',
+    'notes.search': "Hitady ao amin'ny naoty",
+    'notes.noResults': 'Tsy misy naoty mifanaraka amin\'izany',
+    'notes.exportAll': 'Zarao daholo',
+    'notes.exportTitle': 'Ny naotiko — e-Baiboly',
+    // The highlight bubble over selected words. Colours and B / I / U are
+    // drawn; these name them for screen readers.
+    'highlight.color': 'Loko',
+    'highlight.bold': 'Gras',
+    'highlight.italic': 'Italique',
+    'highlight.underline': 'Souligné',
+    'highlight.erase': 'Fafao',
+    'actions.noteAdd': 'Hanoratra naoty',
+    'actions.noteOpen': 'Jereo ny naoty',
+    'actions.hymnNoteAdd': "Naoty momba ny hira",
+    'actions.hymnNoteOpen': "Jereo ny naoty momba ny hira",
     'cultMode.title': 'Fotoam-pivavahana',
     'cultMode.activate': 'Velomy ny fotoana',
     'cultMode.deactivate': 'Ajanony',
     'cultMode.intro':
       'Ito dia fampidirana ny programam-pivavahana ka rehefa alahatrao mialoha eto ireo tokony ho vakianao mandritra ny fotoana dia tsy mila mikaroka boky/fihirana intsony ianao fa manindry ny teboka (prev, next) ery ambany fotsiny. Alaminao otrany ireny mandamina “Playlist” ireny izy ity mba hanamorana ny fampiasanao ny appli e-Baiboly mandritra ny fotoam-bavaka.',
-    'cultMode.emptyState': "Mbola tsy misy zavatra eto. Ampio Baiboly na Fihirana.",
-    'cultMode.addBible': 'Hampio Baiboly',
-    'cultMode.addHymn': 'Hampio Fihirana',
-    'cultMode.deleteTitle': 'Esorina',
-    'cultMode.deleteMessage': "Tena esorina ao amin'ny lisitra ve ity?",
-    'cultMode.cannotActivateEmpty': 'Ampio aloha ny zavatra ho hirahana.',
+    'cultMode.emptyState': "Ampio andinin'teny na hira",
+    'cultMode.addBible': 'Ampio Baiboly',
+    'cultMode.addHymn': 'Ampio Fihirana',
+    'cultMode.summary': "{{bible}} andinin'teny · {{hymns}} hira",
+    'cultMode.wholeChapter': 'Toko manontolo',
+    'cultMode.verses': 'Andininy {{range}}',
     'personalization.title': 'Loko manokana',
-    'personalization.subtitle': "Safidio ny lokon'ny rindrina sy ny bokotra",
-    'personalization.reset': 'Avereno tany am-boalohany',
     'personalization.brandBadge': 'Fisafidianana loko',
-    'personalization.chooseColor': 'Fisafidianana loko',
     'personalization.firstRunWelcome':
       "Tongasoa eto amin'ny e-Baiboly! Faly miarahaba anao izahay.",
     'personalization.firstRunDesc':
@@ -182,10 +200,10 @@ const translations: Translations = {
     'history.clearAll': 'Fafao daholo',
     'history.emptyBible': "Tsy mbola misy tsiahy Baiboly",
     'history.emptyHymnal': "Tsy mbola misy tsiahy Fihirana",
+    'history.emptyAll': 'Tsy mbola misy tsiahy',
+    'history.filterAll': 'Rehetra',
     'search.placeholderBible': "Tadiavina ao @ Baiboly sy fihirana...",
-    'search.placeholderHymns': 'Tadiavo ao amin\'ny fihirana...',
     'search.noResultsBible': "Tsy nahitana valiny tao amin'ny Baiboly",
-    'search.noResultsHymns': "Tsy nahitana valiny tao amin'ny fihirana",
     'search.resultCount': '{{count}} valiny',
     // Shown as a pair in the "Fikarohana" header bar, so neither repeats it.
     'search.categorized': 'Isan-tsokajiny',
@@ -209,8 +227,6 @@ const translations: Translations = {
     'share.image': 'Sary',
     'share.text': 'Lahatsoratra',
     'report.title': 'Tatero',
-    'report.reference': 'Tondro',
-    'report.text': 'Lahatsoratra',
     'report.comment': 'Fanamarihana',
     'report.placeholder': 'Farito ny olana tokony ahitsy...',
     'report.note': "Rehefa mandefa ianao dia alefa ny tondro, ny lahatsoratra miseho, ary ny fanamarihanao mba hanitsiana ny lesoka. Tsy misy angona momba ny toerana (localisation) angonina.",
@@ -239,20 +255,8 @@ const translations: Translations = {
     'about.rateAppHint': 'Manampy be ny naoty omenao',
     'about.rateButton': 'Hanome naoty',
     'about.paperBibleNote': "Natao ity rindran-kajy ity hikarohana soratra masina sy hira an-kamehana. Fa amin'ny fotoana ilaina fifantohana ( adim-panahy, asa sy fampaherezana, sns...) dia asaina ianao ampiasa Baiboly taratasy.",
-    'bible.searchPlaceholder': 'Tadiavo boky iray...',
     'bible.oldTestament': 'Testamenta taloha',
     'bible.newTestament': 'Testamenta vaovao',
-    'bible.chaptersTitle': 'Toko',
-    'bible.readerPrev': 'Aloha',
-    'bible.readerNext': 'Manaraka',
-    'bible.readerTitle': '{{book}} toko {{chapterText}}',
-    'bible.booksTitle': 'Boky',
-    'bible.openBooks': 'Hanokatra ny boky',
-    'bible.noResults': 'Tsy misy valiny',
-    'bible.loading': 'Mandrasa kely, eo am-pikarakarana...',
-    'hymns.title': 'Fihirana',
-    'hymns.homeTitle': 'Fihirana',
-    'hymns.placeholder': ' eo am-panamboarana',
   },
 };
 

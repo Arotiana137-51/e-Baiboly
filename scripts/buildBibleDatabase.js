@@ -61,7 +61,212 @@ function getBibleSourceFiles() {
   for (let bookId = 1; bookId <= 66; bookId += 1) {
     files.push(path.join(yamlSourceDir, `bible_verse_mg1865_mg_${bookId}.yaml`));
   }
+  if (fs.existsSync(databasePaths.bible.crossReferences)) {
+    files.push(databasePaths.bible.crossReferences);
+  }
   return files;
+}
+
+// ---- Cross references (OpenBible.info, CC-BY) ----
+//
+// cross_references.txt is "From Verse<TAB>To Verse<TAB>Votes" with OSIS refs
+// (Gen.1.1, Joel.2.28-Joel.2.32) in English numbering. MG1865 numbers most of
+// the Old Testament the Hebrew way (Psalms excepted): Gen 31:55 is MG 32:1,
+// Joel 2:28 is MG 3:1, Malachi has no chapter 4. Every ref is converted to
+// MG numbering here, so the reader can query with the verse it shows.
+
+// Index + 1 = Books.id (canonical order).
+const OSIS_BOOKS = [
+  'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam',
+  '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov',
+  'Eccl', 'Song', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos',
+  'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal', 'Matt',
+  'Mark', 'Luke', 'John', 'Acts', 'Rom', '1Cor', '2Cor', 'Gal', 'Eph', 'Phil',
+  'Col', '1Thess', '2Thess', '1Tim', '2Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1Pet',
+  '2Pet', '1John', '2John', '3John', 'Jude', 'Rev',
+];
+
+// Chapters where MG merged or split a verse, so the counts differ without the
+// difference moving to a neighbouring chapter. Checked against the MG text.
+// "book:English chapter" -> English verse -> [MG chapter, MG verse].
+const MG_MERGES_AND_SPLITS = {
+  // Deut 5:17-20 (the four short commandments) are the single MG 5:17.
+  '5:5': (v) => (v < 17 ? [5, v] : v <= 20 ? [5, 17] : [5, v - 3]),
+  // Josh 17:18 is the end of MG 17:17.
+  '6:17': (v) => [17, Math.min(v, 17)],
+  // The end of English 1 Sam 20:42 is MG 21:1.
+  '9:21': (v) => [21, v + 1],
+  // English 1 Kgs 22:43 is MG 22:43-44.
+  '11:22': (v) => [22, v <= 43 ? v : v + 1],
+  // 1 Chr 27:34 is the end of MG 27:33.
+  '13:27': (v) => [27, Math.min(v, 33)],
+  // Isa 64:1 is the end of MG 63:19.
+  '23:64': (v) => (v === 1 ? [63, 19] : [64, v - 1]),
+};
+
+const parseOsisRef = (ref) => {
+  const m = /^(\w+)\.(\d+)\.(\d+)$/.exec(ref);
+  const book = m ? OSIS_BOOKS.indexOf(m[1]) + 1 : 0;
+  return book ? { book, chapter: Number(m[2]), verse: Number(m[3]) } : null;
+};
+
+// English -> MG verse mapping. Outside MG_MERGES_AND_SPLITS both numberings
+// hold the same verses in the same order and only the chapter breaks move, so
+// over each run of neighbouring chapters whose verse counts differ, the n-th
+// English verse is the n-th MG verse. English counts come from the refs
+// themselves (the highest verse cited in each chapter).
+function buildVersification(engCounts, mgCounts) {
+  const shifted = new Map();
+  const count = (counts, book, ch) => counts.get(`${book}:${ch}`) || 0;
+
+  const alignRun = (book, first, last) => {
+    const eng = [];
+    const mg = [];
+    for (let ch = first; ch <= last; ch += 1) {
+      for (let v = 1; v <= count(engCounts, book, ch); v += 1) eng.push(`${book}:${ch}:${v}`);
+      for (let v = 1; v <= count(mgCounts, book, ch); v += 1) mg.push([ch, v]);
+    }
+    if (eng.length === mg.length) {
+      eng.forEach((key, i) => shifted.set(key, mg[i]));
+      return;
+    }
+    for (let ch = first; ch <= last; ch += 1) {
+      if (!MG_MERGES_AND_SPLITS[`${book}:${ch}`]) {
+        throw new Error(
+          `${OSIS_BOOKS[book - 1]} ${ch}: MG has ${count(mgCounts, book, ch)} verses, English ` +
+            `${count(engCounts, book, ch)}, and no rule maps them; add one to MG_MERGES_AND_SPLITS.`
+        );
+      }
+    }
+  };
+
+  for (let book = 1; book <= 66; book += 1) {
+    let lastChapter = 0;
+    for (const counts of [engCounts, mgCounts]) {
+      while (count(counts, book, lastChapter + 1) > 0) lastChapter += 1;
+    }
+    let runStart = 0;
+    for (let ch = 1; ch <= lastChapter + 1; ch += 1) {
+      const differs = ch <= lastChapter && count(engCounts, book, ch) !== count(mgCounts, book, ch);
+      if (differs && !runStart) runStart = ch;
+      if (!differs && runStart) {
+        alignRun(book, runStart, ch - 1);
+        runStart = 0;
+      }
+    }
+  }
+
+  return ({ book, chapter, verse }) => {
+    const rule = MG_MERGES_AND_SPLITS[`${book}:${chapter}`];
+    if (rule) return rule(verse);
+    return shifted.get(`${book}:${chapter}:${verse}`) || [chapter, verse];
+  };
+}
+
+async function importCrossReferences(db, crossRefsPath) {
+  if (!fs.existsSync(crossRefsPath)) {
+    console.log('  ⚠️ cross_references.txt not found, no cross references');
+    return;
+  }
+
+  // Books.id is the canonical book number, so refs store it directly. Keyed by
+  // the verse the reader looks up; WITHOUT ROWID makes that key the table
+  // itself, with no separate index: 6 MB less than a rowid table + index.
+  await runAsync(db, `CREATE TABLE CrossReferences (
+    from_book INTEGER NOT NULL,
+    from_chapter INTEGER NOT NULL,
+    from_verse INTEGER NOT NULL,
+    to_book INTEGER NOT NULL,
+    to_chapter INTEGER NOT NULL,
+    to_verse_start INTEGER NOT NULL,
+    to_verse_end INTEGER NOT NULL,
+    votes INTEGER NOT NULL,
+    PRIMARY KEY (from_book, from_chapter, from_verse, to_book, to_chapter, to_verse_start, to_verse_end)
+  ) WITHOUT ROWID`);
+
+  const mgCounts = new Map();
+  await new Promise((resolve, reject) =>
+    db.each(
+      `SELECT book_id, chapter, MAX(verse_number) AS n FROM Verses GROUP BY book_id, chapter`,
+      (err, row) => {
+        if (!err) mgCounts.set(`${row.book_id}:${row.chapter}`, row.n);
+      },
+      (err) => (err ? reject(err) : resolve())
+    )
+  );
+
+  const refs = [];
+  const engCounts = new Map();
+  const cite = (ref) => {
+    const key = `${ref.book}:${ref.chapter}`;
+    engCounts.set(key, Math.max(engCounts.get(key) || 0, ref.verse));
+  };
+  let unreadable = 0;
+  const lines = fs.readFileSync(crossRefsPath, 'utf8').split(/\r?\n/);
+  for (const line of lines.slice(1)) {
+    if (!line.trim()) continue;
+    const [fromCol, toCol, votesCol] = line.split('\t');
+    const [toStartCol, toEndCol] = String(toCol || '').split('-');
+    const from = parseOsisRef(String(fromCol || '').trim());
+    const toStart = parseOsisRef(toStartCol.trim());
+    const toEnd = toEndCol ? parseOsisRef(toEndCol.trim()) : toStart;
+    const votes = Number(votesCol);
+    if (!from || !toStart || !toEnd || !Number.isFinite(votes)) {
+      unreadable += 1;
+      continue;
+    }
+    [from, toStart, toEnd].forEach(cite);
+    refs.push({ from, toStart, toEnd, votes: Math.trunc(votes) });
+  }
+
+  const toMg = buildVersification(engCounts, mgCounts);
+  const lastVerse = (book, chapter) => mgCounts.get(`${book}:${chapter}`) || 0;
+
+  // Merged MG verses turn several English refs into the same one: keep it once,
+  // with its best vote count.
+  const rows = new Map();
+  let dropped = 0;
+  for (const { from, toStart, toEnd, votes } of refs) {
+    const [fromChapter, fromVerse] = toMg(from);
+    const [toChapter, toVerseStart] = toMg(toStart);
+    const [endChapter, endVerse] = toMg(toEnd);
+    // The reader shows a single-chapter range: one that runs into the next
+    // chapter stops at the end of its first one.
+    const toVerseEnd =
+      toEnd.book === toStart.book && endChapter === toChapter ? endVerse : lastVerse(toStart.book, toChapter);
+    const resolves =
+      fromVerse >= 1 &&
+      fromVerse <= lastVerse(from.book, fromChapter) &&
+      toVerseStart >= 1 &&
+      toVerseEnd >= toVerseStart &&
+      toVerseEnd <= lastVerse(toStart.book, toChapter);
+    const pointsAtItself =
+      from.book === toStart.book && fromChapter === toChapter && fromVerse === toVerseStart && fromVerse === toVerseEnd;
+    if (!resolves || pointsAtItself) {
+      dropped += 1;
+      continue;
+    }
+    const row = [from.book, fromChapter, fromVerse, toStart.book, toChapter, toVerseStart, toVerseEnd, votes];
+    const key = row.slice(0, 7).join(':');
+    const kept = rows.get(key);
+    if (!kept || kept[7] < votes) rows.set(key, row);
+  }
+
+  const insert = db.prepare(
+    `INSERT INTO CrossReferences (from_book, from_chapter, from_verse, to_book, to_chapter, to_verse_start, to_verse_end, votes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  await runAsync(db, 'BEGIN');
+  for (const row of rows.values()) {
+    await new Promise((res, rej) => insert.run(row, (e) => (e ? rej(e) : res())));
+  }
+  await runAsync(db, 'COMMIT');
+  await finalizeAsync(insert);
+
+  console.log(
+    `  ↳ ${rows.size} cross references (${refs.length} read, ${refs.length - rows.size - dropped} merged, ` +
+      `${dropped} unresolvable, ${unreadable} unreadable)`
+  );
 }
 
 async function buildBible(dbPath, version) {
@@ -275,6 +480,8 @@ async function buildBible(dbPath, version) {
   const vocabularySize = await writeVocabulary(db, vocabulary);
 
   console.log(`  ↳ ${verseId - 1} verses indexed, ${vocabularySize} distinct words`);
+
+  await importCrossReferences(db, databasePaths.bible.crossReferences);
 
   console.log('  optimizing FTS + VACUUM ...');
   await runAsync(db, `INSERT INTO VersesFts(VersesFts) VALUES('optimize')`);

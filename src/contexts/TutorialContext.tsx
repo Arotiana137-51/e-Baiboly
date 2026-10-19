@@ -25,7 +25,6 @@ const statusKey = (id: string) => `@tutorial_status:${id}`;
 export type TutorialStatus = 'available' | 'done';
 
 // A measured rectangle in window coordinates, or null while unmeasured.
-export type TargetRect = {x: number; y: number; width: number; height: number} | null;
 
 // The engine asks the host app to perform a real side-effect (open a modal,
 // switch mode). MainScreen registers a single handler; the engine calls it.

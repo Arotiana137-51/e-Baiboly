@@ -3,6 +3,7 @@ import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -14,12 +15,24 @@ import TutorialOverlay from './TutorialOverlay';
 import ToggleThemeButton from './ToggleThemeButton';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {getRelativeLuminance, lightenHex} from '../utils/colorUtils';
+import {MenuIcon, type MenuIconName} from './MenuIcons';
+import {useResponsive} from '../theme/responsive';
 
 // Jesosy/Jesoa slide toggle geometry — a two-label pill with a knob that
 // covers exactly one half and slides between them.
 const VARIANT_SEGMENT_WIDTH = 74;
 const VARIANT_KNOB_WIDTH = VARIANT_SEGMENT_WIDTH;
 const VARIANT_TRACK_PAD = 3;
+
+// Design sizes at the 375dp baseline, scaled per screen in the component.
+// The width fits the longest row label ("Ora famakiana tiana") on one line at
+// the normal font size; larger system fonts end it with "…" (never wraps).
+const MENU_WIDTH = 260;
+const TILE_MIN_HEIGHT = 60;
+// Must match styles.caret's borderBottomWidth.
+const CARET_HEIGHT = 12;
+// Breathing room kept below the card when it has to scroll.
+const MENU_BOTTOM_GAP = 24;
 
 export type HamburgerMenuItemKey =
   | 'favorites'
@@ -28,8 +41,11 @@ export type HamburgerMenuItemKey =
   | 'notes'
   | 'personalization'
   | 'readingReminder'
+  | 'tenyHoAnao'
   | 'cultMode'
   | 'help';
+
+type MenuEntry = {key: HamburgerMenuItemKey; label: string; icon: MenuIconName};
 
 type Props = {
   visible: boolean;
@@ -166,20 +182,60 @@ const HamburgerMenuPopover: React.FC<Props> = ({
     }
   }, [visible, opacity, scale, isLowEndMode]);
 
-  const items = useMemo(
+  // Platform menu pattern: icon + label tiles for the most used actions
+  // (like the top row of UIMenu's "medium" element size on iOS; four don't
+  // fit one row with whole labels, so they sit two by two), then full-width
+  // rows with a leading icon, grouped by purpose with dividers (Material's
+  // drawer/menu list). Labels stay on one line; help comes last.
+  const quickItems = useMemo(
     () =>
       [
-        {key: 'favorites' as const, label: t('menu.favorites')},
-        {key: 'history' as const, label: t('menu.history')},
-        {key: 'misc' as const, label: t('menu.misc')},
-        {key: 'cultMode' as const, label: t('menu.cultMode')},
-        {key: 'personalization' as const, label: t('menu.personalization')},
-        {key: 'readingReminder' as const, label: 'Ora famakiana tiana'},
-        {key: 'notes' as const, label: t('menu.notes')},
-        {key: 'help' as const, label: 'Toro-lalana'},
-      ] satisfies Array<{key: HamburgerMenuItemKey; label: string}>,
+        {key: 'favorites' as const, label: t('menu.favorites'), icon: 'heart' as const},
+        {key: 'history' as const, label: t('menu.history'), icon: 'history' as const},
+        // Short label here; the Notes screen keeps "Ireo Naoty".
+        {key: 'notes' as const, label: 'Naoty', icon: 'notes' as const},
+        // Short label here too; the screen keeps "Loko manokana".
+        {key: 'personalization' as const, label: 'Loko', icon: 'palette' as const},
+      ] satisfies MenuEntry[],
     []
   );
+  const rowGroups = useMemo(
+    () =>
+      [
+        [
+          {key: 'cultMode' as const, label: t('menu.cultMode'), icon: 'hands' as const},
+          {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
+        ],
+        [
+          // "Widget" is the word in most languages; the feature itself is
+          // still "Teny ho anao" on the screen and on the widget's check-in.
+          {key: 'tenyHoAnao' as const, label: 'Widget', icon: 'bubble' as const},
+          {key: 'readingReminder' as const, label: 'Ora famakiana tiana', icon: 'bell' as const},
+        ],
+        [{key: 'help' as const, label: 'Toro-lalana', icon: 'signpost' as const}],
+      ] satisfies MenuEntry[][],
+    []
+  );
+
+  // Card, tiles and rows follow the screen width like the top and bottom
+  // bars (theme/responsive: Android only, clamped; iOS keeps fixed points),
+  // and labels follow the phone's font size capped at 130%.
+  const {scale: rScale, fontFor, height: windowHeight} = useResponsive();
+  const menuWidth = rScale(MENU_WIDTH);
+  const tileMinHeight = rScale(TILE_MIN_HEIGHT);
+  const tileFontSize = fontFor(12);
+  const rowFontSize = fontFor(16);
+  const cellBackground = (pressed: boolean) =>
+    pressed
+      ? theme.colors.divider
+      : theme.isDark
+        ? theme.colors.backgroundTertiary
+        : theme.colors.backgroundPrimary;
+
+  // Small phones can't fit the whole card below the top bar: cap it at the
+  // space left and let it scroll instead of cutting the last rows off.
+  const menuTopValue = menuTop ?? styles.menuContainer.top;
+  const menuMaxHeight = windowHeight - menuTopValue - CARET_HEIGHT - MENU_BOTTOM_GAP;
 
   return (
     <Modal
@@ -260,7 +316,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
           style={[
             styles.menuContainer,
             {
-              top: menuTop ?? styles.menuContainer.top,
+              top: menuTopValue,
               right: menuRight,
               opacity,
               transform: [{scale}],
@@ -276,97 +332,137 @@ const HamburgerMenuPopover: React.FC<Props> = ({
             style={[
               styles.menuCard,
               {
+                width: menuWidth,
                 backgroundColor: theme.colors.backgroundSecondary,
                 borderColor: theme.colors.divider,
               },
             ]}>
-            {items.map(item => (
-              <Pressable
-                key={item.key}
-                // Tutorial spotlights the Fotoam-pivavahana row via this ref.
-                ref={item.key === 'cultMode' ? cultItemRef : undefined}
-                collapsable={false}
-                onPress={() => onSelect(item.key)}
-                style={({pressed}) => [
-                  styles.menuItem,
-                  pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null
-                ]}>
-                <Text style={[styles.menuItemText, {color: menuAccent}]}>
-                  {item.label}
-                </Text>
-              </Pressable>
-            ))}
+            <ScrollView
+              style={{maxHeight: menuMaxHeight}}
+              bounces={false}
+              showsVerticalScrollIndicator>
+              {/* fontFor already applies the phone's font size (capped), so
+                  the labels below opt out of a second system scaling. */}
+              <View style={styles.quickRow}>
+                {quickItems.map(item => (
+                  <Pressable
+                    key={item.key}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    onPress={() => onSelect(item.key)}
+                    style={({pressed}) => [
+                      styles.quickTile,
+                      {minHeight: tileMinHeight, backgroundColor: cellBackground(pressed)},
+                    ]}>
+                    <MenuIcon name={item.icon} color={menuAccent} />
+                    <Text
+                      style={[styles.quickTileText, {color: menuAccent, fontSize: tileFontSize}]}
+                      numberOfLines={1}
+                      allowFontScaling={false}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
 
-            <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
-
-            <View style={styles.variantSection}>
-              <Text style={[styles.variantTitle, {color: theme.colors.textSecondary}]}>
-                Anaran'ny Tompo
-              </Text>
-
-              {/* Sliding-knob toggle, mirroring the dark/light theme switch. */}
-              <Pressable
-                accessibilityRole="switch"
-                accessibilityState={{checked: jesusNameVariant === 'jesoa'}}
-                accessibilityLabel="Anaran'ny Tompo"
-                onPress={() =>
-                  setJesusNameVariant(jesusNameVariant === 'jesoa' ? 'jesosy' : 'jesoa')
-                }
-                style={({pressed}) => [pressed ? {opacity: 0.9} : null]}>
-                <View
-                  style={[
-                    styles.variantTrack,
-                    {
-                      backgroundColor: theme.colors.backgroundTertiary,
-                      borderColor: theme.isDark ? '#FFFFFF20' : '#00000020',
-                    },
-                  ]}>
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      styles.variantKnob,
-                      {
-                        backgroundColor: menuCheckAccent,
-                        transform: [{translateX: variantKnobTranslate}],
-                      },
-                    ]}
-                  />
-                  {(['jesosy', 'jesoa'] as const).map(variant => {
-                    const active = jesusNameVariant === variant;
-                    return (
-                      <View key={variant} style={styles.variantSegment} pointerEvents="none">
-                        <Text
-                          style={[
-                            styles.variantSegmentText,
-                            {color: active ? '#FFFFFF' : menuAccent},
-                          ]}>
-                          {variant === 'jesosy' ? 'Jesosy' : 'Jesoa'}
-                        </Text>
-                      </View>
-                    );
-                  })}
+              {rowGroups.map(group => (
+                <View key={group[0].key}>
+                  <View style={[styles.groupDivider, {backgroundColor: theme.colors.divider}]} />
+                  {group.map(item => (
+                    <Pressable
+                      key={item.key}
+                      // Tutorial spotlights the Fotoam-pivavahana row via this ref.
+                      ref={item.key === 'cultMode' ? cultItemRef : undefined}
+                      collapsable={false}
+                      accessibilityRole="button"
+                      onPress={() => onSelect(item.key)}
+                      style={({pressed}) => [
+                        styles.menuRow,
+                        pressed ? {backgroundColor: theme.colors.divider} : null,
+                      ]}>
+                      <MenuIcon name={item.icon} color={menuAccent} />
+                      <Text
+                        style={[styles.menuRowText, {color: menuAccent, fontSize: rowFontSize}]}
+                        numberOfLines={1}
+                        allowFontScaling={false}>
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
-              </Pressable>
-            </View>
+              ))}
 
-            <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
+              <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
 
-            <View style={styles.themeRow}>
-              <ToggleThemeButton
-                isDarkMode={isDarkMode}
-                onToggle={onToggleDarkMode}
-              />
-              <Pressable
-                accessibilityLabel={t('menu.about')}
-                onPress={onAbout}
-                style={({pressed}) => [
-                  styles.aboutButton,
-                  {borderColor: menuAccent},
-                  pressed ? styles.aboutButtonPressed : null,
-                ]}>
-                <Text style={[styles.aboutButtonText, {color: menuAccent}]}>?</Text>
-              </Pressable>
-            </View>
+              <View style={styles.variantSection}>
+                <Text style={[styles.variantTitle, {color: theme.colors.textSecondary}]}>
+                  Anaran'ny Tompo
+                </Text>
+
+                {/* Sliding-knob toggle, mirroring the dark/light theme switch. */}
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityState={{checked: jesusNameVariant === 'jesoa'}}
+                  accessibilityLabel="Anaran'ny Tompo"
+                  onPress={() =>
+                    setJesusNameVariant(jesusNameVariant === 'jesoa' ? 'jesosy' : 'jesoa')
+                  }
+                  style={({pressed}) => [pressed ? {opacity: 0.9} : null]}>
+                  <View
+                    style={[
+                      styles.variantTrack,
+                      {
+                        backgroundColor: theme.colors.backgroundTertiary,
+                        borderColor: theme.isDark ? '#FFFFFF20' : '#00000020',
+                      },
+                    ]}>
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.variantKnob,
+                        {
+                          backgroundColor: menuCheckAccent,
+                          transform: [{translateX: variantKnobTranslate}],
+                        },
+                      ]}
+                    />
+                    {(['jesosy', 'jesoa'] as const).map(variant => {
+                      const active = jesusNameVariant === variant;
+                      return (
+                        <View key={variant} style={styles.variantSegment} pointerEvents="none">
+                          <Text
+                            style={[
+                              styles.variantSegmentText,
+                              {color: active ? '#FFFFFF' : menuAccent},
+                            ]}>
+                            {variant === 'jesosy' ? 'Jesosy' : 'Jesoa'}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </Pressable>
+              </View>
+
+              <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
+
+              <View style={styles.themeRow}>
+                <ToggleThemeButton
+                  isDarkMode={isDarkMode}
+                  onToggle={onToggleDarkMode}
+                />
+                <Pressable
+                  accessibilityLabel={t('menu.about')}
+                  onPress={onAbout}
+                  style={({pressed}) => [
+                    styles.aboutButton,
+                    {borderColor: menuAccent},
+                    pressed ? styles.aboutButtonPressed : null,
+                  ]}>
+                  <Text style={[styles.aboutButtonText, {color: menuAccent}]}>?</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
         </Animated.View>
 
@@ -452,7 +548,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: 10,
     overflow: 'hidden',
-    minWidth: 180,
     borderWidth: 2,
     borderColor: '#2c7fb8',
   },
@@ -516,17 +611,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  menuItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+  quickRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 8,
+    padding: 10,
   },
-  menuItemPressed: {
-    backgroundColor: '#f2f6fb',
+  quickTile: {
+    width: '48.5%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
   },
-  menuItemText: {
-    fontSize: 20,
-    color: '#2c7fb8',
-    fontWeight: '400',
+  quickTileText: {
+    fontWeight: '600',
+  },
+  groupDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+    marginVertical: 4,
+  },
+  // 44pt is Apple's minimum touch target; Material lists use 16dp sides.
+  menuRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+  },
+  menuRowText: {
+    flex: 1,
+    fontWeight: '500',
   },
 });
 

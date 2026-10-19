@@ -5,7 +5,7 @@
 import React from 'react';
 import {StyleSheet, View} from 'react-native';
 
-export type TutorialIconName = 'rocket' | 'church' | 'highlighter';
+export type TutorialIconName = 'rocket' | 'church' | 'highlighter' | 'note';
 
 // Cutout pieces (rocket window, church door) are painted with the surface
 // colour rather than being real holes, so callers pass both.
@@ -14,7 +14,7 @@ type ShapeProps = {
   backgroundColor: string;
 };
 
-// ponytail: geometry is hardcoded to a 28px box (the one size the quest log
+// NOTE: geometry is hardcoded to a 28px box (the one size the quest log
 // uses). Parameterise on size if a second caller ever needs another.
 const SIZE = 28;
 
@@ -49,10 +49,24 @@ const Highlighter: React.FC<ShapeProps> = ({color, backgroundColor}) => (
   </View>
 );
 
+// A written page with its top-right corner folded: the corner is cut with the
+// surface colour, and the fold is a paler triangle laid over the page.
+const Note: React.FC<ShapeProps> = ({color, backgroundColor}) => (
+  <View style={styles.box}>
+    <View style={[styles.notePage, {backgroundColor: color}]} />
+    <View style={[styles.noteCornerCut, {borderTopColor: backgroundColor}]} />
+    <View style={[styles.noteFold, {borderBottomColor: backgroundColor}]} />
+    <View style={[styles.noteLine, styles.noteLine1, {backgroundColor}]} />
+    <View style={[styles.noteLine, styles.noteLine2, {backgroundColor}]} />
+    <View style={[styles.noteLine, styles.noteLine3, {backgroundColor}]} />
+  </View>
+);
+
 const ICONS: Record<TutorialIconName, React.FC<ShapeProps>> = {
   rocket: Rocket,
   church: Church,
   highlighter: Highlighter,
+  note: Note,
 };
 
 export const TutorialIcon: React.FC<ShapeProps & {name: TutorialIconName}> = ({
@@ -201,4 +215,51 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     backgroundColor: 'transparent',
   },
+
+  notePage: {
+    position: 'absolute',
+    left: 5,
+    top: 1,
+    width: 18,
+    height: 26,
+    borderRadius: 2,
+  },
+  // Top-right half of the 7px corner square, painted with the surface colour.
+  noteCornerCut: {
+    position: 'absolute',
+    left: 16,
+    top: 1,
+    width: 0,
+    height: 0,
+    borderTopWidth: 7,
+    borderLeftWidth: 7,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
+  // Bottom-left half of the same square: the folded-over flap, paler.
+  noteFold: {
+    position: 'absolute',
+    left: 16,
+    top: 1,
+    width: 0,
+    height: 0,
+    borderBottomWidth: 7,
+    borderRightWidth: 7,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: 'transparent',
+    backgroundColor: 'transparent',
+    opacity: 0.45,
+  },
+  noteLine: {
+    position: 'absolute',
+    left: 9,
+    height: 2,
+    borderRadius: 1,
+  },
+  noteLine1: {top: 12, width: 10},
+  noteLine2: {top: 17, width: 10},
+  noteLine3: {top: 22, width: 6},
 });

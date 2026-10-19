@@ -6,7 +6,7 @@
 import React from 'react';
 import {StyleSheet, View} from 'react-native';
 
-// ponytail: fixed 22px box, the one size the editor toolbar uses. Parameterise
+// NOTE: fixed 22px box, the one size the editor toolbar uses. Parameterise
 // on size if a second caller ever needs another.
 const SIZE = 22;
 const UNIT = SIZE / 24;

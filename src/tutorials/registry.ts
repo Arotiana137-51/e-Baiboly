@@ -1,4 +1,5 @@
 import type {TutorialIconName} from '../components/TutorialIcons';
+import {NATIVE_SELECTION} from '../services/selectionMenu';
 
 // Tutorial data — pure, append-only. To add a mini-tutorial later: append a
 // Tutorial object here (+ its steps). No engine change needed.
@@ -18,25 +19,31 @@ export type TargetId =
   | 'topbarPrev'        // ‹‹ chevron (previous chapter/hymn)
   | 'topbarNext'        // › chevron (next chapter/hymn)
   | 'topbarMenu'        // hamburger
-  | 'cultMenuItem'      // "Fotoam-pivavahana" row inside the hamburger popover
+  | 'cultMenuItem'      // "Fotoam-pivavahana" cell inside the hamburger popover
   | 'selBookTab'        // Boky tab inside BibleSelectionModal's SelectionTopBar
   | 'selChapterGrid'    // Toko grid
   | 'selVerseGrid'      // Andininy grid
-  | 'hymnCategoryTabs'  // category strip inside HymnSelectionModal
+  | 'hymnCategoryTabs'  // category buttons (2x2, or one row when wide) inside HymnSelectionModal
   | 'hymnKeypad'        // numeric keypad
-  | 'cultAddButtons'    // Hampio Baiboly / Fihirana row on CultModeScreen
-  | 'cultFlashRow'      // the just-added playlist row (spotlit + blinks post-add)
+  | 'cultAddButtons'    // Ampio Baiboly / Fihirana row on CultModeScreen
+  | 'cultFlashRow'      // the last-added playlist row (spotlit + blinks post-add; stays
+                        // referenced for the whole tutorial, so the delete step uses it too)
   | 'cultList'          // the playlist itself (what-to-read, drag to reorder)
-  | 'cultActivateToggle'// Velomy ny fotoana switch row on CultModeScreen
+  | 'cultActivateToggle'// round Play/Pause button on CultModeScreen
   | 'cultReaderNav'     // ‹ playlist chevron in the reader (Home) once active
   | 'cultReaderNavNext' // › playlist chevron (paired with cultReaderNav)
   | 'cultStopButton'    // ■ stop button in the reader transport bar (Home)
+  // Notes tutorial.
+  | 'noteActionItem'    // "Hanoratra naoty" in the verse action popover (double-tap)
+  | 'noteInput'         // the text field of the note bubble above the verse
+  | 'noteMarker'        // first verse of the chapter's most recently edited note
   // Highlight tutorial — targets inside the ChapterEditorModal (a native RN
-  // Modal; the verse text is a WebView, everything else is native RN Views).
+  // Modal; the verse text is a WebView, everything else is native RN Views),
+  // or, with native selection, in the highlight bubble over the reader.
   | 'hlReaderArea'      // the normal Bible reader (hole = real long-press to open the menu)
   | 'hlVerseText'       // the WebView chapter body (hole = real press-drag selection)
-  | 'hlColorPicker'     // the highlight-color swatch row
-  | 'hlEraseBtn'        // "Fafao" footer button (erase the selected highlight)
+  | 'hlColorPicker'     // the highlight-color swatch row (editor or bubble)
+  | 'hlEraseBtn'        // "Fafao" button, editor footer or bubble (erase the selected highlight)
   | 'hlSaveBtn';        // "Tahirizo" footer button (commit)
 
 // A side-effect the engine performs when the step becomes active — it drives
@@ -93,8 +100,8 @@ export type CoachStep = {
   // fingertip emoji (bare glyph, no skin-tone modifier — that flat
   // cartoon-yellow IS Unicode's neutral default) with a native-style motion
   // cue. 'longPress' = press-and-hold in place, with an expanding ring.
-  // 'swipeHorizontal' = slides left-right for a scrollable strip, no ring (a
-  // ring there reads as "hold still", contradicting a swipe). 'dragVertical'
+  // 'swipeHorizontal' = slides left-right, e.g. swipe-to-delete on a row, no
+  // ring (a ring there reads as "hold still", contradicting a swipe). 'dragVertical'
   // = press-and-hold (ring, same as longPress) THEN slides up-down — for
   // grab-and-reorder rows.
   gesture?: 'longPress' | 'swipeHorizontal' | 'dragVertical';
@@ -120,6 +127,7 @@ export type Tutorial = {
 export const ONBOARDING_ID = 'onboarding';
 export const CULT_TUTORIAL_ID = 'cultMode';
 export const HIGHLIGHT_TUTORIAL_ID = 'highlight';
+export const NOTES_TUTORIAL_ID = 'notes';
 
 // Onboarding's two mid-tutorial drills. Defined once, reused in whichever
 // order the user actually picks at `modeToggle` below — never assumed.
@@ -192,8 +200,7 @@ const ONBOARDING_HYMN_DRILL: CoachStep[] = [
     id: 'pickCategory',
     targetId: 'hymnCategoryTabs',
     scope: 'modal',
-    gesture: 'swipeHorizontal',
-    text: "Akisaho mianavanana na miankavia ny karazana boky fihirana ery ambony, avy eo tsindrio izay tianao hikarohana hira hirana mialohan'ny hanindrinao ny laharan-kira.",
+    text: "Safidio ery ambony ny boky fihirana tianao. Eo ambanin'ireo no hitanao ny laharana misy ao aminy.",
     advanceOn: 'targetEvent',
     awaitProgress: 'category',
   },
@@ -266,7 +273,18 @@ const CULT_AFTER_ADD_STEPS: CoachStep[] = [
     scope: 'cult',
     placement: 'top',
     gesture: 'dragVertical',
-    text: "Hanova ny filaharana: tsindrio ela ny mari-pisintonana ☰ eo anilan'ny anarana, dia sintony miakatra na midina.",
+    text: "Raha hanova ny filaharana: tsindrio ela ny andalana iray (na ny ☰ eo ankaviany), dia sintony miakatra na midina.",
+  },
+  {
+    // Tap-advance on purpose: the user may delete here or just read and move
+    // on. Deleting is safe either way — two entries were added, and
+    // cultActivate only needs one.
+    id: 'cultDelete',
+    targetId: 'cultFlashRow',
+    scope: 'cult',
+    placement: 'bottom',
+    gesture: 'swipeHorizontal',
+    text: "Raha hamafa: tsindrio ny kisary daba-pako eo ankavanana, na akisaho miankavia ilay andalana dia tsindrio \"Esory\".",
   },
   {
     id: 'cultActivate',
@@ -299,6 +317,72 @@ const CULT_AFTER_ADD_STEPS: CoachStep[] = [
   },
   {
     id: 'cultDone',
+    targetId: null,
+    scope: 'screen',
+    text: "Vita! Raha mbola velona ny fotoana, tsindrio ao amin'ny lisitra ny andalana iray dia io avy hatrany no hiseho. Azonao averina foana ao amin'ny Toro-lalana.",
+  },
+];
+
+// Highlight tutorial where the reader uses the phone's own selection
+// (NATIVE_SELECTION): a long-press selects a word and the highlight bubble
+// shows over it, with no editor to open or save. Same wording as the editor's
+// steps further down, where it still fits.
+const SELECTION_HIGHLIGHT_STEPS: CoachStep[] = [
+  {
+    id: 'hlIntro',
+    targetId: null,
+    scope: 'screen',
+    text: "Azonao asongadinana loko ny teny, andianteny na ampahany amin'ny toko iray.",
+  },
+  {
+    // Real gesture through the hole: the user's own long-press selects a word
+    // and brings the bubble (MainScreen emits highlightMenuOpened).
+    id: 'hlOpenMenu',
+    targetId: 'hlReaderArea',
+    scope: 'screen',
+    drive: 'showBibleReader',
+    gesture: 'longPress',
+    text: 'Tsindrio ela (long press) andininy iray eto amin\'ny famakiana mba hisokafan\'ny fitaovana fanasongadinana.',
+    advanceOn: 'targetEvent',
+    awaitProgress: 'highlightMenuOpened',
+  },
+  {
+    // The bubble's colours: a tap colours the words at once and closes it
+    // (MainScreen emits editorSaved).
+    id: 'hlPickColor',
+    targetId: 'hlColorPicker',
+    scope: 'screen',
+    text: 'Rehefa voafidy ny teny, tsindrio ny loko iray eto.',
+    advanceOn: 'targetEvent',
+    awaitProgress: 'editorSaved',
+  },
+  {
+    id: 'hlDeleteIntro',
+    targetId: null,
+    scope: 'screen',
+    text: "Tsara! Voatahiry ny fanasongadinana. Ankehitriny hianarantsika ny fomba hamafana azy raha diso na tsy ilaina intsony.",
+  },
+  {
+    id: 'hlDeleteReopen',
+    targetId: 'hlReaderArea',
+    scope: 'screen',
+    drive: 'showBibleReader',
+    gesture: 'longPress',
+    text: "Hidiro indray ny fitaovana: tsindrio ela ilay andininy nasongadinao teo.",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'highlightMenuOpened',
+  },
+  {
+    // Fafao in the bubble applies at once, like a colour.
+    id: 'hlDeleteErase',
+    targetId: 'hlEraseBtn',
+    scope: 'screen',
+    text: 'Tsindrio "Fafao" hanesorana ny loko tamin\'ny teny voafidy.',
+    advanceOn: 'targetEvent',
+    awaitProgress: 'editorSaved',
+  },
+  {
+    id: 'hlDone',
     targetId: null,
     scope: 'screen',
     text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
@@ -367,7 +451,7 @@ export const TUTORIALS: Tutorial[] = [
         id: 'cultPickMenuItem',
         targetId: 'cultMenuItem',
         scope: 'modal',
-        text: "Tsindrio \"Fotoam-pivavahana\" ao anaty lisitra.",
+        text: "Tsindrio \"Fotoam-pivavahana\" ao anaty menio.",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultMenuSelected',
       },
@@ -379,7 +463,7 @@ export const TUTORIALS: Tutorial[] = [
       },
       {
         // Branch point, same pattern as onboarding's modeToggle: the row has
-        // both "Hampio Baiboly" and "Hampio Fihirana", and whichever the user
+        // both "Ampio Baiboly" and "Ampio Fihirana", and whichever the user
         // taps first decides the order — text is neutral (not "tap Baiboly"),
         // so a tap on Fihirana isn't treated as a wrong move. Default
         // (Bible-first) falls through to cultAddHymn below via awaitProgress;
@@ -388,7 +472,7 @@ export const TUTORIALS: Tutorial[] = [
         targetId: 'cultAddButtons',
         scope: 'cult',
         placement: 'bottom',
-        text: "Ampio ao anaty lisitra ny voalohany: tsindrio \"Hampio Baiboly\" na \"Hampio Fihirana\".",
+        text: "Ampio ao anaty lisitra ny voalohany: tsindrio \"Ampio Baiboly\" na \"Ampio Fihirana\".",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultBibleAdded',
         branches: {
@@ -401,7 +485,7 @@ export const TUTORIALS: Tutorial[] = [
               extraTargetIds: ['cultFlashRow'],
               scope: 'cult',
               placement: 'top',
-              text: "Ampio andininy Baiboly izao: tsindrio \"Hampio Baiboly\" dia safidio boky, toko ary andininy.",
+              text: "Ampio andininy Baiboly izao: tsindrio \"Ampio Baiboly\" dia safidio boky, toko ary andininy.",
               advanceOn: 'targetEvent',
               awaitProgress: 'cultBibleAdded',
             },
@@ -419,7 +503,7 @@ export const TUTORIALS: Tutorial[] = [
         extraTargetIds: ['cultFlashRow'],
         scope: 'cult',
         placement: 'top',
-        text: "Ampio hira izao: tsindrio \"Hampio Fihirana\" dia soraty ny laharan-kira.",
+        text: "Ampio hira izao: tsindrio \"Ampio Fihirana\" dia soraty ny laharan-kira.",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultHymnAdded',
       },
@@ -432,7 +516,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'highlighter',
     order: 2,
     launchRoute: 'Home',
-    steps: [
+    steps: NATIVE_SELECTION ? SELECTION_HIGHLIGHT_STEPS : [
       {
         id: 'hlIntro',
         targetId: null,
@@ -550,6 +634,69 @@ export const TUTORIALS: Tutorial[] = [
         targetId: null,
         scope: 'screen',
         text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
+      },
+    ],
+  },
+  {
+    // The note written here is a real one: the last card says how to remove it.
+    id: NOTES_TUTORIAL_ID,
+    title: 'Naoty', // Notes
+    icon: 'note',
+    order: 3,
+    launchRoute: 'Home',
+    steps: [
+      {
+        id: 'noteIntro',
+        targetId: null,
+        scope: 'screen',
+        drive: 'showBibleReader',
+        text: "Azonao asiana naoty ny andininy na ny hira, toy ny manoratra eo amin'ny sisin'ny Baiboly taratasy.",
+      },
+      {
+        // Real gesture through the hole: the user's own double-tap opens the
+        // verse menu (MainScreen emits verseActionOpened).
+        id: 'noteOpenActions',
+        targetId: 'hlReaderArea',
+        scope: 'screen',
+        drive: 'showBibleReader',
+        text: 'Tsindrio indroa haingana (double tap) ny andininy iray.',
+        advanceOn: 'targetEvent',
+        awaitProgress: 'verseActionOpened',
+      },
+      {
+        id: 'notePickAction',
+        targetId: 'noteActionItem',
+        scope: 'modal',
+        text: 'Tsindrio "Hanoratra naoty".',
+        advanceOn: 'targetEvent',
+        awaitProgress: 'noteOpened',
+      },
+      {
+        // The bubble opens in the reader itself (screen scope), scrolled to
+        // the top; the card goes below it, above the keyboard. Advances on any
+        // close, saved or not (NoteBubble emits noteClosed for Tahirizo, back
+        // and delete), so closing an empty bubble can't strand the tutorial.
+        id: 'noteWrite',
+        targetId: 'noteInput',
+        scope: 'screen',
+        text: "Soraty eto ny naotinao. Raha andininy maromaro no resahiny, ampitomboy amin'ny + ny \"Hatramin'ny andininy\". Rehefa vita, tsindrio \"Tahirizo\" eo ambony.",
+        advanceOn: 'targetEvent',
+        awaitProgress: 'noteClosed',
+      },
+      {
+        // The hole frames the whole first noted verse: coloured number,
+        // margin bracket and (for a one-verse note) the preview line.
+        id: 'noteMarker',
+        targetId: 'noteMarker',
+        scope: 'screen',
+        peekCard: true,
+        text: "Ny laharan'ny andininy misy loko, ny tsipika eo amin'ny sisiny ary ny andalana voalohany amin'ny naotinao no mampahafantatra fa misy naoty eo. Tsindrio ny iray amin'ireo hamaky azy.",
+      },
+      {
+        id: 'noteDone',
+        targetId: null,
+        scope: 'screen',
+        text: "Vita! Ao amin'ny \"Naoty\" ao anaty menio no ahitanao azy rehetra. Raha hamafa ity naoty fanandramana ity, sokafy ary tsindrio ny daba-pako. Azonao averina foana ao amin'ny Toro-lalana.",
       },
     ],
   },

@@ -10,12 +10,8 @@ const FAVORITES_KEY = 'favorites_hymns';
 
 type HymnFavoritesContextValue = {
   favorites: FavoriteHymn[];
-  isLoading: boolean;
   addToFavorites: (hymn: Hymn) => Promise<void>;
   removeFromFavorites: (hymn: Hymn) => Promise<void>;
-  isFavorite: (hymn: Hymn) => boolean;
-  clearFavorites: () => Promise<void>;
-  loadFavorites: () => Promise<void>;
 };
 
 // See useFavorites.tsx for why this is a shared singleton rather than a
@@ -24,7 +20,6 @@ const HymnFavoritesContext = createContext<HymnFavoritesContextValue | null>(nul
 
 export const HymnFavoritesProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [favorites, setFavorites] = useState<FavoriteHymn[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Load favorites from storage
   const loadFavorites = useCallback(async () => {
@@ -36,8 +31,6 @@ export const HymnFavoritesProvider: React.FC<{children: React.ReactNode}> = ({ch
       }
     } catch (error) {
       console.error('Error loading hymn favorites:', error);
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
@@ -81,21 +74,6 @@ export const HymnFavoritesProvider: React.FC<{children: React.ReactNode}> = ({ch
     }
   }, []);
 
-  // Check if a hymn is in favorites
-  const isFavorite = useCallback((hymn: Hymn) => {
-    return favorites.some(fav => fav.id === hymn.id);
-  }, [favorites]);
-
-  // Clear all favorites
-  const clearFavorites = useCallback(async () => {
-    try {
-      setFavorites([]);
-      await AsyncStorage.removeItem(FAVORITES_KEY);
-    } catch (error) {
-      console.error('Error clearing hymn favorites:', error);
-    }
-  }, []);
-
   // Load favorites on mount
   useEffect(() => {
     loadFavorites();
@@ -104,14 +82,10 @@ export const HymnFavoritesProvider: React.FC<{children: React.ReactNode}> = ({ch
   const value = useMemo(
     () => ({
       favorites,
-      isLoading,
       addToFavorites,
       removeFromFavorites,
-      isFavorite,
-      clearFavorites,
-      loadFavorites,
     }),
-    [favorites, isLoading, addToFavorites, removeFromFavorites, isFavorite, clearFavorites, loadFavorites]
+    [favorites, addToFavorites, removeFromFavorites]
   );
 
   return <HymnFavoritesContext.Provider value={value}>{children}</HymnFavoritesContext.Provider>;

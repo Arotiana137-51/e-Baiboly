@@ -13,6 +13,7 @@ import {FavoritesProvider} from './src/hooks/useFavorites';
 import {HymnFavoritesProvider} from './src/hooks/useHymnFavorites';
 import {BibleHistoryProvider} from './src/hooks/useBibleHistory';
 import {HymnHistoryProvider} from './src/hooks/useHymnHistory';
+import {NotesProvider} from './src/contexts/NotesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {STORAGE_KEY_PRIVACY_POLICY_ACCEPTED} from './src/screens/PrivacyPolicyScreen';
 import {isOnboardingDone} from './src/contexts/TutorialContext';
@@ -22,7 +23,13 @@ import {
   drainFatalErrorToQueue,
 } from './src/services/reporting/crashReporter';
 import {ensureRemindersScheduled} from './src/services/reminders/readingReminder';
-import {syncDailyVerseWidget} from './src/services/widget/dailyVerseWidget';
+import {
+  FAVORITE_URL,
+  parseVerseKey,
+  recordWidgetHeart,
+  syncDailyVerseWidget,
+  TENY_HO_ANAO_URL,
+} from './src/services/widget/dailyVerseWidget';
 import notifee, {EventType, type Notification} from '@notifee/react-native';
 
 // Capture uncaught JS errors (async, timers, event handlers) before RN's
@@ -52,8 +59,18 @@ const openVerseFromNotification = (notification?: Notification) => {
   if (data) openVerse({bookId: data.bookId, bookName: data.bookName, chapter: data.chapter, verse: data.verse});
 };
 
+// Hand-parsed: RN's URL lacks searchParams.
+const urlParams = (url: string): Record<string, string> => {
+  const params: Record<string, string> = {};
+  for (const pair of (url.split('?')[1] ?? '').split('&')) {
+    const [key, value = ''] = pair.split('=');
+    if (key) params[key] = decodeURIComponent(value);
+  }
+  return params;
+};
+
 // ebaiboly://verse?book=19&chapter=23&verse=1&name=Salamo (see
-// services/widget/dailyVerseWidget.ts). Hand-parsed: RN's URL lacks searchParams.
+// services/widget/dailyVerseWidget.ts).
 const openVerseFromUrl = (url: string | null) => {
   // The widget's Loko shortcut: straight to the look screen, which closes
   // the app again on "Vita" so the user lands back on the widget.
@@ -61,12 +78,23 @@ const openVerseFromUrl = (url: string | null) => {
     if (navigationRef.isReady()) navigationRef.navigate('WidgetLook', {fromWidget: true});
     return;
   }
-  if (!url?.startsWith('ebaiboly://verse')) return;
-  const params: Record<string, string> = {};
-  for (const pair of (url.split('?')[1] ?? '').split('&')) {
-    const [key, value = ''] = pair.split('=');
-    if (key) params[key] = decodeURIComponent(value);
+  // The widget's "Teny ho anao" check-in card.
+  if (url?.startsWith(TENY_HO_ANAO_URL)) {
+    if (navigationRef.isReady()) navigationRef.navigate('TenyHoAnao');
+    return;
   }
+  // The widget's heart on an iPhone without interactive widgets (iOS
+  // 15-16): recorded as the widget itself would, then the verse is shown.
+  if (url?.startsWith(FAVORITE_URL)) {
+    const params = urlParams(url);
+    const ref = parseVerseKey(params.key ?? '');
+    if (!ref) return;
+    recordWidgetHeart(params.key, params.on === '1');
+    openVerse({bookId: ref.b, bookName: params.name, chapter: ref.c, verse: ref.v});
+    return;
+  }
+  if (!url?.startsWith('ebaiboly://verse')) return;
+  const params = urlParams(url);
   openVerse({bookId: params.book, bookName: params.name, chapter: params.chapter, verse: params.verse});
 };
 
@@ -187,18 +215,20 @@ const App = () => {
                       <HymnFavoritesProvider>
                         <BibleHistoryProvider>
                           <HymnHistoryProvider>
-                            <NavigationContainer
-                              ref={navigationRef}
-                              onReady={() => {
-                                // Cold start from a notification or widget tap.
-                                notifee
-                                  .getInitialNotification()
-                                  .then(initial => openVerseFromNotification(initial?.notification))
-                                  .catch(() => {});
-                                Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
-                              }}>
-                              <AppContent />
-                            </NavigationContainer>
+                            <NotesProvider>
+                              <NavigationContainer
+                                ref={navigationRef}
+                                onReady={() => {
+                                  // Cold start from a notification or widget tap.
+                                  notifee
+                                    .getInitialNotification()
+                                    .then(initial => openVerseFromNotification(initial?.notification))
+                                    .catch(() => {});
+                                  Linking.getInitialURL().then(openVerseFromUrl).catch(() => {});
+                                }}>
+                                <AppContent />
+                              </NavigationContainer>
+                            </NotesProvider>
                           </HymnHistoryProvider>
                         </BibleHistoryProvider>
                       </HymnFavoritesProvider>
@@ -215,11 +245,6 @@ const App = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   splashContainer: {
     flex: 1,
     justifyContent: 'center',

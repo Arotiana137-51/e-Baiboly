@@ -21,7 +21,6 @@ interface ThemeColors {
   divider: string;
   accentBlue: string;
   accentGold: string;
-  glow: string;
   navBackground: string;
   verseNumber: string;
   markerHighlight: string;
@@ -36,7 +35,6 @@ type ThemeContextValue = {
   theme: Theme;
   isDarkMode: boolean;
   setDarkMode: (enabled: boolean) => void;
-  toggleDarkMode: () => void;
   isReady: boolean;
   enableLowEndMode: () => void;
   disableLowEndMode: () => void;
@@ -61,7 +59,6 @@ const darkColors: ThemeColors = {
   divider: '#3A3A3C',
   accentBlue: '#007991',
   accentGold: '#FFD60A',
-  glow: '#25A18E',
   navBackground: '#004E64',
   verseNumber: '#007991',
   markerHighlight: 'rgba(255, 193, 7, 0.42)',
@@ -79,7 +76,6 @@ const lightColors: ThemeColors = {
   divider: '#E2D1BB',
   accentBlue: '#007991',
   accentGold: '#FFD60A',
-  glow: '#25A18E',
   navBackground: '#004E64',
   verseNumber: '#007991',
   markerHighlight: 'rgba(255, 213, 79, 0.55)',
@@ -158,10 +154,6 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
     [persist]
   );
 
-  const toggleDarkMode = useCallback(() => {
-    setDarkMode(!isDarkMode);
-  }, [isDarkMode, setDarkMode]);
-
   const enableLowEndMode = useCallback(() => {
     setIsLowEndMode(true);
     persistLowEnd(true);
@@ -193,7 +185,6 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
       theme,
       isDarkMode,
       setDarkMode,
-      toggleDarkMode,
       isReady,
       enableLowEndMode,
       disableLowEndMode,
@@ -201,7 +192,7 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
       primaryColor,
       setPrimaryColor,
     }),
-    [theme, isDarkMode, setDarkMode, toggleDarkMode, isReady, enableLowEndMode, disableLowEndMode, isLowEndMode, primaryColor, setPrimaryColor]
+    [theme, isDarkMode, setDarkMode, isReady, enableLowEndMode, disableLowEndMode, isLowEndMode, primaryColor, setPrimaryColor]
   );
 
   return (

@@ -26,7 +26,6 @@ export const useHymnsData = () => {
   const [hymns, setHymns] = useState<Hymn[]>([]);
   const [verses, setVerses] = useState<HymnVerse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Load all hymns
   const loadHymns = useCallback(async () => {
@@ -51,7 +50,6 @@ export const useHymnsData = () => {
       return hymnsList;
     } catch (error) {
       console.error('Error loading hymns:', error);
-      setError('Failed to load hymns');
       return [];
     } finally {
       setIsLoading(false);
@@ -74,50 +72,9 @@ export const useHymnsData = () => {
       return versesList;
     } catch (error) {
       console.error('Error loading hymn verses:', error);
-      setError('Failed to load hymn verses');
       return [];
     } finally {
       setIsLoading(false);
-    }
-  }, []);
-
-  // Search for hymns by title or content
-  const searchHymns = useCallback(async (query: string) => {
-    try {
-      await hymnsDatabaseService.initDatabase();
-      const { rows } = await hymnsDatabaseService.executeQuery<{
-        id: string;
-        number: number;
-        category?: string;
-        title: string;
-        authors: string;
-      }>(
-        // HymnVersesFts is contentless, so we look up hymn_id by joining
-        // HymnVerses on rowid rather than selecting it from FTS.
-        `SELECT h.id, h.number, h.category, h.title, h.authors
-         FROM Hymns h
-         WHERE h.id IN (
-           SELECT hymn_id FROM HymnsFts WHERE HymnsFts MATCH ?
-           UNION
-           SELECT v.hymn_id
-             FROM HymnVersesFts f
-             JOIN HymnVerses v ON v.rowid = f.rowid
-             WHERE HymnVersesFts MATCH ?
-         )
-         ORDER BY h.number
-         LIMIT 200`,
-        [query, query]
-      );
-      
-      const hymnsList: Hymn[] = rows.map(hymn => ({
-        ...hymn,
-        authors: hymn.authors ? JSON.parse(hymn.authors) : []
-      }));
-      
-      return hymnsList;
-    } catch (error) {
-      console.error('Error searching hymns:', error);
-      return [];
     }
   }, []);
 
@@ -130,9 +87,6 @@ export const useHymnsData = () => {
     hymns,
     verses,
     isLoading,
-    error,
-    loadHymns,
     loadHymnVerses,
-    searchHymns,
   };
 };

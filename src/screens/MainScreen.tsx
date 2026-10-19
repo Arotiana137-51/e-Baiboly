@@ -1,12 +1,10 @@
 import React, {useCallback, useEffect, useMemo, useState, useRef} from 'react';
 import {
-  Modal,
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   View,
-  Dimensions,
-  FlatList,
   Platform,
   AppState,
   PanResponder,
@@ -16,7 +14,11 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
-import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
+import BibleReaderView, {
+  type BibleReaderHandle,
+  type SelectedVerseRange,
+} from '../components/BibleReaderView';
+import {NATIVE_SELECTION, onSelectionActive} from '../services/selectionMenu';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
@@ -26,6 +28,10 @@ import SelectionTopBar from '../components/SelectionTopBar';
 import VerseActionPopover from '../components/VerseActionPopover';
 import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
+import NoteBubble, {type NoteBubbleTarget} from '../components/NoteBubble';
+import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
+import {SheetButton, SheetModal} from '../components/SheetModal';
+import {UndoBar} from '../components/UndoBar';
 import {ShareCardModal} from '../components/ShareCardModal';
 import {
   buildBibleShareItems,
@@ -53,18 +59,27 @@ import HamburgerMenuPopover, {
 } from '../components/HamburgerMenuPopover';
 import {useTheme} from '../contexts/ThemeContext';
 import {useCultMode} from '../contexts/CultModeContext';
-import {WHOLE_CHAPTER_VERSE_END} from '../types/cultMode';
+import {isWholeChapterEntry} from '../types/cultMode';
+import {useNotes} from '../contexts/NotesContext';
+import {
+  anchorStartKey,
+  chapterNotes,
+  hymnNotes,
+  sameAnchorStart,
+  type Note,
+  type NoteAnchor,
+} from '../types/notes';
 import {useTutorial, useTutorialTarget, isOnboardingDone} from '../contexts/TutorialContext';
 import {ONBOARDING_ID, CULT_TUTORIAL_ID, HIGHLIGHT_TUTORIAL_ID} from '../tutorials/registry';
 import TutorialOverlay from '../components/TutorialOverlay';
 import type {DriveVerb} from '../tutorials/registry';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
 import { useResponsive } from '../theme/responsive';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
 import {t} from '../i18n/strings';
 import {hexToRgba} from '../utils/colorUtils';
+import {maybeRequestReview, REVIEW_DELAY_DAYS} from '../utils/appReview';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
   enqueueIssueReport,
@@ -111,8 +126,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   useKeepAwake();
   const { scale: rScale, isAndroid: rIsAndroid } = useResponsive();
   const TOP_BAR_TOOLBAR_HEIGHT = Math.max(TOP_BAR_TOOLBAR_BASE, rScale(rIsAndroid ? 52 : 44));
-  const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
-  const flatListRef = useRef<FlatList>(null);
+  const readerRef = useRef<BibleReaderHandle>(null);
   const [shouldScrollToVerse, setShouldScrollToVerse] = useState<number | null>(null);
   // Set to true by the topnav chevrons after they advance the chapter, so
   // the Bible reader scrolls back to verse 1 once the new chapter's verses
@@ -127,22 +141,11 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // resurrects) whatever history entry the user deleted for the last-read
   // item, since restoring position and logging a visit shared one effect.
   const skipNextHistoryLogRef = useRef(false);
+  // Set once a route param (deep link, notification, favorites…) picks the
+  // Bible position, so the last-read restore never overwrites it.
+  const explicitBibleTargetRef = useRef(false);
 
   const appState = useRef(AppState.currentState);
-
-  // Calculate adaptive safe area padding (1.5% of screen height, but only if inset is significant)
-  const maxPadding = screenHeight * 0.015;
-  const minSignificantInset = 20; // Only apply padding if inset is more than 20px
-  const proportionalTopPadding = insets.top > minSignificantInset ? Math.min(insets.top, maxPadding) : 0;
-  const proportionalBottomPadding = insets.bottom > minSignificantInset ? Math.min(insets.bottom, maxPadding) : 0;
-
-  // Update screen height on orientation change
-  useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setScreenHeight(window.height);
-    });
-    return () => subscription?.remove();
-  }, []);
 
   const [mode, setMode] = useState<AppMode>(route.params?.mode || 'bible');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -191,6 +194,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     // caller actually meant to set.
     if (params.mode !== 'hymnal') {
       if (params.selectedBook) {
+        // Wins over the async last-read restore below if that read is
+        // still in flight (cold start from the widget or a notification).
+        explicitBibleTargetRef.current = true;
         setMode('bible');
         setCurrentBook(params.selectedBook);
       }
@@ -221,7 +227,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     loadHymnVerses,
     isLoading: isHymnsLoading,
   } = useHymnsData();
-  const { addToFavorites: addToBibleFavorites } = useFavorites();
+  const { addToFavorites: addToBibleFavorites, favorites: bibleFavorites } = useFavorites();
   const { addToFavorites: addToHymnFavorites } = useHymnFavorites();
   const { logAccess: logBibleAccess } = useBibleHistory();
   const { logAccess: logHymnAccess } = useHymnHistory();
@@ -249,16 +255,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [chapterEditorScrollVerseNumber, setChapterEditorScrollVerseNumber] =
     useState<number | null>(null);
   const {transformText} = useJesusName();
-  const {marks: chapterMarks, setAllMarks, clearChapter} = useChapterMarks(
+  const {marks: chapterMarks, setAllMarks} = useChapterMarks(
     currentBook?.id ?? null,
     currentChapter ?? null,
   );
   // Same editor and mark model as the Bible, stored per hymn.
-  const {
-    marks: hymnMarks,
-    setAllMarks: setAllHymnMarks,
-    clearChapter: clearHymnMarks,
-  } = useHymnMarks(mode === 'hymnal' ? currentHymnId : null);
+  const {marks: hymnMarks, setAllMarks: setAllHymnMarks} = useHymnMarks(
+    mode === 'hymnal' ? currentHymnId : null,
+  );
 
   // Hymn action popover state
   const [hymnActionVisible, setHymnActionVisible] = useState(false);
@@ -274,12 +278,21 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Hymn selection modal state
   const [hymnSelectionVisible, setHymnSelectionVisible] = useState(false);
 
+  // A native text selection is on screen: its handles drag sideways, which
+  // must not switch Baiboly / Fihirana.
+  const selectionActiveRef = useRef(false);
+
   const swipeResponder = useMemo(() => {
     const SWIPE_MIN_DX = 60;
     const SWIPE_ACTIVATION_DX = 18;
     const SWIPE_MAX_DY = 80;
+    // A swipe moves at once. A finger held still first is a long-press: the
+    // phone's text selection, whose drag to extend it would read as a swipe.
+    const SWIPE_MAX_HOLD_MS = 300;
+    let touchStartedAt = 0;
 
     const isSwipeEligible = () => {
+      if (selectionActiveRef.current) return false;
       if (isMenuOpen) return false;
       if (bibleSelectionVisible) return false;
       if (verseActionVisible) return false;
@@ -292,8 +305,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     };
 
     return PanResponder.create({
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+      // The touch's own timestamps, not the JS clock: a busy JS thread gets
+      // the start and the moves late and together, so a hold would look short.
+      onStartShouldSetPanResponderCapture: evt => {
+        touchStartedAt = evt.nativeEvent.timestamp;
+        return false;
+      },
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
         if (!isSwipeEligible()) return false;
+        if (evt.nativeEvent.timestamp - touchStartedAt > SWIPE_MAX_HOLD_MS) return false;
 
         const dx = gestureState.dx;
         const dy = gestureState.dy;
@@ -385,6 +405,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     (async () => {
       try {
         const stored = await AsyncStorage.getItem(LAST_READ_BIBLE_KEY);
+        if (explicitBibleTargetRef.current) return;
         if (stored) {
           const {bookId, bookName, chapter, verse} = JSON.parse(stored);
           if (books.find(b => b.id === bookId)) {
@@ -399,6 +420,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       } catch (error) {
         console.error('Error restoring last-read Bible position:', error);
       }
+      if (explicitBibleTargetRef.current) return;
       const defaultBook = books.find(b => b.name === 'Marka') ?? books[0];
       skipNextHistoryLogRef.current = true;
       setCurrentBook({id: defaultBook.id, name: defaultBook.name});
@@ -445,12 +467,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   }, [mode, hymns, currentHymnId]);
 
   useEffect(() => {
-    if (mode === 'hymnal' && currentHymnId) {
-      loadHymnVerses(currentHymnId);
-    }
-  }, [mode, currentHymnId, loadHymnVerses]);
-
-  useEffect(() => {
     if (mode === 'bible' && currentBook) {
       loadVerses(currentBook.id, currentChapter);
     } else if (mode === 'hymnal' && currentHymnId) {
@@ -487,46 +503,40 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     if (shouldScrollToVerse === null || verses.length === 0) {
       return;
     }
+    // The target chapter's verses may not have loaded yet (book/chapter and
+    // the scroll target change together, loadVerses lands a render later).
+    // Matching against the previous chapter would scroll to the wrong verse
+    // and consume the request, so wait for the right chapter.
+    if (verses[0].book_id !== currentBook?.id || verses[0].chapter !== currentChapter) {
+      return;
+    }
 
-    // When a range is active, the reader filters its FlatList down to just
-    // the range, so the target verse is at index 0 — no scroll needed, and
-    // scrolling against the full-chapter index would crash with
-    // "scrollToIndex out of range" because the visible list is shorter.
+    // When a range is active, the reader shows only the range, so the
+    // target verse is already at the top — no scroll needed.
     if (selectedVerseRange) {
       setShouldScrollToVerse(null);
       return;
     }
 
-    const verseIndex = verses.findIndex(
-      verse => verse.verse_number === shouldScrollToVerse,
-    );
-    if (verseIndex === -1) {
+    if (!verses.some(verse => verse.verse_number === shouldScrollToVerse)) {
       // Target verse missing in this chapter — unblock future scroll requests.
       setShouldScrollToVerse(null);
       return;
     }
 
-    if (!flatListRef.current) {
+    if (!readerRef.current) {
       return;
     }
 
-    const timer = setTimeout(() => {
-      flatListRef.current?.scrollToIndex({
-        index: verseIndex,
-        viewPosition: 0.2, // Position verse at 20% from top
-        animated: true,
-      });
-      setShouldScrollToVerse(null);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [verses, shouldScrollToVerse, selectedVerseRange]);
+    // The reader waits for the verse to be laid out, then scrolls it to 20 %
+    // from the top.
+    readerRef.current.scrollToVerse(shouldScrollToVerse);
+    setShouldScrollToVerse(null);
+  }, [verses, shouldScrollToVerse, selectedVerseRange, currentBook?.id, currentChapter]);
 
   // Chevron-driven scroll-to-top: wait until the new chapter's verses have
   // loaded before scrolling, otherwise the call lands on the previous
-  // chapter's FlatList contents. Mirrors the shouldScrollToVerse effect
-  // above but without an index — we use scrollToOffset(0) so it's safe even
-  // if the list is empty mid-transition.
+  // chapter's contents. Mirrors the shouldScrollToVerse effect above.
   useEffect(() => {
     if (!shouldScrollToTop) return;
     if (mode !== 'bible') {
@@ -534,12 +544,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       return;
     }
     if (verses.length === 0) return;
-    if (!flatListRef.current) {
+    if (!readerRef.current) {
       setShouldScrollToTop(false);
       return;
     }
     const timer = setTimeout(() => {
-      flatListRef.current?.scrollToOffset({offset: 0, animated: true});
+      readerRef.current?.scrollToTop();
       setShouldScrollToTop(false);
     }, 50);
     return () => clearTimeout(timer);
@@ -653,8 +663,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Cult mode propagator: when the active entry changes, drive the reader
   // (mode + book/chapter/range or hymn id/number/category) from it.
   // Whole-chapter Bible entries translate back to a null range so no banner
-  // shows. The verseEnd>=WHOLE_CHAPTER_VERSE_END fallback covers entries
-  // saved before isWholeChapter existed.
+  // shows. isWholeChapterEntry also covers entries saved before
+  // isWholeChapter existed.
   useEffect(() => {
     if (!cultMode.isActive || !cultMode.currentEntry) return;
     const entry = cultMode.currentEntry;
@@ -663,9 +673,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       setCurrentBook({id: entry.bookId, name: entry.bookName});
       setCurrentChapter(entry.chapter);
       setSelectedVerseNumber(null);
-      const isWholeChapter =
-        entry.isWholeChapter ?? entry.verseEnd >= WHOLE_CHAPTER_VERSE_END;
-      if (isWholeChapter) {
+      if (isWholeChapterEntry(entry)) {
         setSelectedVerseRange(null);
         setShouldScrollToVerse(null);
       } else {
@@ -778,6 +786,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       case 'readingReminder':
         navigation.navigate('ReadingReminder');
         return;
+      case 'tenyHoAnao':
+        navigation.navigate('TenyHoAnao');
+        return;
       default: {
         const _exhaustiveCheck: never = key;
         return _exhaustiveCheck;
@@ -833,7 +844,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const openHymnReportModal = (payload: { stanzaNumber: number; stanzaText: string }) => {
     const hymn = getCurrentHymn();
     const titleRef = `Fihirana ${hymn?.number ?? ''}${hymn?.category ? ` (${hymn.category.toUpperCase()})` : ''}`.trim();
-    const ref = `${titleRef} - Couplet ${payload.stanzaNumber}`.trim();
+    const part = payload.stanzaNumber === 0 ? HYMN_CHORUS_LABEL : `Couplet ${payload.stanzaNumber}`;
+    const ref = `${titleRef} - ${part}`.trim();
 
     setReportType('hymn');
     setReportReference(ref);
@@ -871,10 +883,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   const maybeFlushReports = async () => {
-    if (!ISSUE_REPORT_ENDPOINT_URL || ISSUE_REPORT_ENDPOINT_URL.includes('PUT_YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
-      return;
-    }
-
     try {
       await flushIssueReports(ISSUE_REPORT_ENDPOINT_URL);
     } catch (e) {
@@ -887,6 +895,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     const unsub = NetInfo.addEventListener((state: NetInfoState) => {
       if (state.isConnected) {
         maybeFlushReports();
+        // Once per app version; the store decides whether the dialog shows.
+        maybeRequestReview(REVIEW_DELAY_DAYS);
       }
     });
 
@@ -907,6 +917,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const handleVerseLongPress = (verse: BibleVerse) => {
     setSelectedVerseForAction(verse);
     setVerseActionVisible(true);
+    tutorial.notifyProgress('verseActionOpened');
   };
 
   const chapterDisplay = useMemo(() => {
@@ -932,6 +943,184 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       ? bibleShareReference(currentChapter)
       : undefined;
 
+  // --- Notes: anchored to verses / stanzas, shown in a bubble above them ---
+  const {notes, saveNote} = useNotes();
+  const [noteBubble, setNoteBubble] = useState<NoteBubbleTarget | null>(null);
+  const [deletedNote, setDeletedNote] = useState<Note | null>(null);
+  const clearDeletedNote = useCallback(() => setDeletedNote(null), []);
+
+  // Leaving the chapter or hymn closes the bubble (its unmount saves it).
+  useEffect(() => {
+    setNoteBubble(null);
+  }, [mode, currentBook?.id, currentChapter, currentHymnId]);
+
+  const currentChapterNotes = useMemo(
+    () => (currentBook ? chapterNotes(notes, currentBook.id, currentChapter) : []),
+    [notes, currentBook, currentChapter],
+  );
+  const currentHymnNotes = useMemo(
+    () => (mode === 'hymnal' && currentHymnId ? hymnNotes(notes, currentHymnId) : []),
+    [notes, mode, currentHymnId],
+  );
+  // This chapter's favourite verses, which the reader frames.
+  const favoriteVerseNumbers = useMemo(
+    () =>
+      new Set(
+        bibleFavorites
+          .filter(f => f.book_id === currentBook?.id && f.chapter === currentChapter)
+          .map(f => f.verse_number),
+      ),
+    [bibleFavorites, currentBook?.id, currentChapter],
+  );
+
+  const bibleNoteTarget = useCallback(
+    (anchor: NoteAnchor, existing: Note | null): NoteBubbleTarget => ({
+      anchor,
+      existing,
+      maxVerse: verses.length > 0 ? verses[verses.length - 1].verse_number : undefined,
+      reference: a =>
+        a.kind === 'bible'
+          ? `${currentBook?.name ?? ''} ${a.chapter}:${a.verseStart}${a.verseEnd > a.verseStart ? `-${a.verseEnd}` : ''}`.trim()
+          : '',
+      quote: a =>
+        a.kind === 'bible'
+          ? verses
+              .filter(v => v.verse_number >= a.verseStart && v.verse_number <= a.verseEnd)
+              .map(v => transformText(v.text))
+              .join(' ')
+          : '',
+    }),
+    [verses, currentBook, transformText],
+  );
+
+  const hymnNoteTarget = useCallback(
+    (anchor: NoteAnchor, existing: Note | null): NoteBubbleTarget => {
+      const hymn = currentHymnId ? hymns.find(h => h.id === currentHymnId) ?? null : null;
+      const label = hymn
+        ? `${hymn.category ? `${hymn.category.toUpperCase()} ` : ''}${hymn.number}`
+        : '';
+      return {
+        anchor,
+        existing,
+        reference: a => {
+          if (a.kind !== 'hymn') return '';
+          if (a.stanza === null) return hymn?.title ? `${label} · ${hymn.title}` : label;
+          return `${label} · ${a.stanza === 0 ? HYMN_CHORUS_LABEL : a.stanza}`;
+        },
+        quote: a => {
+          if (a.kind !== 'hymn' || a.stanza === null) return '';
+          return hymnVerses
+            .filter(v => v.verse_number === a.stanza)
+            .map(v => v.text.trim())
+            .join(' / ');
+        },
+      };
+    },
+    [currentHymnId, hymns, hymnVerses],
+  );
+
+  // A verse that already starts a note opens it; otherwise a new one-verse note.
+  const openBibleNote = (verse: BibleVerse) => {
+    if (!currentBook) return;
+    const anchor: NoteAnchor = {
+      kind: 'bible',
+      bookId: currentBook.id,
+      chapter: currentChapter,
+      verseStart: verse.verse_number,
+      verseEnd: verse.verse_number,
+    };
+    const existing = currentChapterNotes.find(n => sameAnchorStart(n.anchor, anchor)) ?? null;
+    setNoteBubble(bibleNoteTarget(anchor, existing));
+  };
+
+  const openHymnNote = (stanza: number | null) => {
+    if (!currentHymnId) return;
+    const anchor: NoteAnchor = {kind: 'hymn', hymnId: currentHymnId, stanza};
+    const existing = currentHymnNotes.find(n => sameAnchorStart(n.anchor, anchor)) ?? null;
+    setNoteBubble(hymnNoteTarget(anchor, existing));
+  };
+
+  // From a margin bracket or the hymn header chip.
+  const openNoteById = useCallback(
+    (noteId: string) => {
+      const note = notes.find(n => n.id === noteId);
+      if (!note) return;
+      setNoteBubble(
+        note.anchor.kind === 'bible'
+          ? bibleNoteTarget(note.anchor, note)
+          : hymnNoteTarget(note.anchor, note),
+      );
+    },
+    [notes, bibleNoteTarget, hymnNoteTarget],
+  );
+
+  // From the notes list: open the note once its chapter or hymn is on screen.
+  const [pendingNoteId, setPendingNoteId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!route.params?.openNoteId) return;
+    setPendingNoteId(route.params.openNoteId);
+    // Params are merged on later visits; clear it so it can't fire again.
+    navigation.setParams({openNoteId: undefined});
+  }, [route.params?.openNoteId, navigation]);
+  useEffect(() => {
+    if (!pendingNoteId) return;
+    const note = notes.find(n => n.id === pendingNoteId);
+    if (!note) return;
+    const a = note.anchor;
+    const onScreen =
+      a.kind === 'bible'
+        ? mode === 'bible' &&
+          verses.length > 0 &&
+          verses[0].book_id === a.bookId &&
+          verses[0].chapter === a.chapter
+        : mode === 'hymnal' && hymnVerses.length > 0 && hymnVerses[0].hymn_id === a.hymnId;
+    if (!onScreen) return;
+    setPendingNoteId(null);
+    openNoteById(note.id);
+  }, [pendingNoteId, notes, mode, verses, hymnVerses, openNoteById]);
+
+  // Stable while the end verse changes or the note gets saved, so the bubble
+  // keeps its draft; another note (another start) gets a fresh bubble.
+  const bubbleKey = noteBubble ? anchorStartKey(noteBubble.anchor) : '';
+  const renderNoteBubble = useCallback(
+    (onFocus: () => void) =>
+      noteBubble ? (
+        <NoteBubble
+          key={bubbleKey}
+          target={noteBubble}
+          onFocus={onFocus}
+          onClose={() => setNoteBubble(null)}
+          // Keep the target on the stored note, so a bubble that remounts
+          // edits it instead of creating a second one.
+          onSaved={note =>
+            setNoteBubble(prev => (prev ? {...prev, anchor: note.anchor, existing: note} : prev))
+          }
+          onDeleted={setDeletedNote}
+        />
+      ) : null,
+    [noteBubble, bubbleKey],
+  );
+  const noteBubbleVerse =
+    noteBubble?.anchor.kind === 'bible' ? noteBubble.anchor.verseStart : null;
+  const noteBubbleStanza =
+    noteBubble?.anchor.kind === 'hymn'
+      ? noteBubble.anchor.stanza === null
+        ? 'whole'
+        : noteBubble.anchor.stanza
+      : null;
+
+  const selectedVerseHasNote =
+    !!selectedVerseForAction &&
+    currentChapterNotes.some(
+      n => n.anchor.kind === 'bible' && n.anchor.verseStart === selectedVerseForAction.verse_number,
+    );
+  const stanzaHasNote = currentHymnNotes.some(
+    n => n.anchor.kind === 'hymn' && n.anchor.stanza === selectedHymnStanzaNumber,
+  );
+  const hymnHasNote = currentHymnNotes.some(
+    n => n.anchor.kind === 'hymn' && n.anchor.stanza === null,
+  );
+
   const handleChapterMarksSave = (next: ChapterMark[]) => {
     if (mode === 'hymnal') {
       setAllHymnMarks(next);
@@ -943,14 +1132,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     tutorial.notifyProgress('editorSaved');
   };
 
-  const handleChapterMarksClear = () => {
-    if (mode === 'hymnal') {
-      clearHymnMarks();
-    } else {
-      clearChapter();
-    }
-  };
-
   const handleViewCorrespondence = (verse: BibleVerse) => {
     openCrossReferences(verse);
   };
@@ -959,6 +1140,21 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     if (currentBook) {
       addToBibleFavorites(verse, currentBook.name);
     }
+  };
+
+  // --- Native text selection (long-press a word): swipes wait while it is on
+  // screen. ---
+  useEffect(() => {
+    if (!NATIVE_SELECTION) return;
+    return onSelectionActive(active => {
+      selectionActiveRef.current = active;
+    });
+  }, []);
+
+  // A colour or style from the highlight bubble, already merged in.
+  const handleChapterMarksEdit = (next: ChapterMark[]) => {
+    setAllMarks(next);
+    tutorial.notifyProgress('editorSaved');
   };
 
   const closeVerseAction = () => {
@@ -1258,10 +1454,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onSearchPress={() => navigation.navigate('GlobalSearch')}
         />
       )}
-      <Pressable
+      {/* A plain View: a Pressable here would take every touch the verses
+          leave, and on Android the view holding a touch keeps it from the
+          list, which then can't scroll. */}
+      <View
         ref={hlReaderAreaRef}
         collapsable={false}
-        android_ripple={null}
         style={styles.readerContainer}
         {...swipeResponder.panHandlers}>
         {mode === 'bible' && bibleSelectionVisible ? (
@@ -1332,22 +1530,21 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                 setChapterEditorScrollVerseNumber(verse.verse_number);
                 setChapterEditorVisible(true);
               }}
-              onNotePress={(verse) => {
-                // Tapping the ✎ glyph opens the chapter editor scrolled to the
-                // verse, where the note span is visible (dotted underline) and
-                // tappable to read/edit. Same open path as long-press.
-                setChapterEditorScrollVerseNumber(verse.verse_number);
-                setChapterEditorVisible(true);
-              }}
+              notes={currentChapterNotes}
+              onNoteMarkPress={openNoteById}
+              noteBubbleVerse={noteBubbleVerse}
+              renderNoteBubble={renderNoteBubble}
+              onChapterMarksChange={handleChapterMarksEdit}
+              onHighlightBubbleOpen={() => tutorial.notifyProgress('highlightMenuOpened')}
               selectedVerseNumber={selectedVerseNumber}
               selectedVerseRange={selectedVerseRange}
               onInlineRefPress={handleInlineBibleRefPress}
-              flatListRef={flatListRef}
+              handleRef={readerRef}
               headerText={mode === 'bible' ? bibleTitleLong : null}
               chapterMarks={chapterMarks}
-              currentBookName={currentBook?.name ?? null}
               onClearRange={() => setSelectedVerseRange(null)}
               onTopVerseChange={handleTopVerseChange}
+              favoriteVerses={favoriteVerseNumbers}
             />
           ) : (
             <HymnReaderView
@@ -1360,12 +1557,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               marks={hymnMarks}
               onHymnLongPress={handleHymnStanzaLongPress}
               onHymnDoubleTap={handleHymnStanzaDoubleTap}
-              onNotePress={handleHymnStanzaLongPress}
+              notes={currentHymnNotes}
+              onNoteMarkPress={openNoteById}
+              noteBubbleStanza={noteBubbleStanza}
+              renderNoteBubble={renderNoteBubble}
             />
           )
         )}
 
-      </Pressable>
+      </View>
       <CustomBottomNav
         activeMode={mode}
         onTabPress={(m) => {
@@ -1458,59 +1658,56 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         }}
       />
 
-      <Modal
+      <SheetModal
         visible={crossRefModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeCrossReferences}
+        title={
+          selectedVerse
+            ? `${currentBook?.name ?? ''} ${selectedVerse.chapter}:${selectedVerse.verse_number}`
+            : 'Cross references'
+        }
+        onClose={closeCrossReferences}
+        footer={<SheetButton label={t('common.close')} onPress={closeCrossReferences} />}
       >
-        <Pressable style={[styles.modalBackdrop]} onPress={closeCrossReferences}>
-          <Pressable
-            style={[
-              styles.modalCard,
-              {backgroundColor: theme.colors.backgroundSecondary},
-            ]}
-            onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, {color: theme.colors.textPrimary}]}> 
-                {selectedVerse
-                  ? `${currentBook?.name ?? ''} ${selectedVerse.chapter}:${selectedVerse.verse_number}`
-                  : 'Cross references'}
-              </Text>
-              <Pressable onPress={closeCrossReferences}>
-                <Text style={[styles.modalClose, {color: theme.colors.accentBlue}]}>HIDY</Text>
-              </Pressable>
-            </View>
-
-            {isCrossRefsLoading ? (
-              <Text style={[styles.modalHint, {color: theme.colors.readerText}]}>Mitady...</Text>
-            ) : crossRefs.length === 0 ? (
-              <Text style={[styles.modalHint, {color: theme.colors.readerText}]}>Tsy misy cross-reference.</Text>
-            ) : (
-              <View>
-                {crossRefs.slice(0, 200).map(ref => {
-                  const rangeText =
-                    ref.to_verse_start === ref.to_verse_end
-                      ? `${ref.to_verse_start}`
-                      : `${ref.to_verse_start}-${ref.to_verse_end}`;
-                  return (
-                    <Pressable
-                      key={ref.id}
-                      style={[styles.crossRefRow, {borderTopColor: theme.colors.divider}]}
-                      onPress={() => handleCrossRefPress(ref)}
-                    >
-                      <Text style={[styles.crossRefText, {color: theme.colors.readerText}]}> 
-                        {ref.to_book_name} {ref.to_chapter}:{rangeText}
-                      </Text>
-                      <Text style={[styles.crossRefVotes, {color: theme.colors.textSecondary}]}>{ref.votes}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+        {isCrossRefsLoading ? (
+          <View style={styles.modalState}>
+            <ActivityIndicator color={theme.colors.navBackground} />
+            <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Mitady...</Text>
+          </View>
+        ) : crossRefs.length === 0 ? (
+          <View style={styles.modalState}>
+            <Text style={[styles.modalHint, {color: theme.colors.textSecondary}]}>Tsy misy cross-reference.</Text>
+          </View>
+        ) : (
+          <ScrollViewWithThumb
+            style={styles.crossRefList}
+            contentContainerStyle={styles.crossRefListContent}
+          >
+            {crossRefs.slice(0, 200).map((ref, index) => {
+              const rangeText =
+                ref.to_verse_start === ref.to_verse_end
+                  ? `${ref.to_verse_start}`
+                  : `${ref.to_verse_start}-${ref.to_verse_end}`;
+              return (
+                <Pressable
+                  key={`${ref.to_book}:${ref.to_chapter}:${ref.to_verse_start}-${ref.to_verse_end}`}
+                  style={({pressed}) => [
+                    styles.crossRefRow,
+                    index > 0 && [styles.crossRefRowDivider, {borderTopColor: theme.colors.divider}],
+                    pressed && {backgroundColor: hexToRgba(theme.colors.navBackground, 0.08)},
+                  ]}
+                  onPress={() => handleCrossRefPress(ref)}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.crossRefText, {color: theme.colors.readerText}]}>
+                    {ref.to_book_name} {ref.to_chapter}:{rangeText}
+                  </Text>
+                  <Text style={[styles.crossRefChevron, {color: theme.colors.textSecondary}]}>›</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollViewWithThumb>
+        )}
+      </SheetModal>
 
       <HamburgerMenuPopover
         visible={isMenuOpen}
@@ -1546,7 +1743,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         visible={hymnSelectionVisible}
         hymns={hymns}
         currentCategory={currentHymnCategory}
-        currentNumber={currentHymnNumber}
         onClose={() => setHymnSelectionVisible(false)}
         onHymnSelect={handleHymnSelect}
       />
@@ -1555,7 +1751,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         visible={verseActionVisible}
         verse={selectedVerseForAction}
         verseBookName={currentBook?.name}
+        hasNote={selectedVerseHasNote}
         onClose={closeVerseAction}
+        onNote={openBibleNote}
         onViewCorrespondence={handleViewCorrespondence}
         onAddToFavorites={handleAddToFavorites}
         onShare={openBibleShare}
@@ -1572,7 +1770,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         highlightColor={theme.colors.markerHighlight}
         shareReference={editorShareReference}
         onSave={handleChapterMarksSave}
-        onClear={handleChapterMarksClear}
         onClose={() => {
           setChapterEditorVisible(false);
           setChapterEditorScrollVerseNumber(null);
@@ -1584,10 +1781,25 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         hymn={getCurrentHymn()}
         stanzaNumber={selectedHymnStanzaNumber}
         stanzaText={selectedHymnStanzaText}
+        stanzaHasNote={stanzaHasNote}
+        hymnHasNote={hymnHasNote}
         onClose={closeHymnAction}
+        onNote={openHymnNote}
         onAddToFavorites={handleAddHymnToFavorites}
         onShare={openHymnShare}
         onReportIssue={openHymnReportModal}
+      />
+
+      {/* Clear of the floating Baiboly / Fihirana switch at the bottom. */}
+      <UndoBar
+        item={deletedNote}
+        message={t('notes.deleted')}
+        onUndo={note => {
+          saveNote(note);
+          setDeletedNote(null);
+        }}
+        onDismiss={clearDeletedNote}
+        bottomOffset={72}
       />
 
       {shareCard ? (
@@ -1671,56 +1883,42 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#FFFFFF',
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  modalCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
+  modalState: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111',
-    flex: 1,
-    paddingRight: 12,
-  },
-  modalClose: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#005a9e',
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    gap: 10,
   },
   modalHint: {
-    paddingVertical: 12,
-    color: '#444',
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  // Sized by its rows when they fit; shrinks between header and footer when
+  // they don't, and scrolls.
+  crossRefList: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  crossRefListContent: {
+    paddingVertical: 4,
   },
   crossRefRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    minHeight: 52,
+    paddingHorizontal: 20,
+  },
+  crossRefRowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e5e5e5',
   },
   crossRefText: {
     flex: 1,
-    color: '#111',
+    fontSize: 16,
     paddingRight: 12,
   },
-  crossRefVotes: {
-    color: '#666',
-    fontVariant: ['tabular-nums'],
+  crossRefChevron: {
+    fontSize: 24,
+    lineHeight: 26,
   },
 });
 

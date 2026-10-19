@@ -1,14 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Modal,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ScrollView,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import {t} from '../i18n/strings';
+import { SheetButton, SheetModal } from './SheetModal';
+import { ScrollViewWithThumb } from './ScrollViewWithThumb';
 
 type ReportIssueModalProps = {
   visible: boolean;
@@ -27,184 +30,171 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const [comment, setComment] = useState('');
+  const [infoVisible, setInfoVisible] = useState(false);
+  const bodyRef = useRef<ScrollView>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (visible) {
       setComment('');
+      setInfoVisible(false);
     }
   }, [visible]);
+
+  // The comment field is the last thing in the body: once the card has made
+  // room for the keyboard, bring it (and the note under it) into view.
+  useEffect(() => {
+    if (keyboardHeight > 0) {
+      requestAnimationFrame(() => bodyRef.current?.scrollToEnd({ animated: true }));
+    }
+  }, [keyboardHeight]);
 
   const canSubmit = useMemo(() => comment.trim().length > 0, [comment]);
 
   return (
-    <Modal
+    <SheetModal
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      title={t('report.title')}
+      titleExtra={
+        // What gets sent and what doesn't, one tap away instead of a
+        // paragraph under the field.
         <Pressable
-          style={[
-            styles.card,
-            { backgroundColor: theme.colors.backgroundSecondary },
+          onPress={() => setInfoVisible(true)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="?"
+          style={({ pressed }) => [
+            styles.info,
+            { borderColor: theme.colors.accentBlue },
+            pressed && styles.infoPressed,
           ]}
-          onPress={() => {}}
         >
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
-              {t('report.title')}
-            </Text>
-            <Pressable onPress={onClose}>
-              <Text style={[styles.closeText, { color: theme.colors.textSecondary }]}>
-                {t('common.close')}
-              </Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.reference')}</Text>
-            <Text style={[styles.value, { color: theme.colors.textPrimary }]}>
-              {reference}
-            </Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.text')}</Text>
-            <Text
-              style={[styles.value, { color: theme.colors.textPrimary }]}
-              numberOfLines={8}
-            >
-              {text}
-            </Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.comment')}</Text>
-            <TextInput
-              value={comment}
-              onChangeText={setComment}
-              placeholder={t('report.placeholder')}
-              placeholderTextColor={theme.colors.textSecondary}
-              multiline
-              style={[
-                styles.input,
-                {
-                  borderColor: theme.colors.divider,
-                  color: theme.colors.textPrimary,
-                },
-              ]}
-            />
-            <Text style={[styles.note, { color: theme.colors.textSecondary }]}>
-              {t('report.note')}
-            </Text>
-          </View>
-
-          <View style={styles.actions}>
-            <Pressable
-              style={[styles.button, { borderColor: theme.colors.divider }]}
-              onPress={onClose}
-            >
-              <Text style={[styles.buttonText, { color: theme.colors.textPrimary }]}>{t('common.cancel')}</Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.button,
-                styles.primaryButton,
-                {
-                  backgroundColor: canSubmit ? '#005a9e' : theme.colors.divider,
-                },
-              ]}
-              onPress={() => onSubmit(comment)}
-              disabled={!canSubmit}
-            >
-              <Text style={[styles.buttonText, { color: '#fff' }]}>{t('common.send')}</Text>
-            </Pressable>
-          </View>
+          <Text style={[styles.infoText, { color: theme.colors.accentBlue }]}>?</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      }
+      onClose={onClose}
+      footer={
+        <>
+          <SheetButton label={t('common.cancel')} onPress={onClose} />
+          <SheetButton
+            label={t('common.send')}
+            variant="filled"
+            onPress={() => onSubmit(comment)}
+            disabled={!canSubmit}
+          />
+        </>
+      }
+    >
+      <ScrollViewWithThumb
+        ref={bodyRef}
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* The text being reported, quoted with its reference under it. */}
+        <View
+          style={[
+            styles.quote,
+            { backgroundColor: theme.colors.readerBackground, borderLeftColor: theme.colors.accentBlue },
+          ]}
+        >
+          <Text style={[styles.quoteText, { color: theme.colors.textPrimary }]} numberOfLines={8}>
+            {text}
+          </Text>
+          <Text style={[styles.reference, { color: theme.colors.accentBlue }]}>{reference}</Text>
+        </View>
+
+        <Text style={[styles.label, styles.spaced, { color: theme.colors.textSecondary }]}>
+          {t('report.comment')}
+        </Text>
+        <TextInput
+          value={comment}
+          onChangeText={setComment}
+          placeholder={t('report.placeholder')}
+          placeholderTextColor={theme.colors.textSecondary}
+          multiline
+          textAlignVertical="top"
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.colors.readerBackground,
+              borderColor: theme.colors.divider,
+              color: theme.colors.textPrimary,
+            },
+          ]}
+        />
+      </ScrollViewWithThumb>
+
+      {/* Inside the report card's tree, so iOS stacks it over that modal. */}
+      <SheetModal visible={infoVisible} onClose={() => setInfoVisible(false)}>
+        <Text style={[styles.note, { color: theme.colors.textPrimary }]}>{t('report.note')}</Text>
+      </SheetModal>
+    </SheetModal>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    padding: 16,
+  // Shrinks between the header and the footer when the card runs out of room.
+  body: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
-  card: {
-    borderRadius: 12,
-    padding: 16,
-    minWidth: 280,
-    maxWidth: '92%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  closeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  section: {
-    marginBottom: 12,
+  bodyContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   label: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
     marginBottom: 6,
   },
-  value: {
-    fontSize: 14,
+  spaced: {
+    marginTop: 18,
   },
-  input: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 10,
-    padding: 10,
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
-  note: {
-    marginTop: 8,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 12,
-  },
-  button: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 12,
+  info: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButton: {
-    borderWidth: 0,
+  infoPressed: {
+    opacity: 0.6,
   },
-  buttonText: {
+  infoText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  reference: {
+    marginTop: 8,
     fontSize: 14,
     fontWeight: '700',
+  },
+  quote: {
+    borderLeftWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  quoteText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 110,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  note: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    fontSize: 15,
+    lineHeight: 22,
   },
 });
 

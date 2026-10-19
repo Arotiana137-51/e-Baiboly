@@ -235,13 +235,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  verseText: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  highlightedText: {
-    fontWeight: '600',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

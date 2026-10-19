@@ -24,12 +24,6 @@ export type CultHymnEntry = {
 
 export type CultEntry = CultBibleEntry | CultHymnEntry;
 
-export const isCultBibleEntry = (e: CultEntry): e is CultBibleEntry =>
-  e.type === 'bible';
-
-export const isCultHymnEntry = (e: CultEntry): e is CultHymnEntry =>
-  e.type === 'hymn';
-
 export const generateCultEntryId = (): string =>
   `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -37,6 +31,9 @@ export const generateCultEntryId = (): string =>
 // used this as a verseEnd placeholder. Kept only so those old playlist
 // entries still play back without a range banner.
 export const WHOLE_CHAPTER_VERSE_END = 999;
+
+export const isWholeChapterEntry = (e: CultBibleEntry): boolean =>
+  e.isWholeChapter ?? e.verseEnd >= WHOLE_CHAPTER_VERSE_END;
 
 export const buildBibleLabel = (
   bookName: string,

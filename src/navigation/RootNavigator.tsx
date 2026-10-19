@@ -20,6 +20,7 @@ import NotesScreen from '../screens/NotesScreen';
 import HelpScreen from '../screens/HelpScreen';
 import ReadingReminderScreen from '../screens/ReadingReminderScreen';
 import WidgetLookScreen from '../screens/WidgetLookScreen';
+import TenyHoAnaoScreen from '../screens/TenyHoAnaoScreen';
 
 export type RootStackParamList = {
   Home:
@@ -29,6 +30,8 @@ export type RootStackParamList = {
         selectedChapter?: number;
         selectedVerse?: number;
         selectedHymnId?: string;
+        // From the notes list: open this note's bubble once its text is shown.
+        openNoteId?: string;
       }
     | undefined;
   Favorites: { mode: 'bible' | 'hymnal' };
@@ -46,6 +49,7 @@ export type RootStackParamList = {
   CultMode: undefined;
   Help: undefined;
   ReadingReminder: undefined;
+  TenyHoAnao: undefined;
   // fromWidget: opened from the widget's own shortcut — "done" leaves the app.
   WidgetLook: {fromWidget?: boolean} | undefined;
 };
@@ -166,6 +170,11 @@ const RootNavigator = ({
         name="ReadingReminder"
         component={ReadingReminderScreen}
         options={{title: 'Ora famakiana tiana', ...headerOptions}}
+      />
+      <Stack.Screen
+        name="TenyHoAnao"
+        component={TenyHoAnaoScreen}
+        options={{title: 'Widget', ...headerOptions}}
       />
       <Stack.Screen
         name="WidgetLook"

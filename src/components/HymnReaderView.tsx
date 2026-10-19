@@ -1,5 +1,5 @@
-import React, {useCallback, useMemo, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { HymnVerse } from '../hooks/useHymnsData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
@@ -11,7 +11,15 @@ import {
   intersectMarksWithSpan,
   type ChapterMark,
 } from '../utils/chapterMarks';
-import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
+import {dimHighlightForDarkMode, dimHighlightForLightMode, hexToRgba} from '../utils/colorUtils';
+import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
+import {noteSnippet, noteSnippetBudget, type Note} from '../types/notes';
+
+// A note shown on a stanza: its id (to open it) and its first words (the
+// preview under the text).
+type StanzaNote = {id: string; snippet: string};
+import {t} from '../i18n/strings';
+import {NoteGlyph} from './NoteGlyph';
 
 const DOUBLE_TAP_DELAY_MS = 300;
 const EMPTY_MARKS: ChapterMark[] = [];
@@ -20,23 +28,6 @@ const EMPTY_MARKS: ChapterMark[] = [];
 const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
 const HYMN_STANZA_MARGIN = 20;
 const HYMN_BASE_BOTTOM_PADDING = 28;
-
-const hexToRgba = (hex: string, alpha: number) => {
-  const normalized = hex.replace('#', '');
-  const parsed =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map(ch => ch + ch)
-          .join('')
-      : normalized;
-
-  const int = parseInt(parsed, 16);
-  const r = (int >> 16) & 255;
-  const g = (int >> 8) & 255;
-  const b = int & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
 
 const FLOATING_BOTTOM_NAV_SPACER = {
   offsetFromBottom: 15,
@@ -60,7 +51,14 @@ interface HymnReaderViewProps {
   marks?: ChapterMark[];
   onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
   onHymnDoubleTap?: (stanzaNumber: number, stanzaText: string) => void;
-  onNotePress?: (stanzaNumber: number) => void;
+  // This hymn's notes: stanza notes get a bracket, a whole-hymn note a chip
+  // under the title.
+  notes?: Note[];
+  onNoteMarkPress?: (noteId: string) => void;
+  // The open note bubble: a stanza number (0 = chorus) or 'whole' for the
+  // whole-hymn note in the header. `onFocus` is for its text field.
+  noteBubbleStanza?: number | 'whole' | null;
+  renderNoteBubble?: (onFocus: () => void) => React.ReactNode;
 }
 
 interface HymnStanza {
@@ -83,7 +81,15 @@ interface HymnStanzaItemProps {
   isDark: boolean;
   onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
   onHymnDoubleTap?: (stanzaNumber: number, stanzaText: string) => void;
-  onNotePress?: (stanzaNumber: number) => void;
+  stanzaNote: StanzaNote | null;
+  chorusNote: StanzaNote | null;
+  // The chorus repeats after every stanza; its preview line shows once.
+  showChorusPreview: boolean;
+  noteColor: string;
+  onNoteMarkPress?: (noteId: string) => void;
+  // The open note bubble, drawn above the stanza card or above the chorus.
+  stanzaBubble?: React.ReactNode;
+  chorusBubble?: React.ReactNode;
 }
 
 // A stanza's lines with its marks applied — the hymn counterpart of the
@@ -158,7 +164,13 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   isDark,
   onHymnLongPress,
   onHymnDoubleTap,
-  onNotePress,
+  stanzaNote,
+  chorusNote,
+  showChorusPreview,
+  noteColor,
+  onNoteMarkPress,
+  stanzaBubble,
+  chorusBubble,
 }) => {
   const stanzaText = useMemo(
     () => item.lines.map(line => line.text).join('\n').trim(),
@@ -174,51 +186,103 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   const lineFontSize = styles.hymnText.fontSize * fontScale;
   const lineStyle = [styles.hymnText, {fontSize: lineFontSize, lineHeight, color: readerText}];
   const labelStyle = [styles.label, {fontSize: styles.label.fontSize * fontScale, color: labelColor}];
-  const hasNote = stanzaMarks.some(m => m.style === 'note');
 
-  // Same double-tap detection as the Bible reader's verses.
+  // Same double-tap detection as the Bible reader's verses. The chorus has its
+  // own, as stanza 0, so it can carry a note too.
   const lastTapRef = useRef(0);
-  const handlePress = () => {
+  const lastChorusTapRef = useRef(0);
+  const doubleTap = (ref: React.MutableRefObject<number>, stanza: number, text: string) => {
     const now = Date.now();
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY_MS) {
-      lastTapRef.current = 0;
-      onHymnDoubleTap?.(item.verseNumber, stanzaText);
+    if (now - ref.current < DOUBLE_TAP_DELAY_MS) {
+      ref.current = 0;
+      onHymnDoubleTap?.(stanza, text);
       return;
     }
-    lastTapRef.current = now;
+    ref.current = now;
   };
+
+  // The bar along the card's left edge, like the Bible reader's margin
+  // bracket. Tapping it opens the note.
+  const noteBracket = (note: StanzaNote | null) =>
+    note ? (
+      <Pressable
+        onPress={() => onNoteMarkPress?.(note.id)}
+        style={styles.noteGutter}
+        accessibilityRole="button"
+        accessibilityLabel={t('notes.open')}
+      >
+        <View style={[styles.noteBar, {backgroundColor: noteColor}]} />
+      </Pressable>
+    ) : null;
+
+  // The note's first line under the text, like a pencilled line in the
+  // margin. Tap to read it all.
+  const notePreview = (note: StanzaNote | null) =>
+    note ? (
+      <Pressable
+        onPress={() => onNoteMarkPress?.(note.id)}
+        style={styles.notePreview}
+        accessibilityRole="button"
+        accessibilityLabel={t('notes.open')}
+      >
+        <NoteGlyph color={noteColor} size={14} />
+        <Text
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          maxFontSizeMultiplier={1.3}
+          style={[styles.notePreviewText, {color: noteColor, fontSize: 15 * fontScale}]}
+        >
+          {note.snippet}
+        </Text>
+      </Pressable>
+    ) : null;
 
   return (
     <View style={styles.stanzaBlock}>
+      {stanzaBubble}
       <Pressable
         style={[styles.hymnStanza, {backgroundColor: stanzaCardBackground}]}
-        onPress={handlePress}
+        onPress={() => doubleTap(lastTapRef, item.verseNumber, stanzaText)}
         onLongPress={() => onHymnLongPress?.(item.verseNumber, stanzaText)}
         delayLongPress={400}
         disabled={!onHymnLongPress && !onHymnDoubleTap}
       >
-        <Text
-          maxFontSizeMultiplier={1.3}
-          style={[
-            styles.hymnNumber,
-            {
-              fontSize: styles.hymnNumber.fontSize * fontScale,
-              color: verseNumberColor,
-            },
-          ]}>
-          {item.verseNumber}
-          {hasNote ? (
-            <Text
-              onPress={e => {
-                e.stopPropagation?.();
-                onNotePress?.(item.verseNumber);
-              }}
-              suppressHighlighting
+        {noteBracket(stanzaNote)}
+        <View style={styles.numberColumn}>
+          {/* A stanza with a note gets its number on a pill, as YouVersion
+              does for verses: tap it to open the note. */}
+          {stanzaNote ? (
+            <Pressable
+              onPress={() => onNoteMarkPress?.(stanzaNote.id)}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={t('notes.open')}
+              style={[styles.numberPill, {backgroundColor: noteColor}]}
             >
-              {' ✎'}
+              <Text
+                maxFontSizeMultiplier={1.3}
+                style={[
+                  styles.hymnNumber,
+                  styles.numberPillText,
+                  {fontSize: styles.hymnNumber.fontSize * fontScale},
+                ]}>
+                {item.verseNumber}
+              </Text>
+            </Pressable>
+          ) : (
+            <Text
+              maxFontSizeMultiplier={1.3}
+              style={[
+                styles.hymnNumber,
+                {
+                  fontSize: styles.hymnNumber.fontSize * fontScale,
+                  color: verseNumberColor,
+                },
+              ]}>
+              {item.verseNumber}
             </Text>
-          ) : null}
-        </Text>
+          )}
+        </View>
         <View style={styles.hymnTextContainer}>
           {item.heading ? (
             <Text maxFontSizeMultiplier={1.3} style={[...labelStyle, styles.stanzaHeading]}>
@@ -232,23 +296,55 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
             style={lineStyle}
             keyPrefix={`stanza-${item.verseNumber}`}
           />
+          {notePreview(stanzaNote)}
         </View>
       </Pressable>
 
+      {chorusLines.length > 0 ? chorusBubble : null}
       {chorusLines.length > 0 ? (
-        <View style={[styles.chorusBlock, {backgroundColor: chorusBackground}]}>
-          <Text
-            maxFontSizeMultiplier={1.3}
-            style={[
-              styles.chorusLabel,
-              {
-                fontSize: styles.chorusLabel.fontSize * fontScale,
-                color: verseNumberColor,
-              },
-            ]}
-          >
-            {HYMN_CHORUS_LABEL}
-          </Text>
+        <Pressable
+          style={[styles.chorusBlock, {backgroundColor: chorusBackground}]}
+          onPress={() => doubleTap(lastChorusTapRef, 0, chorusText)}
+          onLongPress={() => onHymnLongPress?.(0, chorusText)}
+          delayLongPress={400}
+          disabled={!onHymnLongPress && !onHymnDoubleTap}
+        >
+          {noteBracket(chorusNote)}
+          <View style={styles.chorusLabelRow}>
+            {chorusNote ? (
+              <Pressable
+                onPress={() => onNoteMarkPress?.(chorusNote.id)}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={t('notes.open')}
+                style={[styles.chorusPill, {backgroundColor: noteColor}]}
+              >
+                <Text
+                  maxFontSizeMultiplier={1.3}
+                  style={[
+                    styles.chorusLabel,
+                    styles.numberPillText,
+                    {fontSize: styles.chorusLabel.fontSize * fontScale},
+                  ]}
+                >
+                  {HYMN_CHORUS_LABEL}
+                </Text>
+              </Pressable>
+            ) : (
+              <Text
+                maxFontSizeMultiplier={1.3}
+                style={[
+                  styles.chorusLabel,
+                  {
+                    fontSize: styles.chorusLabel.fontSize * fontScale,
+                    color: verseNumberColor,
+                  },
+                ]}
+              >
+                {HYMN_CHORUS_LABEL}
+              </Text>
+            )}
+          </View>
           <View style={styles.chorusTextContainer}>
             <MarkedLines
               text={chorusText}
@@ -257,8 +353,10 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
               style={[...lineStyle, styles.chorusLine]}
               keyPrefix={`chorus-${item.verseNumber}`}
             />
+            {/* The chorus repeats after every stanza; its preview shows once. */}
+            {showChorusPreview ? notePreview(chorusNote) : null}
           </View>
-        </View>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -276,7 +374,13 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   prev.isDark === next.isDark &&
   prev.onHymnLongPress === next.onHymnLongPress &&
   prev.onHymnDoubleTap === next.onHymnDoubleTap &&
-  prev.onNotePress === next.onNotePress
+  prev.stanzaNote === next.stanzaNote &&
+  prev.chorusNote === next.chorusNote &&
+  prev.showChorusPreview === next.showChorusPreview &&
+  prev.noteColor === next.noteColor &&
+  prev.onNoteMarkPress === next.onNoteMarkPress &&
+  prev.stanzaBubble === next.stanzaBubble &&
+  prev.chorusBubble === next.chorusBubble
 );
 
 const HymnReaderView: React.FC<HymnReaderViewProps> = ({
@@ -289,16 +393,43 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   marks,
   onHymnLongPress,
   onHymnDoubleTap,
-  onNotePress,
+  notes,
+  onNoteMarkPress,
+  noteBubbleStanza,
+  renderNoteBubble,
 }) => {
   const { theme } = useTheme();
   const { isLowEndMode } = useLowEndMode();
   const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList<HymnStanza>>(null);
+  const keyboardHeight = useKeyboardHeight();
+
+  // stanza -> its note (0 = chorus), plus the whole-hymn note. Stable objects,
+  // so untouched stanzas skip re-rendering. The preview's length follows the
+  // window width, as in the Bible reader.
+  const {width: windowWidth} = useWindowDimensions();
+  const snippetBudget = useMemo(() => noteSnippetBudget(windowWidth), [windowWidth]);
+  const {noteByStanza, wholeHymnNote} = useMemo(() => {
+    const byStanza: Record<number, StanzaNote> = {};
+    let whole: StanzaNote | null = null;
+    for (const n of notes ?? []) {
+      if (n.anchor.kind !== 'hymn') continue;
+      const entry = {id: n.id, snippet: noteSnippet(n.text, snippetBudget)};
+      if (n.anchor.stanza === null) whole = entry;
+      else byStanza[n.anchor.stanza] = entry;
+    }
+    return {noteByStanza: byStanza, wholeHymnNote: whole};
+  }, [notes, snippetBudget]);
 
   const hasTitle = typeof hymnTitle === 'string' && hymnTitle.trim().length > 0;
   const headerNote = hymnNote?.trim() || '';
   const headerAuthors = (hymnAuthors ?? []).map(a => a.trim()).filter(Boolean).join(', ');
-  const hasHeader = hasTitle || headerNote.length > 0 || headerAuthors.length > 0;
+  const hasHeader =
+    hasTitle ||
+    headerNote.length > 0 ||
+    headerAuthors.length > 0 ||
+    wholeHymnNote !== null ||
+    noteBubbleStanza === 'whole';
 
   const bottomScrollSpacer =
     Math.max(insets.bottom, 0) +
@@ -355,6 +486,43 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     return map;
   }, [marks, hymnVerses]);
 
+  // Only to a stanza the list still holds: the hymn can change between
+  // scheduling a scroll and running it, and scrollToIndex past the end is a
+  // fatal crash (the 1.4.2 Bible reader's "scrollToIndex out of range").
+  const scrollToStanza = useCallback((index: number) => {
+    const list = listRef.current;
+    if (list && index >= 0 && index < (list.props.data?.length ?? 0)) {
+      list.scrollToIndex({index, viewPosition: 0, animated: true});
+    }
+  }, []);
+
+  // Brings the bubble to the top of the reader, above where the keyboard
+  // rises. The chorus bubble sits after the first stanza; the whole-hymn one
+  // in the header.
+  const scrollBubbleToTop = useCallback(() => {
+    if (noteBubbleStanza == null) return;
+    setTimeout(() => {
+      if (noteBubbleStanza === 'whole') {
+        listRef.current?.scrollToOffset({offset: 0, animated: true});
+        return;
+      }
+      scrollToStanza(
+        noteBubbleStanza === 0 ? 0 : hymnStanzas.findIndex(s => s.verseNumber === noteBubbleStanza),
+      );
+    }, 120);
+  }, [noteBubbleStanza, hymnStanzas, scrollToStanza]);
+
+  useEffect(() => {
+    scrollBubbleToTop();
+  }, [scrollBubbleToTop]);
+  useEffect(() => {
+    if (keyboardHeight > 0) scrollBubbleToTop();
+  }, [keyboardHeight, scrollBubbleToTop]);
+
+  const noteBubbleElement =
+    noteBubbleStanza != null && renderNoteBubble ? renderNoteBubble(scrollBubbleToTop) : null;
+  const firstStanzaNumber = hymnStanzas[0]?.verseNumber;
+
   const keyExtractor = useCallback((item: HymnStanza) => item.verseNumber.toString(), []);
 
   const renderItem = useCallback(
@@ -373,14 +541,29 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
         isDark={theme.isDark}
         onHymnLongPress={onHymnLongPress}
         onHymnDoubleTap={onHymnDoubleTap}
-        onNotePress={onNotePress}
+        stanzaNote={noteByStanza[item.verseNumber] ?? null}
+        chorusNote={noteByStanza[0] ?? null}
+        showChorusPreview={item.verseNumber === firstStanzaNumber}
+        noteColor={theme.colors.accentBlue}
+        onNoteMarkPress={onNoteMarkPress}
+        stanzaBubble={noteBubbleStanza === item.verseNumber ? noteBubbleElement : undefined}
+        // The chorus repeats after every stanza; its bubble shows once.
+        chorusBubble={
+          noteBubbleStanza === 0 && item.verseNumber === firstStanzaNumber
+            ? noteBubbleElement
+            : undefined
+        }
       />
     ),
     [
+      noteBubbleStanza,
+      noteBubbleElement,
+      firstStanzaNumber,
       fontScale,
       theme.colors.readerText,
       theme.colors.textSecondary,
       theme.colors.verseNumber,
+      theme.colors.accentBlue,
       theme.isDark,
       stanzaCardBackground,
       chorusBackground,
@@ -388,7 +571,8 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       marksByVerseNumber,
       onHymnLongPress,
       onHymnDoubleTap,
-      onNotePress,
+      noteByStanza,
+      onNoteMarkPress,
     ],
   );
 
@@ -422,9 +606,16 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
 
   return (
     <FlatList
+      ref={listRef}
       data={hymnStanzas}
       keyExtractor={keyExtractor}
-      contentContainerStyle={{paddingBottom: HYMN_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted}}
+      contentContainerStyle={{
+        paddingBottom:
+          HYMN_BASE_BOTTOM_PADDING +
+          bottomScrollSpacerAdjusted +
+          (noteBubbleStanza != null ? keyboardHeight : 0),
+      }}
+      onScrollToIndexFailed={info => setTimeout(() => scrollToStanza(info.index), 220)}
       ListHeaderComponent={
         <View>
           {hasHeader ? (
@@ -466,6 +657,31 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
                 >
                   {headerAuthors}
                 </Text>
+              ) : null}
+              {noteBubbleStanza === 'whole' ? (
+                <View style={styles.headerBubble}>{noteBubbleElement}</View>
+              ) : null}
+              {/* The whole-hymn note, first line under the title. */}
+              {wholeHymnNote && noteBubbleStanza !== 'whole' ? (
+                <Pressable
+                  onPress={() => onNoteMarkPress?.(wholeHymnNote.id)}
+                  style={[styles.notePreview, styles.headerNotePreview]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('notes.open')}
+                >
+                  <NoteGlyph color={theme.colors.accentBlue} size={14} />
+                  <Text
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    maxFontSizeMultiplier={1.3}
+                    style={[
+                      styles.notePreviewText,
+                      {color: theme.colors.accentBlue, fontSize: 15 * fontScale},
+                    ]}
+                  >
+                    {wholeHymnNote.snippet}
+                  </Text>
+                </Pressable>
               ) : null}
             </View>
           ) : null}
@@ -526,6 +742,71 @@ const styles = StyleSheet.create({
     color: '#005a9e',
     width: 24,
   },
+  numberColumn: {
+    width: 24,
+  },
+  // The card's left padding holds the bracket: a tap strip with the bar in it.
+  noteGutter: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 10,
+  },
+  noteBar: {
+    position: 'absolute',
+    left: 3,
+    top: 10,
+    bottom: 10,
+    width: 3,
+    borderRadius: 1.5,
+    opacity: 0.55,
+  },
+  // A stanza (or chorus) with a note: its number on a pill, tap to open.
+  numberPill: {
+    alignSelf: 'flex-start',
+    minWidth: 26,
+    borderRadius: 13,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  numberPillText: {
+    width: undefined,
+    textAlign: 'center',
+    color: '#FFFFFF',
+  },
+  chorusPill: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 1,
+  },
+  chorusLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  // The note's first words under the text, like a pencilled margin line:
+  // quieter than the lyrics (0.7) and only as wide as those words.
+  notePreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    gap: 6,
+    marginTop: 6,
+    paddingVertical: 4,
+    opacity: 0.7,
+  },
+  notePreviewText: {
+    flexShrink: 1,
+    fontStyle: 'italic',
+  },
+  headerNotePreview: {
+    marginTop: 10,
+  },
+  headerBubble: {
+    marginTop: 12,
+  },
   hymnTextContainer: {
     flex: 1,
     paddingLeft: 8,
@@ -544,7 +825,6 @@ const styles = StyleSheet.create({
   chorusLabel: {
     fontSize: 13,
     fontWeight: '800',
-    marginBottom: 6,
   },
   chorusTextContainer: {
     paddingLeft: 8,

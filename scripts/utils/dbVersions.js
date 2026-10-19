@@ -3,6 +3,6 @@
 // `yarn bump:db-version` — never edit either by hand.
 
 module.exports = {
-  BIBLE_DB_VERSION: 20260917,
+  BIBLE_DB_VERSION: 20261016,
   HYMNS_DB_VERSION: 20260916,
 };

@@ -55,12 +55,6 @@ The production build creates ZIP archives of the databases:
 
 These are automatically decompressed on first app launch.
 
-To ensure runtime data/assets are set up:
-
-```sh
-yarn setup:data
-```
-
 ## Run
 
 Start Metro:
@@ -89,7 +83,6 @@ For the iOS build pipeline and the manual iCloud backup-exclusion check, see
 - `yarn test`
 - `yarn lint`
 - `yarn build:database`
-- `yarn setup:data`
 
 ## Notes / Troubleshooting
 
