@@ -223,7 +223,8 @@ const WidgetLookScreen = () => {
                   fontStyleFor(text.font),
                   {color: shown.text, fontSize: 15 * text.scale, lineHeight: 21 * text.scale},
                 ]}
-                numberOfLines={4}
+                // The medium widget's own cap: the whole verse, as on the home screen.
+                numberOfLines={7}
               >
                 {today ? (today.key ? `“${today.text}”` : today.text) : ''}
               </Text>
@@ -391,7 +392,9 @@ const styles = StyleSheet.create({
   preview: {borderRadius: 24, overflow: 'hidden', minHeight: 160},
   previewImage: {...StyleSheet.absoluteFillObject, width: undefined, height: undefined, resizeMode: 'cover'},
   previewVeil: {...StyleSheet.absoluteFillObject},
-  previewContent: {flex: 1, padding: 14},
+  // flexGrow, not flex: 1, whose zero basis kept the card at its 160pt
+  // minimum and clipped the verse's end and the reference.
+  previewContent: {flexGrow: 1, padding: 14},
   previewTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   badge: {
     fontSize: 10,
