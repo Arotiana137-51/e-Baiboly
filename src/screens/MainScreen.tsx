@@ -465,12 +465,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   }, [mode, hymns, currentHymnId]);
 
   useEffect(() => {
-    if (mode === 'hymnal' && currentHymnId) {
-      loadHymnVerses(currentHymnId);
-    }
-  }, [mode, currentHymnId, loadHymnVerses]);
-
-  useEffect(() => {
     if (mode === 'bible' && currentBook) {
       loadVerses(currentBook.id, currentChapter);
     } else if (mode === 'hymnal' && currentHymnId) {
