@@ -431,7 +431,11 @@ export const ensureRemindersScheduled = async (): Promise<void> => {
  * queue the crash reporter uses (flushed on reconnect) instead of vanishing.
  */
 export const reportSchedulingFailure = (where: string, error: unknown): void => {
-  if (__DEV__) console.warn(`[readingReminder] ${where} failed:`, error);
+  // Only release builds report (see recordFatalError).
+  if (__DEV__) {
+    console.warn(`[readingReminder] ${where} failed:`, error);
+    return;
+  }
   const err = error instanceof Error ? error : new Error(String(error));
   enqueueIssueReport({
     id: `crash-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
