@@ -38,15 +38,6 @@ export const LETTER_SPACING = {
   relaxed: 0.5,  // Emphasized text
 } as const;
 
-export const FONT_WEIGHTS = {
-  light: '300',
-  regular: '400',
-  medium: '500',
-  semibold: '600',
-  bold: '700',
-  extrabold: '800',
-} as const;
-
 export const FONT_FAMILIES = {
   // Use platform-specific system fonts for optimal performance
   primary: Platform.OS === 'ios' ? 'System' : 'Roboto',
@@ -64,15 +55,6 @@ export const TEXT_STYLES = {
     color: '#1c1c1c',
   },
   
-  subheading: {
-    fontFamily: FONT_FAMILIES.primary,
-    fontSize: TYPOGRAPHY_SCALE.h3,
-    lineHeight: LINE_HEIGHTS.tight * TYPOGRAPHY_SCALE.h3,
-    letterSpacing: LETTER_SPACING.normal,
-    fontWeight: '500',
-    color: '#1c1c1c',
-  },
-  
   // Body text
   body: {
     fontFamily: FONT_FAMILIES.primary,
@@ -81,44 +63,6 @@ export const TEXT_STYLES = {
     letterSpacing: LETTER_SPACING.normal,
     fontWeight: '400',
     color: '#1c1c1c',
-  },
-  
-  bodyLarge: {
-    fontFamily: FONT_FAMILIES.primary,
-    fontSize: TYPOGRAPHY_SCALE.bodyLarge,
-    lineHeight: LINE_HEIGHTS.normal * TYPOGRAPHY_SCALE.bodyLarge,
-    letterSpacing: LETTER_SPACING.normal,
-    fontWeight: '400',
-    color: '#1c1c1c',
-  },
-  
-  // Secondary text
-  caption: {
-    fontFamily: FONT_FAMILIES.primary,
-    fontSize: TYPOGRAPHY_SCALE.caption,
-    lineHeight: LINE_HEIGHTS.normal * TYPOGRAPHY_SCALE.caption,
-    letterSpacing: LETTER_SPACING.normal,
-    fontWeight: '400',
-    color: '#6f6f6f',
-  },
-  
-  small: {
-    fontFamily: FONT_FAMILIES.primary,
-    fontSize: TYPOGRAPHY_SCALE.small,
-    lineHeight: LINE_HEIGHTS.normal * TYPOGRAPHY_SCALE.small,
-    letterSpacing: LETTER_SPACING.normal,
-    fontWeight: '400',
-    color: '#6f6f6f',
-  },
-  
-  // UI elements
-  button: {
-    fontFamily: FONT_FAMILIES.primary,
-    fontSize: TYPOGRAPHY_SCALE.body,
-    lineHeight: LINE_HEIGHTS.tight * TYPOGRAPHY_SCALE.body,
-    letterSpacing: LETTER_SPACING.tight,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   
   // Bible verse numbers — color is supplied at runtime from theme.colors.verseNumber.
@@ -134,11 +78,6 @@ export const TEXT_STYLES = {
 // Helper function to scale font sizes based on user preference
 export const scaleFontSize = (baseSize: number, scale: number = 1) => {
   return Math.round(baseSize * scale);
-};
-
-// Accessibility helper - ensures minimum 16px for body text
-export const getAccessibleFontSize = (size: number) => {
-  return Math.max(size, 16);
 };
 
 /**

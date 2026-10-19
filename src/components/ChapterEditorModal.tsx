@@ -37,7 +37,6 @@ interface ChapterEditorModalProps {
   // button is disabled when absent.
   shareReference?: ShareReference;
   onSave: (marks: ChapterMark[]) => void;
-  onClear: () => void;
   onClose: () => void;
 }
 
@@ -514,7 +513,6 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
   highlightColor,
   shareReference,
   onSave,
-  onClear,
   onClose,
 }) => {
   const {theme} = useTheme();

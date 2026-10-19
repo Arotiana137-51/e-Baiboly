@@ -15,9 +15,6 @@ type FavoritesContextValue = {
   isLoading: boolean;
   addToFavorites: (verse: BibleVerse, bookName: string) => Promise<void>;
   removeFromFavorites: (verse: BibleVerse) => Promise<void>;
-  isFavorite: (verse: BibleVerse) => boolean;
-  clearFavorites: () => Promise<void>;
-  loadFavorites: () => Promise<void>;
 };
 
 // A single shared instance, provided once at the app root. MainScreen and
@@ -98,26 +95,6 @@ export const FavoritesProvider: React.FC<{children: React.ReactNode}> = ({childr
     }
   }, []);
 
-  // Check if a verse is in favorites
-  const isFavorite = useCallback((verse: BibleVerse) => {
-    return favorites.some(
-      fav =>
-        fav.book_id === verse.book_id &&
-        fav.chapter === verse.chapter &&
-        fav.verse_number === verse.verse_number
-    );
-  }, [favorites]);
-
-  // Clear all favorites
-  const clearFavorites = useCallback(async () => {
-    try {
-      setFavorites([]);
-      await AsyncStorage.removeItem(FAVORITES_KEY);
-    } catch (error) {
-      console.error('Error clearing favorites:', error);
-    }
-  }, []);
-
   // Load favorites on mount
   useEffect(() => {
     loadFavorites();
@@ -167,11 +144,8 @@ export const FavoritesProvider: React.FC<{children: React.ReactNode}> = ({childr
       isLoading,
       addToFavorites,
       removeFromFavorites,
-      isFavorite,
-      clearFavorites,
-      loadFavorites,
     }),
-    [favorites, isLoading, addToFavorites, removeFromFavorites, isFavorite, clearFavorites, loadFavorites]
+    [favorites, isLoading, addToFavorites, removeFromFavorites]
   );
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;

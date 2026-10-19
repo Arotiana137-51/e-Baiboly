@@ -20,7 +20,6 @@ interface HymnSelectionModalProps {
   visible: boolean;
   hymns: Hymn[];
   currentCategory: string | null;
-  currentNumber: number | null;
   onClose: () => void;
   onHymnSelect: (hymnId: string, category: string, number: number) => void;
 }
@@ -81,7 +80,6 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   visible,
   hymns,
   currentCategory,
-  currentNumber,
   onClose,
   onHymnSelect,
 }) => {
@@ -148,10 +146,6 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       .filter(hymn => hymn.category === selectedCategory)
       .sort((a, b) => a.number - b.number);
   }, [hymns, selectedCategory]);
-
-  const currentHymn = useMemo(() => {
-    return filteredHymns.find(h => h.number === currentNumber);
-  }, [filteredHymns, currentNumber]);
 
   const handleCategoryChange = useCallback((category: string) => {
     setSelectedCategory(category);
@@ -549,9 +543,6 @@ const styles = StyleSheet.create({
   keypadText: {
     fontSize: 24,
     fontWeight: 'bold',
-  },
-  keypadSpecialText: {
-    fontSize: 20,
   },
 });
 

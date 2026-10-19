@@ -6,12 +6,10 @@ import { recordFatalError } from '../services/reporting/crashReporter';
 
 type DatabaseContextType = {
   isInitialized: boolean;
-  initializeDatabase: () => Promise<void>;
 };
 
 const DatabaseContext = createContext<DatabaseContextType>({
   isInitialized: false,
-  initializeDatabase: async () => {},
 });
 
 export const DatabaseProvider: React.FC<{children: React.ReactNode}> = ({
@@ -53,10 +51,7 @@ export const DatabaseProvider: React.FC<{children: React.ReactNode}> = ({
 
   return (
     <DatabaseContext.Provider
-      value={{
-        isInitialized,
-        initializeDatabase,
-      }}>
+      value={{isInitialized}}>
       {children}
     </DatabaseContext.Provider>
   );

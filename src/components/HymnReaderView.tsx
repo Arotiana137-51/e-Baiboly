@@ -11,7 +11,7 @@ import {
   intersectMarksWithSpan,
   type ChapterMark,
 } from '../utils/chapterMarks';
-import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
+import {dimHighlightForDarkMode, dimHighlightForLightMode, hexToRgba} from '../utils/colorUtils';
 import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
 import {noteSnippet, noteSnippetBudget, type Note} from '../types/notes';
 
@@ -28,23 +28,6 @@ const EMPTY_MARKS: ChapterMark[] = [];
 const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
 const HYMN_STANZA_MARGIN = 20;
 const HYMN_BASE_BOTTOM_PADDING = 28;
-
-const hexToRgba = (hex: string, alpha: number) => {
-  const normalized = hex.replace('#', '');
-  const parsed =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map(ch => ch + ch)
-          .join('')
-      : normalized;
-
-  const int = parseInt(parsed, 16);
-  const r = (int >> 16) & 255;
-  const g = (int >> 8) & 255;
-  const b = int & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
 
 const FLOATING_BOTTOM_NAV_SPACER = {
   offsetFromBottom: 15,

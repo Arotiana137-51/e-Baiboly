@@ -668,9 +668,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111111',
   },
-  searchPlaceholder: {
-    color: 'rgba(0,0,0,0.45)',
-  },
   contentSearchLoading: {
     paddingVertical: 16,
     alignItems: 'center',

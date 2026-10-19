@@ -24,12 +24,6 @@ export type CultHymnEntry = {
 
 export type CultEntry = CultBibleEntry | CultHymnEntry;
 
-export const isCultBibleEntry = (e: CultEntry): e is CultBibleEntry =>
-  e.type === 'bible';
-
-export const isCultHymnEntry = (e: CultEntry): e is CultHymnEntry =>
-  e.type === 'hymn';
-
 export const generateCultEntryId = (): string =>
   `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 

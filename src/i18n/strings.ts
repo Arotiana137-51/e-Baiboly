@@ -42,10 +42,7 @@ type TranslationKey =
   | 'cultMode.wholeChapter'
   | 'cultMode.verses'
   | 'personalization.title'
-  | 'personalization.subtitle'
-  | 'personalization.reset'
   | 'personalization.brandBadge'
-  | 'personalization.chooseColor'
   | 'personalization.firstRunWelcome'
   | 'personalization.firstRunDesc'
   | 'personalization.hint'
@@ -71,9 +68,7 @@ type TranslationKey =
   | 'history.emptyAll'
   | 'history.filterAll'
   | 'search.placeholderBible'
-  | 'search.placeholderHymns'
   | 'search.noResultsBible'
-  | 'search.noResultsHymns'
   | 'search.resultCount'
   | 'search.categorized'
   | 'search.simple'
@@ -94,8 +89,6 @@ type TranslationKey =
   | 'share.image'
   | 'share.text'
   | 'report.title'
-  | 'report.reference'
-  | 'report.text'
   | 'report.comment'
   | 'report.placeholder'
   | 'report.note'
@@ -123,20 +116,8 @@ type TranslationKey =
   | 'about.rateAppHint'
   | 'about.rateButton'
   | 'about.paperBibleNote'
-  | 'bible.searchPlaceholder'
   | 'bible.oldTestament'
-  | 'bible.newTestament'
-  | 'bible.chaptersTitle'
-  | 'bible.readerPrev'
-  | 'bible.readerNext'
-  | 'bible.readerTitle'
-  | 'bible.booksTitle'
-  | 'bible.openBooks'
-  | 'bible.noResults'
-  | 'bible.loading'
-  | 'hymns.title'
-  | 'hymns.homeTitle'
-  | 'hymns.placeholder';
+  | 'bible.newTestament';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -194,10 +175,7 @@ const translations: Translations = {
     'cultMode.wholeChapter': 'Toko manontolo',
     'cultMode.verses': 'Andininy {{range}}',
     'personalization.title': 'Loko manokana',
-    'personalization.subtitle': "Safidio ny lokon'ny rindrina sy ny bokotra",
-    'personalization.reset': 'Avereno tany am-boalohany',
     'personalization.brandBadge': 'Fisafidianana loko',
-    'personalization.chooseColor': 'Fisafidianana loko',
     'personalization.firstRunWelcome':
       "Tongasoa eto amin'ny e-Baiboly! Faly miarahaba anao izahay.",
     'personalization.firstRunDesc':
@@ -225,9 +203,7 @@ const translations: Translations = {
     'history.emptyAll': 'Tsy mbola misy tsiahy',
     'history.filterAll': 'Rehetra',
     'search.placeholderBible': "Tadiavina ao @ Baiboly sy fihirana...",
-    'search.placeholderHymns': 'Tadiavo ao amin\'ny fihirana...',
     'search.noResultsBible': "Tsy nahitana valiny tao amin'ny Baiboly",
-    'search.noResultsHymns': "Tsy nahitana valiny tao amin'ny fihirana",
     'search.resultCount': '{{count}} valiny',
     // Shown as a pair in the "Fikarohana" header bar, so neither repeats it.
     'search.categorized': 'Isan-tsokajiny',
@@ -251,8 +227,6 @@ const translations: Translations = {
     'share.image': 'Sary',
     'share.text': 'Lahatsoratra',
     'report.title': 'Tatero',
-    'report.reference': 'Tondro',
-    'report.text': 'Lahatsoratra',
     'report.comment': 'Fanamarihana',
     'report.placeholder': 'Farito ny olana tokony ahitsy...',
     'report.note': "Rehefa mandefa ianao dia alefa ny tondro, ny lahatsoratra miseho, ary ny fanamarihanao mba hanitsiana ny lesoka. Tsy misy angona momba ny toerana (localisation) angonina.",
@@ -281,20 +255,8 @@ const translations: Translations = {
     'about.rateAppHint': 'Manampy be ny naoty omenao',
     'about.rateButton': 'Hanome naoty',
     'about.paperBibleNote': "Natao ity rindran-kajy ity hikarohana soratra masina sy hira an-kamehana. Fa amin'ny fotoana ilaina fifantohana ( adim-panahy, asa sy fampaherezana, sns...) dia asaina ianao ampiasa Baiboly taratasy.",
-    'bible.searchPlaceholder': 'Tadiavo boky iray...',
     'bible.oldTestament': 'Testamenta taloha',
     'bible.newTestament': 'Testamenta vaovao',
-    'bible.chaptersTitle': 'Toko',
-    'bible.readerPrev': 'Aloha',
-    'bible.readerNext': 'Manaraka',
-    'bible.readerTitle': '{{book}} toko {{chapterText}}',
-    'bible.booksTitle': 'Boky',
-    'bible.openBooks': 'Hanokatra ny boky',
-    'bible.noResults': 'Tsy misy valiny',
-    'bible.loading': 'Mandrasa kely, eo am-pikarakarana...',
-    'hymns.title': 'Fihirana',
-    'hymns.homeTitle': 'Fihirana',
-    'hymns.placeholder': ' eo am-panamboarana',
   },
 };
 
