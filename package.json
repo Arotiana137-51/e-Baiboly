@@ -12,7 +12,6 @@
     "test": "jest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "postinstall": "patch-package && node -e \"const isMac = process.platform === 'darwin'; console.log('🔍 Detected platform:', isMac ? 'macOS (iOS development ready)' : 'Windows (Android development)'); if (isMac) { console.log('🚀 Setting up iOS dependencies...'); try { require('child_process').execSync('cd ios && pod install', { stdio: 'inherit' }); } catch (e) { console.log('⚠️  iOS setup completed with warnings'); } }\"",
-    "setup:data": "node scripts/setupData.js",
     "build:database": "node scripts/buildDatabase.js",
     "build:bible": "node scripts/buildBibleDatabase.js",
     "build:hymns": "node scripts/buildHymnsDatabase.js",
