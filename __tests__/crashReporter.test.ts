@@ -4,14 +4,17 @@
  * the production ones it exists for.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {drainFatalErrorToQueue, recordFatalError} from '../src/services/reporting/crashReporter';
-import {reportSchedulingFailure} from '../src/services/reminders/readingReminder';
+import {
+  drainFatalErrorToQueue,
+  recordFatalError,
+} from '../src/services/reporting/crashReporter';
+import { reportSchedulingFailure } from '../src/services/reminders/readingReminder';
 
-const queued = async (): Promise<Array<{type: string; reference: string}>> =>
+const queued = async (): Promise<Array<{ type: string; reference: string }>> =>
   JSON.parse((await AsyncStorage.getItem('issueReportsQueueV1')) ?? '[]');
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
-const g = global as unknown as {__DEV__: boolean};
+const g = global as unknown as { __DEV__: boolean };
 const realDev = g.__DEV__;
 
 beforeEach(() => {

@@ -6,14 +6,14 @@
  * must not turn either into a crash.
  */
 import React from 'react';
-import {act, create, type ReactTestRenderer} from 'react-test-renderer';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {ThemeProvider} from '../src/contexts/ThemeContext';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider } from '../src/contexts/ThemeContext';
 import HymnReaderView from '../src/components/HymnReaderView';
-import type {HymnVerse} from '../src/hooks/useHymnsData';
+import type { HymnVerse } from '../src/hooks/useHymnsData';
 
 const hymn = (stanzas: number): HymnVerse[] =>
-  Array.from({length: stanzas}, (_, i) => ({
+  Array.from({ length: stanzas }, (_, i) => ({
     id: i + 1,
     hymn_id: `h${stanzas}`,
     verse_number: i + 1,
@@ -21,12 +21,20 @@ const hymn = (stanzas: number): HymnVerse[] =>
     is_chorus: false,
   }));
 
-const metrics = {frame: {x: 0, y: 0, width: 390, height: 844}, insets: {top: 0, left: 0, right: 0, bottom: 0}};
+const metrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 },
+};
 
 const reader = (verses: HymnVerse[], bubble: number | null) => (
   <SafeAreaProvider initialMetrics={metrics}>
     <ThemeProvider>
-      <HymnReaderView hymnVerses={verses} isLoading={false} noteBubbleStanza={bubble} renderNoteBubble={() => null} />
+      <HymnReaderView
+        hymnVerses={verses}
+        isLoading={false}
+        noteBubbleStanza={bubble}
+        renderNoteBubble={() => null}
+      />
     </ThemeProvider>
   </SafeAreaProvider>
 );
