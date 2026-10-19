@@ -12,10 +12,10 @@ import AppIntents
 //
 // Look: the share card's — the chosen colour as a diagonal gradient with
 // matching ink, or a photo (copied next to the feed) under a veil — behind the
-// verse in the chosen typeface and size, a date badge and the heart on top, reference + translation tag + mode
-// on the bottom line; small, medium and large families. With "follow dark
-// mode" the feed adds a night look, used while the phone is in dark mode. From
-// iOS 16 the lock screen gets the words alone.
+// verse in the chosen typeface and size, a date badge and the heart on top,
+// reference + translation tag + mode on the bottom line; small, medium and large
+// families. With "follow dark mode" the feed adds a night look, used while the
+// phone is in dark mode. From iOS 16 the lock screen gets the words alone.
 //
 // The heart adds the verse to the app's favorites, or takes it out: from iOS
 // 17 without opening the app (ToggleFavoriteIntent records the wanted state in
