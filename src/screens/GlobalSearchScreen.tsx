@@ -214,12 +214,19 @@ const GlobalSearchScreen = () => {
       setHymns([]);
       return;
     }
+    // A search still running when the query changes must not land after the
+    // newer one: clearing the timer can't stop it, so its results are dropped.
+    let cancelled = false;
     const id = setTimeout(async () => {
       const res = await search(query);
+      if (cancelled) return;
       setBible(res.bible);
       setHymns(res.hymns);
     }, 300);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [query, search]);
 
   // The toggle lives in the native header next to the "Fikarohana" title, so

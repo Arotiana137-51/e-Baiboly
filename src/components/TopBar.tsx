@@ -332,15 +332,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#ecf0f1',
   },
-  iconWrapper: {
-    width: 26,
-    height: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeIcon: {
-    position: 'absolute',
-  },
 });
 
 export default TopBar;

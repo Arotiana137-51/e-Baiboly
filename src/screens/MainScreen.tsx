@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Dimensions,
   Platform,
   AppState,
   PanResponder,
@@ -75,7 +74,6 @@ import {ONBOARDING_ID, CULT_TUTORIAL_ID, HIGHLIGHT_TUTORIAL_ID} from '../tutoria
 import TutorialOverlay from '../components/TutorialOverlay';
 import type {DriveVerb} from '../tutorials/registry';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
 import { useResponsive } from '../theme/responsive';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
@@ -128,7 +126,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   useKeepAwake();
   const { scale: rScale, isAndroid: rIsAndroid } = useResponsive();
   const TOP_BAR_TOOLBAR_HEIGHT = Math.max(TOP_BAR_TOOLBAR_BASE, rScale(rIsAndroid ? 52 : 44));
-  const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   const readerRef = useRef<BibleReaderHandle>(null);
   const [shouldScrollToVerse, setShouldScrollToVerse] = useState<number | null>(null);
   // Set to true by the topnav chevrons after they advance the chapter, so
@@ -149,20 +146,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const explicitBibleTargetRef = useRef(false);
 
   const appState = useRef(AppState.currentState);
-
-  // Calculate adaptive safe area padding (1.5% of screen height, but only if inset is significant)
-  const maxPadding = screenHeight * 0.015;
-  const minSignificantInset = 20; // Only apply padding if inset is more than 20px
-  const proportionalTopPadding = insets.top > minSignificantInset ? Math.min(insets.top, maxPadding) : 0;
-  const proportionalBottomPadding = insets.bottom > minSignificantInset ? Math.min(insets.bottom, maxPadding) : 0;
-
-  // Update screen height on orientation change
-  useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setScreenHeight(window.height);
-    });
-    return () => subscription?.remove();
-  }, []);
 
   const [mode, setMode] = useState<AppMode>(route.params?.mode || 'bible');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -272,16 +255,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [chapterEditorScrollVerseNumber, setChapterEditorScrollVerseNumber] =
     useState<number | null>(null);
   const {transformText} = useJesusName();
-  const {marks: chapterMarks, setAllMarks, clearChapter} = useChapterMarks(
+  const {marks: chapterMarks, setAllMarks} = useChapterMarks(
     currentBook?.id ?? null,
     currentChapter ?? null,
   );
   // Same editor and mark model as the Bible, stored per hymn.
-  const {
-    marks: hymnMarks,
-    setAllMarks: setAllHymnMarks,
-    clearChapter: clearHymnMarks,
-  } = useHymnMarks(mode === 'hymnal' ? currentHymnId : null);
+  const {marks: hymnMarks, setAllMarks: setAllHymnMarks} = useHymnMarks(
+    mode === 'hymnal' ? currentHymnId : null,
+  );
 
   // Hymn action popover state
   const [hymnActionVisible, setHymnActionVisible] = useState(false);
@@ -484,12 +465,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       applyHymn(defaultHymn.id);
     })();
   }, [mode, hymns, currentHymnId]);
-
-  useEffect(() => {
-    if (mode === 'hymnal' && currentHymnId) {
-      loadHymnVerses(currentHymnId);
-    }
-  }, [mode, currentHymnId, loadHymnVerses]);
 
   useEffect(() => {
     if (mode === 'bible' && currentBook) {
@@ -908,10 +883,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   const maybeFlushReports = async () => {
-    if (!ISSUE_REPORT_ENDPOINT_URL || ISSUE_REPORT_ENDPOINT_URL.includes('PUT_YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
-      return;
-    }
-
     try {
       await flushIssueReports(ISSUE_REPORT_ENDPOINT_URL);
     } catch (e) {
@@ -1159,14 +1130,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     setChapterEditorVisible(false);
     // Advance the highlight tutorial's "Tahirizo" step off the real save.
     tutorial.notifyProgress('editorSaved');
-  };
-
-  const handleChapterMarksClear = () => {
-    if (mode === 'hymnal') {
-      clearHymnMarks();
-    } else {
-      clearChapter();
-    }
   };
 
   const handleViewCorrespondence = (verse: BibleVerse) => {
@@ -1579,7 +1542,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               handleRef={readerRef}
               headerText={mode === 'bible' ? bibleTitleLong : null}
               chapterMarks={chapterMarks}
-              currentBookName={currentBook?.name ?? null}
               onClearRange={() => setSelectedVerseRange(null)}
               onTopVerseChange={handleTopVerseChange}
               favoriteVerses={favoriteVerseNumbers}
@@ -1781,7 +1743,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         visible={hymnSelectionVisible}
         hymns={hymns}
         currentCategory={currentHymnCategory}
-        currentNumber={currentHymnNumber}
         onClose={() => setHymnSelectionVisible(false)}
         onHymnSelect={handleHymnSelect}
       />
@@ -1809,7 +1770,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         highlightColor={theme.colors.markerHighlight}
         shareReference={editorShareReference}
         onSave={handleChapterMarksSave}
-        onClear={handleChapterMarksClear}
         onClose={() => {
           setChapterEditorVisible(false);
           setChapterEditorScrollVerseNumber(null);

@@ -8,7 +8,7 @@ import { useHymnFavorites } from '../hooks/useHymnFavorites';
 import { useTheme } from '../contexts/ThemeContext';
 import {useJesusName} from '../contexts/JesusNameContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
+import { TEXT_STYLES } from '../constants/Typography';
 import { getBibleBookShortName } from '../utils/bibleBookNames';
 import {t} from '../i18n/strings';
 
@@ -147,10 +147,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e5e5',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
   },
   list: {
     flex: 1,

@@ -422,14 +422,18 @@ struct DailyVerseView: View {
                 .foregroundColor(ink.opacity(0.7))
                 .lineLimit(1)
             }
+            // The glyph stays put; its target reaches into the card's margin,
+            // and the negative padding outside keeps the layout as it was.
             Link(destination: settingsURL) {
               Image(systemName: "slider.horizontal.3")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(ink.opacity(0.7))
                 .frame(minWidth: 28, minHeight: 28, alignment: .trailing)
+                .padding(EdgeInsets(top: 6, leading: 14, bottom: 14, trailing: 14))
                 .contentShape(Rectangle())
                 .accessibilityLabel("Loko") // placeholder MG copy — user-owned
             }
+            .padding(EdgeInsets(top: -6, leading: -14, bottom: -14, trailing: -14))
           }
         }
         .padding(.top, 4)

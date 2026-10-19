@@ -11,7 +11,7 @@ import {
   intersectMarksWithSpan,
   type ChapterMark,
 } from '../utils/chapterMarks';
-import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
+import {dimHighlightForDarkMode, dimHighlightForLightMode, hexToRgba} from '../utils/colorUtils';
 import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
 import {noteSnippet, noteSnippetBudget, type Note} from '../types/notes';
 
@@ -28,23 +28,6 @@ const EMPTY_MARKS: ChapterMark[] = [];
 const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
 const HYMN_STANZA_MARGIN = 20;
 const HYMN_BASE_BOTTOM_PADDING = 28;
-
-const hexToRgba = (hex: string, alpha: number) => {
-  const normalized = hex.replace('#', '');
-  const parsed =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map(ch => ch + ch)
-          .join('')
-      : normalized;
-
-  const int = parseInt(parsed, 16);
-  const r = (int >> 16) & 255;
-  const g = (int >> 8) & 255;
-  const b = int & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
 
 const FLOATING_BOTTOM_NAV_SPACER = {
   offsetFromBottom: 15,
@@ -503,6 +486,16 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     return map;
   }, [marks, hymnVerses]);
 
+  // Only to a stanza the list still holds: the hymn can change between
+  // scheduling a scroll and running it, and scrollToIndex past the end is a
+  // fatal crash (the 1.4.2 Bible reader's "scrollToIndex out of range").
+  const scrollToStanza = useCallback((index: number) => {
+    const list = listRef.current;
+    if (list && index >= 0 && index < (list.props.data?.length ?? 0)) {
+      list.scrollToIndex({index, viewPosition: 0, animated: true});
+    }
+  }, []);
+
   // Brings the bubble to the top of the reader, above where the keyboard
   // rises. The chorus bubble sits after the first stanza; the whole-hymn one
   // in the header.
@@ -513,13 +506,11 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
         listRef.current?.scrollToOffset({offset: 0, animated: true});
         return;
       }
-      const index =
-        noteBubbleStanza === 0
-          ? 0
-          : hymnStanzas.findIndex(s => s.verseNumber === noteBubbleStanza);
-      if (index >= 0) listRef.current?.scrollToIndex({index, viewPosition: 0, animated: true});
+      scrollToStanza(
+        noteBubbleStanza === 0 ? 0 : hymnStanzas.findIndex(s => s.verseNumber === noteBubbleStanza),
+      );
     }, 120);
-  }, [noteBubbleStanza, hymnStanzas]);
+  }, [noteBubbleStanza, hymnStanzas, scrollToStanza]);
 
   useEffect(() => {
     scrollBubbleToTop();
@@ -624,12 +615,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
           bottomScrollSpacerAdjusted +
           (noteBubbleStanza != null ? keyboardHeight : 0),
       }}
-      onScrollToIndexFailed={info =>
-        setTimeout(
-          () => listRef.current?.scrollToIndex({index: info.index, viewPosition: 0, animated: true}),
-          220,
-        )
-      }
+      onScrollToIndexFailed={info => setTimeout(() => scrollToStanza(info.index), 220)}
       ListHeaderComponent={
         <View>
           {hasHeader ? (

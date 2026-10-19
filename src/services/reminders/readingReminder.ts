@@ -13,7 +13,7 @@ import {bibleDatabaseService} from '../database/DatabaseService';
 import {dailyVerseFor, type VerseRef} from '../../constants/dailyVerses';
 import {getBibleBookShortName} from '../../utils/bibleBookNames';
 import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
-import {getStoredJesusNameVariant, transformJesusName} from '../../utils/jesusName';
+import {getStoredJesusNameVariant, transformJesusName, type JesusNameVariant} from '../../utils/jesusName';
 import {PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {enqueueIssueReport} from '../reporting/issueReportQueue';
 import {loadTenyHoAnao} from '../lifeSituations/situationStore';
@@ -211,12 +211,14 @@ export type DailyVerse = {
 /**
  * The day's verse resolved against the bundled Bible DB — shared by the
  * notification scheduler and the home-screen widget file. `ref` overrides
- * the calendar (a "Teny ho anao" plan). Caller ensures
- * bibleDatabaseService.initDatabase() has run.
+ * the calendar (a "Teny ho anao" plan). Loops pass `variant` so it is read
+ * once, not once per day. Caller ensures bibleDatabaseService.initDatabase()
+ * has run.
  */
 export const verseForDate = async (
   date: Date,
   ref: VerseRef = dailyVerseFor(date),
+  variant?: JesusNameVariant,
 ): Promise<DailyVerse | null> => {
   const {rows} = await bibleDatabaseService.executeQuery<{text: string; name: string}>(
     'SELECT v.text, b.name FROM Verses v JOIN Books b ON b.id = v.book_id WHERE v.book_id = ? AND v.chapter = ? AND v.verse_number BETWEEN ? AND ? ORDER BY v.verse_number',
@@ -224,10 +226,14 @@ export const verseForDate = async (
   );
   if (rows.length === 0) return null;
   const bookName = rows[0].name;
-  const variant = await getStoredJesusNameVariant();
   return {
     ref: `${getBibleBookShortName(bookName, ref.b)} ${ref.c}:${ref.v}${ref.to ? `-${ref.to}` : ''}`,
-    body: capitalize(transformJesusName(rows.map(r => plainVerseText(r.text)).join(' '), variant)),
+    body: capitalize(
+      transformJesusName(
+        rows.map(r => plainVerseText(r.text)).join(' '),
+        variant ?? (await getStoredJesusNameVariant()),
+      ),
+    ),
     bookId: ref.b,
     bookName,
     chapter: ref.c,
@@ -248,12 +254,13 @@ const scheduleVerseSlot = async (slot: ReminderSlot, color: string): Promise<voi
   const tenyHoAnao = await loadTenyHoAnao();
   const situations = tenyHoAnao.inReminders ? tenyHoAnao.situations : [];
   const schedule = situationSchedule(situations, first, VERSE_WINDOW_DAYS, tenyHoAnao.since);
+  const variant = await getStoredJesusNameVariant();
 
   for (let i = 0; i < VERSE_WINDOW_DAYS; i += step) {
     // setDate rather than adding ms so a DST change doesn't shift the hour.
     const when = new Date(first);
     when.setDate(first.getDate() + i);
-    const verse = await verseForDate(when, schedule[i][0]?.ref);
+    const verse = await verseForDate(when, schedule[i][0]?.ref, variant);
     if (!verse) continue;
     const {ref: title, body, bookId, bookName, chapter, verse: verseNumber} = verse;
 
@@ -424,7 +431,11 @@ export const ensureRemindersScheduled = async (): Promise<void> => {
  * queue the crash reporter uses (flushed on reconnect) instead of vanishing.
  */
 export const reportSchedulingFailure = (where: string, error: unknown): void => {
-  if (__DEV__) console.warn(`[readingReminder] ${where} failed:`, error);
+  // Only release builds report (see recordFatalError).
+  if (__DEV__) {
+    console.warn(`[readingReminder] ${where} failed:`, error);
+    return;
+  }
   const err = error instanceof Error ? error : new Error(String(error));
   enqueueIssueReport({
     id: `crash-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

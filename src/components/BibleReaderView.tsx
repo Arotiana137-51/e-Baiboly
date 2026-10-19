@@ -592,7 +592,6 @@ interface BibleReaderViewProps {
   headerText?: string | null;
   chapterMarks?: ChapterMark[];
   onClearRange?: () => void;
-  currentBookName?: string | null;
   // Verse numbers of this chapter in the favourites, drawn framed.
   favoriteVerses?: ReadonlySet<number>;
 }
@@ -617,7 +616,6 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   headerText,
   chapterMarks,
   onClearRange,
-  currentBookName,
   favoriteVerses,
 }) => {
   const { theme } = useTheme();
@@ -1257,13 +1255,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  verseNumber: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '700',
-    color: '#3A86FF',
-    transform: [{ translateY: VERSE_NUMBER_LIFT }],
   },
   // iOS breaks lines greedily with no hyphenation, so justify stretches long
   // Malagasy words into wide gaps. Android balances line breaks and justifies

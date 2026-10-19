@@ -456,7 +456,6 @@ const CultModeScreen = () => {
         visible={hymnModalVisible}
         hymns={hymns}
         currentCategory={null}
-        currentNumber={null}
         onClose={() => setHymnModalVisible(false)}
         onHymnSelect={handleHymnSelect}
       />

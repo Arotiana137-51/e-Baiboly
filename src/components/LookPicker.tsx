@@ -1,6 +1,7 @@
 import React from 'react';
 import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useTheme} from '../contexts/ThemeContext';
+import {useEarthTheme} from '../hooks/useEarthTheme';
 import {PRIMARY_COLOR_OPTIONS} from '../theme/personalizationPalette';
 import {byHue} from '../utils/colorUtils';
 import {lookForColor, PRESET_LOOKS, type ShareCardLook} from '../utils/shareCard';
@@ -67,28 +68,39 @@ export const LookPicker = ({look, photoUri, onSelect, onPickPhoto}: LookPickerPr
   );
 };
 
-// Every look at once, for the widget screen: the photo and the designed looks
-// as small cards that show their text and reference colours, then the whole
-// palette as a grid of circles, like the app's own colour screen.
-export const LookGrid = ({look, photoUri, onSelect, onPickPhoto}: LookPickerProps) => {
-  const {theme} = useTheme();
+// Every look at once, for the widget screen: a labelled photo row, the
+// designed looks as small cards that show their text and reference colours,
+// then the whole palette as a grid of circles, like the app's own colour screen.
+// In the earth colours of Teny ho anao, like the screen it sits on.
+export const LookGrid = ({
+  look,
+  photoUri,
+  onSelect,
+  onPickPhoto,
+  photoLabel,
+}: LookPickerProps & {photoLabel: string}) => {
+  const earth = useEarthTheme();
   const ring = (on: boolean) =>
-    on ? [styles.ringOn, {borderColor: theme.colors.accentBlue}] : {borderColor: theme.colors.divider};
+    on ? [styles.ringOn, {borderColor: earth.accentText}] : {borderColor: earth.line};
   return (
     <View style={styles.grid}>
-      <View style={styles.cards}>
-        <Pressable
-          onPress={onPickPhoto}
-          style={[styles.card, {backgroundColor: theme.colors.backgroundTertiary}, ring(!!look.imageUri)]}
-          accessibilityRole="button"
-          accessibilityState={{selected: !!look.imageUri}}
-        >
+      <Pressable
+        onPress={onPickPhoto}
+        style={[styles.photoRow, {backgroundColor: earth.card}, ring(!!look.imageUri)]}
+        accessibilityRole="button"
+        accessibilityLabel={photoLabel}
+        accessibilityState={{selected: !!look.imageUri}}
+      >
+        <View style={[styles.photoRowThumb, {backgroundColor: earth.chip}]}>
           {photoUri ? (
             <Image source={{uri: photoUri}} style={styles.photoThumb} />
           ) : (
-            <Text style={[styles.photoPlus, {color: theme.colors.textPrimary}]}>+</Text>
+            <Text style={[styles.photoPlus, {color: earth.ink}]}>+</Text>
           )}
-        </Pressable>
+        </View>
+        <Text style={[styles.photoRowLabel, {color: earth.ink}]}>{photoLabel}</Text>
+      </Pressable>
+      <View style={styles.cards}>
         {PRESET_LOOKS.map(preset => (
           <Pressable
             key={preset.background}
@@ -153,6 +165,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   grid: {gap: 20},
+  photoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 64,
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  photoRowThumb: {
+    width: 56,
+    height: 44,
+    borderRadius: 10,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoRowLabel: {flex: 1, fontSize: 15, fontWeight: '600'},
   cards: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   card: {
     width: 62,

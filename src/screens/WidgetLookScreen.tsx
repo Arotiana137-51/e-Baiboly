@@ -3,9 +3,10 @@ import {BackHandler, Image, Platform, Pressable, StyleSheet, Switch, Text, View,
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useTheme} from '../contexts/ThemeContext';
+import {useEarthTheme} from '../hooks/useEarthTheme';
 import {LookGrid} from '../components/LookPicker';
 import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
+import {SegmentedToggle} from '../components/SegmentedToggle';
 import {SheetButton} from '../components/SheetModal';
 import {bibleDatabaseService} from '../services/database/DatabaseService';
 import {verseForDate} from '../services/reminders/readingReminder';
@@ -58,17 +59,46 @@ const FONTS: ReadonlyArray<{id: WidgetFont; label: string}> = [
 ];
 const SIZE_LABELS = ['A−', 'A', 'A+', 'A++'];
 
+// The background first: it is what people come here to change.
+type Tab = 'fond' | 'soratra';
+const TABS: ReadonlyArray<{key: Tab; label: string}> = [
+  {key: 'fond', label: 'Fond'},
+  {key: 'soratra', label: 'Soratra'},
+];
+
+// The widget's own settings glyph, the Material "tune" sliders of
+// android/.../drawable/ic_widget_tune.xml, as its nine rectangles on the same
+// 24-unit grid, so the preview shows what the widget shows.
+const TUNE_SIZE = 14;
+const TUNE_BARS = [
+  [3, 5, 10, 2], [15, 3, 2, 6], [17, 5, 4, 2],
+  [3, 11, 4, 2], [7, 9, 2, 6], [11, 11, 10, 2],
+  [3, 17, 6, 2], [11, 15, 2, 6], [13, 17, 8, 2],
+].map(([x, y, w, h]) => {
+  const unit = TUNE_SIZE / 24;
+  return {position: 'absolute' as const, left: x * unit, top: y * unit, width: w * unit, height: h * unit};
+});
+
+const TuneIcon = ({color}: {color: string}) => (
+  <View style={styles.tune}>
+    {TUNE_BARS.map((bar, i) => (
+      <View key={i} style={[bar, {backgroundColor: color}]} />
+    ))}
+  </View>
+);
+
 const fontStyleFor = (font: WidgetFont) =>
   font === 'sans' ? styles.sans : font === 'italic' ? styles.italic : styles.serif;
 
-// The home-screen widget's look: a live preview pinned on top, the text
-// settings and every look under it, and a "done" button. Reached from the
-// widget's own ⚙ shortcut (fromWidget) or from Safidio ny loko. Every pick is
+// The home-screen widget's look: a live preview and the Fond / Soratra tabs
+// pinned on top, the chosen tab's settings under them, and a "done" button. Reached from the
+// widget's own sliders shortcut (fromWidget) or from Safidio ny loko. Every pick is
 // saved and pushed to the real widget immediately, so the preview and the
 // widget change together.
 const WidgetLookScreen = () => {
-  const {theme} = useTheme();
+  const earth = useEarthTheme();
   const navigation = useNavigation<NavigationProp>();
+  const [tab, setTab] = useState<Tab>('fond');
   const route = useRoute<WidgetLookRouteProp>();
   const fromWidget = route.params?.fromWidget === true;
 
@@ -116,6 +146,17 @@ const WidgetLookScreen = () => {
       cancelled = true;
     };
   }, []);
+
+  // The same header as Teny ho anao, which opens this screen.
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: {backgroundColor: earth.ground},
+      headerTintColor: earth.ink,
+      headerTitleStyle: {color: earth.ink, fontSize: 18, fontWeight: '700'},
+      headerShadowVisible: false,
+      statusBarStyle: earth.isDark ? 'light' : 'dark',
+    });
+  }, [navigation, earth]);
 
   const toggleFollowDark = (on: boolean) => {
     setFollowDark(on);
@@ -169,24 +210,17 @@ const WidgetLookScreen = () => {
     }
   };
 
+  // Same cards as Teny ho anao: the accent's outline and wash when chosen.
   const ring = (on: boolean) => ({
-    borderColor: on ? theme.colors.accentBlue : theme.colors.divider,
-    backgroundColor: on ? theme.colors.backgroundSecondary : 'transparent',
+    borderColor: on ? earth.accentText : earth.line,
+    backgroundColor: on ? earth.accentTint : earth.card,
   });
 
   return (
-    <SafeAreaView
-      edges={['bottom']}
-      style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}
-    >
-      {/* The preview stays in view while the settings scroll, so every pick
-          shows on it at once. */}
+    <SafeAreaView edges={['bottom']} style={[styles.container, {backgroundColor: earth.ground}]}>
+      {/* The preview and the tabs stay in view while the settings scroll, so
+          every pick shows on it at once. */}
       <View style={styles.top}>
-        {/* Placeholder MG copy — user-owned. */}
-        <Text style={[styles.hint, {color: theme.colors.textSecondary}]}>
-          Safidio ny lokon'ny andinin-teny eo amin'ny écran fandraisana.
-        </Text>
-
         {shown ? (
           <View style={[styles.preview, {backgroundColor: shown.background}]}>
             {shown.imageUri ? (
@@ -210,7 +244,8 @@ const WidgetLookScreen = () => {
                   fontStyleFor(text.font),
                   {color: shown.text, fontSize: 15 * text.scale, lineHeight: 21 * text.scale},
                 ]}
-                numberOfLines={4}
+                // The medium widget's own cap: the whole verse, as on the home screen.
+                numberOfLines={7}
               >
                 {today ? (today.key ? `“${today.text}”` : today.text) : ''}
               </Text>
@@ -223,85 +258,101 @@ const WidgetLookScreen = () => {
                 <Text style={[styles.mode, {color: hexToRgba(shown.text, 0.7)}]} numberOfLines={1}>
                   {today?.label.toUpperCase()}
                 </Text>
-                <Text style={[styles.gear, {color: hexToRgba(shown.text, 0.7)}]}>⚙</Text>
+                <TuneIcon color={hexToRgba(shown.text, 0.7)} />
               </View>
             </View>
           </View>
         ) : null}
+        <View style={styles.tabs}>
+          <SegmentedToggle options={TABS} selected={tab} onChange={setTab} />
+        </View>
       </View>
 
-      <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
-        {/* Placeholder MG copy — user-owned. */}
-        <Text style={[styles.sectionTitle, {color: theme.colors.textPrimary}]}>Lokon'ny soratra</Text>
-        <View style={styles.row}>
-          {INKS.map(option => (
-            <Pressable
-              key={option.id}
-              onPress={() => changeText({ink: option.id})}
-              style={[styles.choice, ring(text.ink === option.id)]}
-              accessibilityRole="button"
-              accessibilityState={{selected: text.ink === option.id}}
-            >
-              {option.swatch ? (
-                <View style={[styles.swatch, {backgroundColor: option.swatch, borderColor: theme.colors.divider}]} />
-              ) : null}
-              <Text style={[styles.choiceText, {color: theme.colors.textPrimary}]}>{option.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={[styles.sectionTitle, {color: theme.colors.textPrimary}]}>Karazana soratra</Text>
-        <View style={styles.row}>
-          {FONTS.map(option => (
-            <Pressable
-              key={option.id}
-              onPress={() => changeText({font: option.id})}
-              style={[styles.tile, ring(text.font === option.id)]}
-              accessibilityRole="button"
-              accessibilityState={{selected: text.font === option.id}}
-            >
-              <Text style={[styles.tileSample, fontStyleFor(option.id), {color: theme.colors.textPrimary}]}>Abc</Text>
-              <Text style={[styles.tileLabel, {color: theme.colors.textSecondary}]}>{option.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={[styles.sectionTitle, {color: theme.colors.textPrimary}]}>Haben'ny soratra</Text>
-        <View style={styles.row}>
-          {WIDGET_TEXT_SCALES.map((scale, i) => (
-            <Pressable
-              key={scale}
-              onPress={() => changeText({scale})}
-              style={[styles.choice, ring(text.scale === scale)]}
-              accessibilityRole="button"
-              accessibilityLabel={`${Math.round(scale * 100)}%`}
-              accessibilityState={{selected: text.scale === scale}}
-            >
-              <Text style={[styles.choiceText, SIZE_STYLES[i], {color: theme.colors.textPrimary}]}>
-                {SIZE_LABELS[i]}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={[styles.darkRow, {backgroundColor: theme.colors.backgroundSecondary}]}>
-          <View style={styles.darkText}>
-            <Text style={[styles.darkTitle, {color: theme.colors.textPrimary}]}>Mode sombre</Text>
-            <Text style={[styles.hint, styles.darkHint, {color: theme.colors.textSecondary}]}>
-              Maizina koa ny widget rehefa mode sombre ny finday.
-            </Text>
+      {/* Keyed by tab, so each one opens at its top. */}
+      <ScrollViewWithThumb key={tab} style={styles.list} contentContainerStyle={styles.scroll}>
+        {tab === 'fond' ? (
+          <View style={styles.stack}>
+            {look ? (
+              <LookGrid
+                look={look}
+                photoUri={photoUri}
+                onSelect={apply}
+                onPickPhoto={pickPhoto}
+                photoLabel="Misafidiana sary atao fond ny widget"
+              />
+            ) : null}
+            <View style={[styles.darkRow, {backgroundColor: earth.card, borderColor: earth.line}]}>
+              <View style={styles.darkText}>
+                <Text style={[styles.darkTitle, {color: earth.ink}]}>Mode sombre</Text>
+                <Text style={[styles.darkHint, {color: earth.muted}]}>
+                  Maizina koa ny widget rehefa mode sombre ny finday.
+                </Text>
+              </View>
+              <Switch
+                value={followDark}
+                onValueChange={toggleFollowDark}
+                trackColor={{false: earth.edge, true: earth.accentText}}
+                thumbColor={earth.card}
+              />
+            </View>
           </View>
-          <Switch
-            value={followDark}
-            onValueChange={toggleFollowDark}
-            trackColor={{false: theme.colors.divider, true: theme.colors.accentBlue}}
-            thumbColor="#FFFFFF"
-          />
-        </View>
-        {look ? <LookGrid look={look} photoUri={photoUri} onSelect={apply} onPickPhoto={pickPhoto} /> : null}
+        ) : (
+          <>
+            {/* Placeholder MG copy — user-owned. */}
+            <Text style={[styles.sectionTitle, {color: earth.ink}]}>Karazana soratra</Text>
+            <View style={styles.row}>
+              {FONTS.map(option => (
+                <Pressable
+                  key={option.id}
+                  onPress={() => changeText({font: option.id})}
+                  style={[styles.tile, ring(text.font === option.id)]}
+                  accessibilityRole="button"
+                  accessibilityState={{selected: text.font === option.id}}
+                >
+                  <Text style={[styles.tileSample, fontStyleFor(option.id), {color: earth.ink}]}>Abc</Text>
+                  <Text style={[styles.tileLabel, {color: earth.muted}]}>{option.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={[styles.sectionTitle, {color: earth.ink}]}>Haben'ny soratra</Text>
+            <View style={styles.row}>
+              {WIDGET_TEXT_SCALES.map((scale, i) => (
+                <Pressable
+                  key={scale}
+                  onPress={() => changeText({scale})}
+                  style={[styles.choice, ring(text.scale === scale)]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${Math.round(scale * 100)}%`}
+                  accessibilityState={{selected: text.scale === scale}}
+                >
+                  <Text style={[styles.choiceText, SIZE_STYLES[i], {color: earth.ink}]}>{SIZE_LABELS[i]}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={[styles.sectionTitle, {color: earth.ink}]}>Lokon'ny soratra</Text>
+            <View style={styles.row}>
+              {INKS.map(option => (
+                <Pressable
+                  key={option.id}
+                  onPress={() => changeText({ink: option.id})}
+                  style={[styles.choice, ring(text.ink === option.id)]}
+                  accessibilityRole="button"
+                  accessibilityState={{selected: text.ink === option.id}}
+                >
+                  {option.swatch ? (
+                    <View style={[styles.swatch, {backgroundColor: option.swatch, borderColor: earth.edge}]} />
+                  ) : null}
+                  <Text style={[styles.choiceText, {color: earth.ink}]}>{option.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollViewWithThumb>
 
-      <View style={[styles.footer, {borderTopColor: theme.colors.divider}]}>
+      <View style={[styles.footer, {borderTopColor: earth.line}]}>
         <SheetButton label="Vita" onPress={done} variant="filled" />
       </View>
     </SafeAreaView>
@@ -323,7 +374,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  hint: {fontSize: 14, lineHeight: 20, marginBottom: 12},
+  tabs: {marginTop: 12},
+  stack: {gap: 20},
   sectionTitle: {fontSize: 15, fontWeight: '700', marginBottom: 8},
   row: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20},
   choice: {
@@ -347,14 +399,23 @@ const styles = StyleSheet.create({
   serif: {fontFamily: SERIF},
   sans: {},
   italic: {fontFamily: SERIF, fontStyle: 'italic'},
-  darkRow: {flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 12, padding: 14, marginBottom: 20},
+  darkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+  },
   darkText: {flex: 1},
   darkTitle: {fontSize: 15, fontWeight: '700'},
-  darkHint: {marginBottom: 0, marginTop: 2},
+  darkHint: {fontSize: 14, lineHeight: 20, marginTop: 2},
   preview: {borderRadius: 24, overflow: 'hidden', minHeight: 160},
   previewImage: {...StyleSheet.absoluteFillObject, width: undefined, height: undefined, resizeMode: 'cover'},
   previewVeil: {...StyleSheet.absoluteFillObject},
-  previewContent: {flex: 1, padding: 14},
+  // flexGrow, not flex: 1, whose zero basis kept the card at its 160pt
+  // minimum and clipped the verse's end and the reference.
+  previewContent: {flexGrow: 1, padding: 14},
   previewTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   badge: {
     fontSize: 10,
@@ -372,7 +433,7 @@ const styles = StyleSheet.create({
   previewRef: {fontSize: 12, fontWeight: '700'},
   tag: {fontSize: 9, fontWeight: '600', letterSpacing: 0.5, paddingHorizontal: 3, borderRadius: 4, overflow: 'hidden'},
   mode: {flex: 1, fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textAlign: 'right'},
-  gear: {fontSize: 12},
+  tune: {width: TUNE_SIZE, height: TUNE_SIZE},
 });
 
 // "A−" to "A++", each drawn a step larger.

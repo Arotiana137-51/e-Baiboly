@@ -223,6 +223,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         val secondary = if (size.minimal) View.GONE else View.VISIBLE
         views.setViewVisibility(R.id.widget_label, secondary)
         views.setViewVisibility(R.id.widget_settings, secondary)
+        views.setViewVisibility(R.id.widget_settings_hit, secondary)
 
         // Ink: the look's text colour at full strength for the verse, badge and
         // heart, dimmed for the secondary items; the reference takes the accent.
@@ -292,7 +293,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         val settings = Intent(Intent.ACTION_VIEW, Uri.parse(SETTINGS_URL), context, MainActivity::class.java)
         settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         views.setOnClickPendingIntent(
-            R.id.widget_settings,
+            R.id.widget_settings_hit,
             PendingIntent.getActivity(context, 1, settings, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE),
         )
         return views

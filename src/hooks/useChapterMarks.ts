@@ -20,37 +20,31 @@ const isLegacyNoteMark = (m: any): boolean => !!m && m.style === 'note';
 // exported hooks below only differ in how they derive that key.
 const useMarksForKey = (key: string | null) => {
   const [marks, setMarks] = useState<ChapterMark[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const reload = useCallback(async () => {
+  useEffect(() => {
     if (key == null) {
       setMarks([]);
-      setIsLoading(false);
       return;
     }
-    setIsLoading(true);
-    try {
-      const raw = await AsyncStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
+    // A load for a chapter already left never lands on the next one.
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : [];
         const validMarks = Array.isArray(parsed)
           ? parsed.filter(m => isMark(m) && !isLegacyNoteMark(m))
           : [];
-        setMarks(validMarks);
-      } else {
-        setMarks([]);
+        if (!cancelled) setMarks(validMarks);
+      } catch (error) {
+        console.error('Error loading chapter marks:', error);
+        if (!cancelled) setMarks([]);
       }
-    } catch (error) {
-      console.error('Error loading chapter marks:', error);
-      setMarks([]);
-    } finally {
-      setIsLoading(false);
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [key]);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
 
   const persist = useCallback(
     async (next: ChapterMark[]) => {
@@ -80,38 +74,7 @@ const useMarksForKey = (key: string | null) => {
     [persist],
   );
 
-  const addMark = useCallback(
-    async (mark: ChapterMark) => {
-      const next = [...marks, mark];
-      setMarks(next);
-      await persist(next);
-    },
-    [marks, persist],
-  );
-
-  const removeMark = useCallback(
-    async (id: string) => {
-      const next = marks.filter(m => m.id !== id);
-      setMarks(next);
-      await persist(next);
-    },
-    [marks, persist],
-  );
-
-  const clearChapter = useCallback(async () => {
-    setMarks([]);
-    await persist([]);
-  }, [persist]);
-
-  return {
-    marks,
-    isLoading,
-    addMark,
-    removeMark,
-    clearChapter,
-    setAllMarks,
-    reload,
-  };
+  return {marks, setAllMarks};
 };
 
 export const useChapterMarks = (bookId: number | null, chapter: number | null) =>

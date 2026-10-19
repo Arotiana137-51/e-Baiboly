@@ -19,43 +19,9 @@ type QueryResult<T = any> = {
 
 type QuickSQLiteDatabase = ReturnType<typeof open>;
 
-// Types for our database schema
-export interface Book {
-  id: number;
-  name: string;
-  testament: 'old' | 'new';
-  chapters: number;
-  filename: string;
-}
-
-export interface Verse {
-  id: number;
-  book_id: number;
-  chapter: number;
-  verse_number: number;
-  text: string;
-}
-
-export interface Hymn {
-  id: string;
-  number: number;
-  category?: string;
-  title: string;
-  authors: string;
-}
-
-export interface HymnVerse {
-  id: number;
-  hymn_id: string;
-  verse_number: number;
-  text: string;
-  is_chorus: boolean;
-}
-
 // Database configuration
 type DatabaseServiceConfig = {
   dbName: string;
-  assetPath: string;
   /**
    * Bundled content version (YYYYMMDD) stamped into the asset DB via
    * `PRAGMA user_version` at build time. The writable copy is replaced
@@ -67,13 +33,11 @@ type DatabaseServiceConfig = {
 class DatabaseService {
   private db: QuickSQLiteDatabase | null = null;
   private dbName: string;
-  private assetPath: string;
   private contentVersion: number;
   private initPromise: Promise<void> | null = null;
 
   constructor(config: DatabaseServiceConfig) {
     this.dbName = config.dbName;
-    this.assetPath = config.assetPath;
     this.contentVersion = config.contentVersion;
   }
 
@@ -179,10 +143,8 @@ class DatabaseService {
         }
 
         if (!exists) {
-          const assetPath = __DEV__ ? getDatabaseAssetPath(this.dbName) : (this.assetPath || getDatabaseAssetPath(this.dbName));
-
           try {
-            await copyDatabaseFromAssets(assetPath, dbPath);
+            await copyDatabaseFromAssets(getDatabaseAssetPath(this.dbName), dbPath);
             await FileSystem.stat(dbPath);
           } catch (error) {
             console.error('Failed to copy database from assets:', error);
@@ -454,27 +416,14 @@ class DatabaseService {
       tx.execute(`PRAGMA user_version = ${patch.version}`);
     });
   }
-
-  // Close the database connection
-  async closeDatabase(): Promise<void> {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
-  }
 }
 
 export const bibleDatabaseService = new DatabaseService({
   dbName: 'BibleMG65.db',
-  assetPath: getDatabaseAssetPath('BibleMG65.db'),
   contentVersion: BIBLE_DB_VERSION,
 });
 
 export const hymnsDatabaseService = new DatabaseService({
   dbName: 'Hymns.db',
-  assetPath: getDatabaseAssetPath('Hymns.db'),
   contentVersion: HYMNS_DB_VERSION,
 });
-
-export const databaseService = bibleDatabaseService;
-export default bibleDatabaseService;

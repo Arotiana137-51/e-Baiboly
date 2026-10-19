@@ -33,7 +33,6 @@ export const useBibleData = () => {
   const [books, setBooks] = useState<BibleBook[]>([]);
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Load all Bible books
   const loadBooks = useCallback(async () => {
@@ -53,7 +52,6 @@ export const useBibleData = () => {
       return booksList;
     } catch (error) {
       console.error('Error loading books:', error);
-      setError('Failed to load Bible books');
       return [];
     } finally {
       setIsLoading(false);
@@ -76,7 +74,6 @@ export const useBibleData = () => {
       return versesList;
     } catch (error) {
       console.error('Error loading verses:', error);
-      setError('Failed to load verses');
       return [];
     } finally {
       setIsLoading(false);
@@ -96,51 +93,6 @@ export const useBibleData = () => {
     } catch (error) {
       console.error('Error getting verse count:', error);
       return 0;
-    }
-  }, []);
-
-  // Get a specific verse
-  const getVerse = useCallback(
-    async (bookId: number, chapter: number, verseNumber: number) => {
-    try {
-      await bibleDatabaseService.initDatabase();
-      const { rows } = await bibleDatabaseService.executeQuery<BibleVerse>(
-        'SELECT id, book_id, chapter, verse_number, text, title FROM Verses WHERE book_id = ? AND chapter = ? AND verse_number = ?',
-        [bookId, chapter, verseNumber]
-      );
-      
-      if (rows.length > 0) {
-        return rows[0];
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting verse:', error);
-      return null;
-    }
-    },
-    []
-  );
-
-  // Search for verses containing a specific text
-  const searchVerses = useCallback(async (query: string) => {
-    try {
-      await bibleDatabaseService.initDatabase();
-      const { rows } = await bibleDatabaseService.executeQuery<
-        BibleVerse & { book_name: string }
-      >(
-        `SELECT v.id, v.book_id, v.chapter, v.verse_number, v.text, b.name as book_name
-         FROM VersesFts f
-         JOIN Verses v ON v.id = f.rowid
-         JOIN Books b ON b.id = v.book_id
-         WHERE VersesFts MATCH ?
-         ORDER BY bm25(VersesFts)`,
-        [query]
-      );
-      
-      return rows;
-    } catch (error) {
-      console.error('Error searching verses:', error);
-      return [];
     }
   }, []);
 
@@ -187,12 +139,8 @@ export const useBibleData = () => {
     books,
     verses,
     isLoading,
-    error,
-    loadBooks,
     loadVerses,
     getVerseCount,
-    getVerse,
-    searchVerses,
     getCrossReferences,
   };
 };

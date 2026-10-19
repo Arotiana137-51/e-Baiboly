@@ -38,8 +38,6 @@ const MIN_SCALE = 0.85;
 const MAX_SCALE = 1.25;
 const MAX_FONT_SCALE = 1.3; // cap system "Largest font" so wrapping stays sane
 
-export type ScreenClass = 'xsmall' | 'small' | 'regular' | 'large' | 'xlarge';
-
 export const SPACING = {
   xs: 4,
   sm: 8,
@@ -47,13 +45,6 @@ export const SPACING = {
   lg: 16,
   xl: 24,
   xxl: 32,
-} as const;
-
-export const RADIUS = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  pill: 999,
 } as const;
 
 const clamp = (value: number, min: number, max: number) =>
@@ -66,14 +57,6 @@ const scaleBy = (size: number, actual: number, base: number) =>
   isIOS
     ? size
     : Math.round(clamp((size * actual) / base, size * MIN_SCALE, size * MAX_SCALE));
-
-const classify = (width: number): ScreenClass => {
-  if (width <= 320) return 'xsmall';
-  if (width <= 360) return 'small';
-  if (width <= 400) return 'regular';
-  if (width <= 430) return 'large';
-  return 'xlarge';
-};
 
 /**
  * Static helpers for use outside React (StyleSheet.create, constants, etc.).
@@ -88,13 +71,6 @@ export const scale = (size: number, w: number = initial.width) =>
 export const verticalScale = (size: number, h: number = initial.height) =>
   scaleBy(size, h, BASE_HEIGHT);
 
-/** Moderate scale — dampens by `factor` (default 0.5). Good for fontSize. */
-export const moderateScale = (
-  size: number,
-  factor: number = 0.5,
-  w: number = initial.width,
-) => Math.round(size + (scale(size, w) - size) * factor);
-
 /**
  * Hook variant — re-runs on orientation change, Android split-screen, and
  * iPad multitasking. Use this from components.
@@ -103,7 +79,6 @@ export const useResponsive = () => {
   const { width, height, fontScale } = useWindowDimensions();
 
   return useMemo(() => {
-    const screenClass = classify(width);
     const isSmall = width <= 360;
     const isXSmall = width <= 320;
     const isTablet = width >= 600;
@@ -124,7 +99,6 @@ export const useResponsive = () => {
       width,
       height,
       fontScale: cappedFontScale,
-      screenClass,
       isSmall,
       isXSmall,
       isTablet,
@@ -132,7 +106,6 @@ export const useResponsive = () => {
       isAndroid: Platform.OS === 'android',
       scale: s,
       verticalScale: vs,
-      moderateScale: ms,
       fontFor,
     };
   }, [width, height, fontScale]);

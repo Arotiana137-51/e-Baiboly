@@ -1,2 +1,0 @@
-export const PRIVACY_POLICY_URL = 'https://arotiana137-51.github.io/ebaiboly-privacy-policy/privacy-policy.html';
-// package public key"BF:A9:9C:2F:A2:AE:5B:95:47:27:E8:D7:37:7E:81:5E:67:C3:7A:15:5C:C6:02:63:40:A9:BF:28:8C:9E:99:C6"

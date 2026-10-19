@@ -4,6 +4,7 @@ import * as RNFS from 'react-native-fs';
 import {bibleDatabaseService} from '../database/DatabaseService';
 import {reportSchedulingFailure, verseForDate} from '../reminders/readingReminder';
 import {getStoredPrimaryColor} from '../../utils/primaryColorStorage';
+import {getStoredJesusNameVariant} from '../../utils/jesusName';
 import {findPrimaryColorOption, PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {lookForColor, nightLook, widgetInk, type ShareCardLook, type WidgetInk} from '../../utils/shareCard';
 import {isoDay} from '../../utils/isoDay';
@@ -123,15 +124,16 @@ const readStoredLook = async (): Promise<StoredLook | null> => {
   }
 };
 
-/**
- * The widget's look as the picker understands it. No stored choice = the
- * app's own primary colour with matching ink, so the widget follows
- * "Safidio ny loko" until the user picks something else.
- */
+// No stored choice = the app's own primary colour with matching ink, so the
+// widget follows "Safidio ny loko" until the user picks something else.
+const appColorLook = async (): Promise<ShareCardLook> =>
+  lookForColor((await getStoredPrimaryColor()) ?? PRIMARY_COLOR_OPTIONS[0].hex);
+
+/** The widget's look as the picker understands it. */
 export const getWidgetLook = async (): Promise<ShareCardLook> => {
   const stored = await readStoredLook();
   if (!stored) {
-    return lookForColor((await getStoredPrimaryColor()) ?? PRIMARY_COLOR_OPTIONS[0].hex);
+    return appColorLook();
   }
   const {image, ...look} = stored;
   return image ? {...look, imageUri: `file://${await widgetDir()}/${WIDGET_IMAGE_NAME}`} : look;
@@ -174,8 +176,19 @@ export const setWidgetText = async (text: WidgetText): Promise<void> => {
   await syncDailyVerseWidget();
 };
 
+// Looks are saved one after the other: a photo still being copied must not
+// land after a colour picked right behind it.
+let lookWrites: Promise<void> = Promise.resolve();
+
 /** Persists a look (copying a freshly picked photo next to the feed) and re-syncs the widget. */
-export const setWidgetLook = async (look: ShareCardLook): Promise<void> => {
+export const setWidgetLook = (look: ShareCardLook): Promise<void> => {
+  const run = lookWrites.then(() => saveLook(look));
+  // A failed save must not block the next ones.
+  lookWrites = run.catch(() => {});
+  return run;
+};
+
+const saveLook = async (look: ShareCardLook): Promise<void> => {
   try {
     const dest = `${await widgetDir()}/${WIDGET_IMAGE_NAME}`;
     const image = !!look.imageUri;
@@ -307,6 +320,7 @@ const writeFeed = async (): Promise<void> => {
   const situations = tenyHoAnao.onWidget ? tenyHoAnao.situations : [];
   const schedule = situationSchedule(situations, today, WIDGET_WINDOW_DAYS, tenyHoAnao.since);
   const favorites = await favoriteVerses();
+  const variant = await getStoredJesusNameVariant();
   // Plan verses shown up to yesterday, then counted on day by day: one
   // replay of the plans instead of one per day.
   const yesterday = new Date(today);
@@ -323,7 +337,7 @@ const writeFeed = async (): Promise<void> => {
     }
     const planned = schedule[i][0];
     const ref = planned?.ref ?? dailyVerseFor(date);
-    const verse = await verseForDate(date, ref);
+    const verse = await verseForDate(date, ref, variant);
     if (verse) {
       const key = verseKey(ref);
       days[isoDay(date)] = {
@@ -339,7 +353,7 @@ const writeFeed = async (): Promise<void> => {
     }
   }
   const stored = await readStoredLook();
-  const base = stored ?? lookForColor((await getStoredPrimaryColor()) ?? PRIMARY_COLOR_OPTIONS[0].hex);
+  const base = stored ?? (await appColorLook());
   const text = await getWidgetText();
   const look = widgetInk(stored?.image ? {...base, imageUri: WIDGET_IMAGE_NAME} : base, text.ink);
   // A photo keeps its veil day and night.

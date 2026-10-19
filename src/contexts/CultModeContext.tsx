@@ -33,7 +33,6 @@ type CultModeContextValue = {
   addEntry: (entry: CultEntryInput) => string;
   removeEntry: (id: string) => void;
   reorderEntries: (fromIndex: number, toIndex: number) => void;
-  clearAll: () => Promise<void>;
   // Tutorial isolation: run the walkthrough on an empty in-memory slate so the
   // playlist step shows only the demo entries the user adds — without ever
   // persisting them over the real saved playlist. endTutorial restores it.
@@ -168,11 +167,6 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
     [],
   );
 
-  const clearAll = useCallback(async () => {
-    setEntries([]);
-    await AsyncStorage.removeItem(CULT_PLAYLIST_KEY);
-  }, []);
-
   const beginTutorial = useCallback(() => {
     if (tutorialSnapshot.current) return; // already isolated
     tutorialSnapshot.current = {entries, isActive};
@@ -233,7 +227,6 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
       addEntry,
       removeEntry,
       reorderEntries,
-      clearAll,
       beginTutorial,
       endTutorial,
       isActive,
@@ -252,7 +245,6 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
       addEntry,
       removeEntry,
       reorderEntries,
-      clearAll,
       beginTutorial,
       endTutorial,
       isActive,

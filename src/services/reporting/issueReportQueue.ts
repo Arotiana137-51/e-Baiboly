@@ -27,19 +27,26 @@ const readQueue = async (): Promise<IssueReport[]> => {
   }
 };
 
-const writeQueue = async (queue: IssueReport[]) => {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+// Every write is a read-modify-write run one at a time, so a report enqueued
+// while a flush is posting (or while another enqueue is mid-way, e.g. the
+// crash drain and a scheduling failure at launch) is never overwritten.
+let queueWrites: Promise<unknown> = Promise.resolve();
+
+const updateQueue = (change: (queue: IssueReport[]) => IssueReport[]): Promise<void> => {
+  const run = queueWrites.then(async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(change(await readQueue())));
+  });
+  queueWrites = run.catch(() => {});
+  return run;
 };
 
-export const enqueueIssueReport = async (report: IssueReport) => {
-  const queue = await readQueue();
-  queue.push(report);
-  await writeQueue(queue);
+// Removes the reports a flush is done with, leaving any enqueued meanwhile.
+const removeReports = (done: IssueReport[]) => {
+  const ids = new Set(done.map(r => r.id));
+  return updateQueue(queue => queue.filter(r => !ids.has(r.id)));
 };
 
-export const peekIssueReportsQueue = async () => {
-  return readQueue();
-};
+export const enqueueIssueReport = (report: IssueReport) => updateQueue(queue => [...queue, report]);
 
 // Outcome of POSTing one batch of reports.
 //   - 'sent':      accepted + acknowledged; remove from queue.
@@ -82,7 +89,13 @@ const postBatch = async (
   }
 
   const contentType = res.headers.get('content-type') ?? '';
-  const rawBody = await res.text();
+  let rawBody: string;
+  try {
+    rawBody = await res.text();
+  } catch {
+    // Connection dropped while reading the body — retry later.
+    return 'transient';
+  }
 
   if (__DEV__) {
     console.log(
@@ -141,7 +154,18 @@ const postBatch = async (
   return 'transient';
 };
 
-export const flushIssueReports = async (endpointUrl: string) => {
+// A flush already posting is shared, so a reconnect and a return to the
+// foreground at the same moment don't send the same reports twice.
+let flushing: Promise<{sent: number; dropped: number}> | null = null;
+
+export const flushIssueReports = (endpointUrl: string) => {
+  flushing ??= flushOnce(endpointUrl).finally(() => {
+    flushing = null;
+  });
+  return flushing;
+};
+
+const flushOnce = async (endpointUrl: string) => {
   const queue = await readQueue();
   if (queue.length === 0) {
     if (__DEV__) {
@@ -159,9 +183,9 @@ export const flushIssueReports = async (endpointUrl: string) => {
 
   const outcome = await postBatch(endpointUrl, queue);
 
-  // Whole batch accepted — clear it and we're done.
+  // Whole batch accepted — remove it and we're done.
   if (outcome === 'sent') {
-    await writeQueue([]);
+    await removeReports(queue);
     return { sent: queue.length, dropped: 0 };
   }
 
@@ -185,31 +209,31 @@ export const flushIssueReports = async (endpointUrl: string) => {
         queue[0]?.id
       );
     }
-    await writeQueue([]);
+    await removeReports(queue);
     return { sent: 0, dropped: 1 };
   }
 
   let sent = 0;
   let dropped = 0;
-  const keep: IssueReport[] = [];
+  // Sent or permanently refused; a transient failure stays queued for next time.
+  const done: IssueReport[] = [];
   for (const report of queue) {
     const single = await postBatch(endpointUrl, [report]);
     if (single === 'sent') {
       sent += 1;
+      done.push(report);
     } else if (single === 'permanent') {
       dropped += 1;
+      done.push(report);
       if (__DEV__) {
         console.warn(
           '[issue-report] dropping permanently-rejected report:',
           report.id
         );
       }
-    } else {
-      // Transient on the individual retry — keep it for next time.
-      keep.push(report);
     }
   }
 
-  await writeQueue(keep);
+  await removeReports(done);
   return { sent, dropped };
 };

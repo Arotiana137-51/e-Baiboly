@@ -73,6 +73,9 @@ export const recordFatalError = async (
       console.error('[crash:componentStack]', componentStack);
     }
 
+    // Only release builds report: a debug build's crashes (Fast Refresh
+    // mid-edit, mostly) buried the production ones in the report sheet.
+    if (__DEV__) return;
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(record));
   } catch (reporterError) {
     // Last resort: log and move on. Do not rethrow.
