@@ -80,11 +80,16 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
       setContentResults([]);
       return;
     }
+    // As in GlobalSearchScreen: a search outrun by a newer query is dropped.
+    let cancelled = false;
     const id = setTimeout(async () => {
       const results = await searchBible(searchQuery);
-      setContentResults(results);
+      if (!cancelled) setContentResults(results);
     }, 300);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [currentStep, searchQuery, searchBible]);
 
   const bottomScrollSpacer =
