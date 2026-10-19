@@ -1,4 +1,5 @@
 #import <React/RCTEventEmitter.h>
+#import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 
@@ -34,11 +35,107 @@ static NSHashTable<UITextView *> *EBSelectedTextViews(void)
   return views;
 }
 
+static BOOL EBHasSelection(UITextView *textView)
+{
+  const NSRange range = textView.selectedRange;
+  return range.location != NSNotFound && range.length > 0 && textView.selectedTextRange != nil;
+}
+
+static const void *kEBOverlayKey = &kEBOverlayKey;
+
+// A highlight is a text background, drawn over UIKit's selection, so selected
+// highlighted words looked unselected. The selection is drawn again on top of
+// each highlight: in the selection's blue, or in orange over a blue highlight,
+// which blue would vanish into. Words without a highlight keep UIKit's own.
+// ponytail: "blue" is a hue band, and faint backgrounds (the search verse's
+// tint) are left to UIKit. The pieces follow selection changes and redraws,
+// not a bare relayout (rotation keeps them until the next one). Move this into
+// the library if it ever puts its selection above the text.
+static BOOL EBIsHighlight(id value)
+{
+  return [value isKindOfClass:[UIColor class]] && CGColorGetAlpha(((UIColor *)value).CGColor) >= 0.3;
+}
+
+static BOOL EBIsBluish(UIColor *color)
+{
+  CGFloat hue = 0, saturation = 0, brightness = 0, alpha = 0;
+  if (![color getHue:&hue saturation:&saturation brightness:&brightness alpha:&alpha]) {
+    return NO;
+  }
+  return saturation > 0.2 && hue > 0.5 && hue < 0.75;
+}
+
+static CAShapeLayer *EBOverlayLayer(UIView *overlay, NSUInteger index, UIColor *color)
+{
+  while (overlay.layer.sublayers.count <= index) {
+    [overlay.layer addSublayer:[CAShapeLayer layer]];
+  }
+  CAShapeLayer *layer = (CAShapeLayer *)overlay.layer.sublayers[index];
+  layer.fillColor = [color colorWithAlphaComponent:0.35].CGColor;
+  return layer;
+}
+
+static void EBUpdateSelectionOverlay(UITextView *textView)
+{
+  UIView *overlay = objc_getAssociatedObject(textView, kEBOverlayKey);
+  const NSRange selected = textView.selectedRange;
+  if (!EBHasSelection(textView) || NSMaxRange(selected) > textView.attributedText.length) {
+    [overlay removeFromSuperview];
+    objc_setAssociatedObject(textView, kEBOverlayKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return;
+  }
+
+  UIBezierPath *overPlain = [UIBezierPath bezierPath];
+  UIBezierPath *overBlue = [UIBezierPath bezierPath];
+  [textView.attributedText
+      enumerateAttribute:NSBackgroundColorAttributeName
+                 inRange:selected
+                 options:0
+              usingBlock:^(id value, NSRange range, BOOL *stop) {
+                if (!EBIsHighlight(value)) {
+                  return;
+                }
+                UITextPosition *start = [textView positionFromPosition:textView.beginningOfDocument
+                                                                offset:range.location];
+                UITextPosition *end = [textView positionFromPosition:textView.beginningOfDocument
+                                                              offset:NSMaxRange(range)];
+                UITextRange *textRange = start && end ? [textView textRangeFromPosition:start toPosition:end] : nil;
+                if (textRange == nil) {
+                  return;
+                }
+                UIBezierPath *path = EBIsBluish(value) ? overBlue : overPlain;
+                for (UITextSelectionRect *selectionRect in [textView selectionRectsForRange:textRange]) {
+                  if (!CGRectIsEmpty(selectionRect.rect)) {
+                    [path appendPath:[UIBezierPath bezierPathWithRect:selectionRect.rect]];
+                  }
+                }
+              }];
+
+  if (overlay == nil) {
+    // Zero-sized and unclipped: its layers draw in the text view's own
+    // coordinates, where the selection rects are.
+    overlay = [[UIView alloc] initWithFrame:CGRectZero];
+    overlay.userInteractionEnabled = NO;
+    objc_setAssociatedObject(textView, kEBOverlayKey, overlay, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+  }
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+  EBOverlayLayer(overlay, 0, textView.tintColor).path = overPlain.CGPath;
+  EBOverlayLayer(overlay, 1, [UIColor systemOrangeColor]).path = overBlue.CGPath;
+  [CATransaction commit];
+  if (overlay.superview != textView) {
+    [textView addSubview:overlay];
+  } else {
+    [textView bringSubviewToFront:overlay];
+  }
+}
+
 static void EBClearSelections(UITextView *except)
 {
   for (UITextView *textView in [EBSelectedTextViews() allObjects]) {
     if (textView != except) {
       textView.selectedTextRange = nil;
+      EBUpdateSelectionOverlay(textView);
     }
   }
 }
@@ -85,18 +182,13 @@ static BOOL EBSelectionChangeSuppressed(UIView *owner)
   return *(BOOL *)((uint8_t *)(__bridge void *)owner + ivar_getOffset(flag));
 }
 
-static BOOL EBHasSelection(UITextView *textView)
-{
-  const NSRange range = textView.selectedRange;
-  return range.location != NSNotFound && range.length > 0 && textView.selectedTextRange != nil;
-}
-
 // Where the selected words are, in the passage's coordinates (its top-left).
 static void EBReportSelection(UIView *owner, UITextView *textView)
 {
   if (EBSelectionChangeSuppressed(owner)) {
     return;
   }
+  EBUpdateSelectionOverlay(textView);
   if (!EBHasSelection(textView)) {
     [EBSelectedTextViews() removeObject:textView];
     EBPost(@"SelectionMenuHidden", @{@"tag" : @(owner.tag)});
@@ -322,7 +414,9 @@ static void EBHookDraw(Class cls)
     // A redraw resets the text with selection changes muted, then puts the
     // selection back; when it can't, that selection has ended.
     UITextView *textView = EBFindTextView(owner);
-    if (textView != nil && [EBSelectedTextViews() containsObject:textView] && !EBHasSelection(textView)) {
+    // A kept selection may have moved with the text (new size, new
+    // highlight): its overlay and the bubble's place follow.
+    if (textView != nil && [EBSelectedTextViews() containsObject:textView]) {
       EBReportSelection(owner, textView);
     }
   });
