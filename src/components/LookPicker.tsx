@@ -67,28 +67,38 @@ export const LookPicker = ({look, photoUri, onSelect, onPickPhoto}: LookPickerPr
   );
 };
 
-// Every look at once, for the widget screen: the photo and the designed looks
-// as small cards that show their text and reference colours, then the whole
-// palette as a grid of circles, like the app's own colour screen.
-export const LookGrid = ({look, photoUri, onSelect, onPickPhoto}: LookPickerProps) => {
+// Every look at once, for the widget screen: a labelled photo row, the
+// designed looks as small cards that show their text and reference colours,
+// then the whole palette as a grid of circles, like the app's own colour screen.
+export const LookGrid = ({
+  look,
+  photoUri,
+  onSelect,
+  onPickPhoto,
+  photoLabel,
+}: LookPickerProps & {photoLabel: string}) => {
   const {theme} = useTheme();
   const ring = (on: boolean) =>
     on ? [styles.ringOn, {borderColor: theme.colors.accentBlue}] : {borderColor: theme.colors.divider};
   return (
     <View style={styles.grid}>
-      <View style={styles.cards}>
-        <Pressable
-          onPress={onPickPhoto}
-          style={[styles.card, {backgroundColor: theme.colors.backgroundTertiary}, ring(!!look.imageUri)]}
-          accessibilityRole="button"
-          accessibilityState={{selected: !!look.imageUri}}
-        >
+      <Pressable
+        onPress={onPickPhoto}
+        style={[styles.photoRow, {backgroundColor: theme.colors.backgroundSecondary}, ring(!!look.imageUri)]}
+        accessibilityRole="button"
+        accessibilityLabel={photoLabel}
+        accessibilityState={{selected: !!look.imageUri}}
+      >
+        <View style={[styles.photoRowThumb, {backgroundColor: theme.colors.backgroundTertiary}]}>
           {photoUri ? (
             <Image source={{uri: photoUri}} style={styles.photoThumb} />
           ) : (
             <Text style={[styles.photoPlus, {color: theme.colors.textPrimary}]}>+</Text>
           )}
-        </Pressable>
+        </View>
+        <Text style={[styles.photoRowLabel, {color: theme.colors.textPrimary}]}>{photoLabel}</Text>
+      </Pressable>
+      <View style={styles.cards}>
         {PRESET_LOOKS.map(preset => (
           <Pressable
             key={preset.background}
@@ -153,6 +163,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   grid: {gap: 20},
+  photoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 64,
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  photoRowThumb: {
+    width: 56,
+    height: 44,
+    borderRadius: 10,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoRowLabel: {flex: 1, fontSize: 15, fontWeight: '600'},
   cards: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   card: {
     width: 62,
