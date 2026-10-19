@@ -91,6 +91,18 @@ export const dimHighlightForLightMode = (color: string): string => {
   return lightenHex(trimmed, 0.23);
 };
 
+// The highlight as a see-through colour, for iOS: it draws its blue text
+// selection under the text, so an opaque highlight hid the selection on
+// highlighted words. Dark mode keeps the same desaturated hue; the page
+// showing through stands in for the darkening. Non-hex passes through.
+export const HIGHLIGHT_ALPHA = 0.55;
+export const translucentHighlight = (color: string, isDark: boolean): string => {
+  if (typeof color !== 'string') return color;
+  const trimmed = color.trim();
+  if (!trimmed.startsWith('#')) return trimmed;
+  return hexToRgba(isDark ? desaturateHex(trimmed, 0.25) : trimmed, HIGHLIGHT_ALPHA);
+};
+
 // WCAG-style relative luminance for "is this color dark?" decisions.
 export const getRelativeLuminance = (hex: string): number => {
   const parsed = parseHex(hex);
