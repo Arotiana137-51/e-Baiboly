@@ -1,4 +1,4 @@
-import {accentFill, byHue, contrastRatio, readableAccent} from '../src/utils/colorUtils';
+import {accentFill, byHue, contrastRatio, desaturateHex, HIGHLIGHT_ALPHA, readableAccent, translucentHighlight} from '../src/utils/colorUtils';
 import {PRIMARY_COLOR_OPTIONS} from '../src/theme/personalizationPalette';
 
 // Teny ho anao takes its accent from the reader's theme color, so every color
@@ -29,5 +29,23 @@ describe('byHue', () => {
   it('goes round the rainbow and leaves the greys for last', () => {
     const sorted = ['#000000', '#0A84FF', '#22C55E', '#545E56', '#F97316', '#C8102E'].sort(byHue);
     expect(sorted).toEqual(['#C8102E', '#F97316', '#22C55E', '#0A84FF', '#545E56', '#000000']);
+  });
+});
+
+describe('translucentHighlight (iOS, where the text selection is drawn under the text)', () => {
+  test('keeps the hue and lets the page, and the selection, show through', () => {
+    expect(translucentHighlight('#2196F3', false)).toBe(`rgba(33, 150, 243, ${HIGHLIGHT_ALPHA})`);
+    expect(HIGHLIGHT_ALPHA).toBeGreaterThan(0);
+    expect(HIGHLIGHT_ALPHA).toBeLessThan(1);
+  });
+
+  test('dark mode uses the same desaturated hue as the opaque version', () => {
+    const desaturated = desaturateHex('#E91E63', 0.25).replace('#', '');
+    const [r, g, b] = [0, 2, 4].map(i => parseInt(desaturated.slice(i, i + 2), 16));
+    expect(translucentHighlight('#E91E63', true)).toBe(`rgba(${r}, ${g}, ${b}, ${HIGHLIGHT_ALPHA})`);
+  });
+
+  test('anything that is not hex is left alone', () => {
+    expect(translucentHighlight('rgba(0, 0, 0, 0.2)', false)).toBe('rgba(0, 0, 0, 0.2)');
   });
 });

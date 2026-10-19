@@ -49,7 +49,7 @@ import {
 import {useJesusName} from '../contexts/JesusNameContext';
 import {useTutorialTarget} from '../contexts/TutorialContext';
 import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
-import {dimHighlightForDarkMode, dimHighlightForLightMode, hexToRgba} from '../utils/colorUtils';
+import {dimHighlightForDarkMode, dimHighlightForLightMode, hexToRgba, translucentHighlight} from '../utils/colorUtils';
 import {
   noteMarksForVerses,
   noteSnippetBudget,
@@ -240,7 +240,13 @@ const highlightStyle = (color: string, isDark: boolean): TextStyle => {
   let style = highlightStyles.get(key);
   if (!style) {
     style = {
-      backgroundColor: isDark ? dimHighlightForDarkMode(color) : dimHighlightForLightMode(color),
+      // iOS draws its text selection under the text: see-through there, so a
+      // selection on highlighted words stays visible.
+      backgroundColor: IOS_NATIVE_SELECTION
+        ? translucentHighlight(color, isDark)
+        : isDark
+          ? dimHighlightForDarkMode(color)
+          : dimHighlightForLightMode(color),
     };
     highlightStyles.set(key, style);
   }
