@@ -861,7 +861,7 @@
     "ff_37": {
         "laharana": "37",
         "sokajy": "ff",
-        "lohateny": "Mifalia",
+        "lohateny": "Fa tsy misy fahoriana",
         "mpanoratra": [],
         "hira": [
             {
@@ -1385,7 +1385,7 @@
     "ff_55": {
         "laharana": "55",
         "sokajy": "ff",
-        "lohateny": "Ezaho ny antsoano (Salamo 58: 1a)",
+        "lohateny": "Ezaho ny antsoano (Isaia 58: 1a)",
         "mpanoratra": [],
         "hira": [
             {
@@ -1403,7 +1403,7 @@
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Aminao Jehovah ô no anandratako ny fanahiko;\nAndriamanitro ô, Hianao no itokiako,\nAoka tsy ho menatra aho,\nNdrao hifalian'ny fahavaloko aho.",
+                "tononkira": "Aminao Jehovah ô,\nno anandratako ny fanahiko\nAndriamanitra ô!\nAndriamanitra ô!\nHianao no itokiako,\naoka tsy ho menatra aho\nHianao no itokiako,\naoka tsy ho menatra aho\nAoka tsy hifalian'\nny fahavaloko aho.\nAminao Jehovah ô,\nno anandratako ny fanahiko\nAndriamanitra ô!\nAndriamanitra ô!\nHianao no itokiako,\naoka tsy ho menatra aho\nHianao no itokiako,\naoka tsy ho menatra aho\nAoka tsy hifalian'\nny fahavaloko aho.\nEny, tsy hisy ho menatra\nizay rehetra miandry anao\nfa izay mivadika foana re,\nno ho menatra\nEny, tsy hisy ho menatra\nizay rehetra miandry anao\nfa izay mivadika foana re,\nno ho menatra\nAmpafantaro ny lalanao aho\nJehovah ô\nAmpianaro ny sitrakao aho\nAmpafantaro ny lalanao aho\nJehovah ô\nAmpianaro ny sitrakao aho\nAmpafantaro ny lalanao aho\nJehovah ô\nAmpianaro ny sitrakao aho",
                 "fiverenany": false
             }
         ]
@@ -1416,7 +1416,89 @@
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Hisaotra an'i Jehovah lalandava aho;\nNy fiderana Azy ho eo am-bavako mandrakariva.\nAo amin'i Jehovah no hideran'ny fanahiko;\nHandre izany ny mpandefitra ka ho faly.",
+                "tononkira": "Hisaotra an'i Jehovah\nlalandava aho\nHo eo am-bavako mandrakariva ny fiderana azy\nHo eo am-bavako mandrakariva ny fiderana azy\nJehovah no\nreharehan'ny fanahiko\nHahare izany ny mpandefitra\nHahare izany ka ho faly\nka ho faly\nHisaotra an'i Jehovah\nlalandava aho\nHo eo am-bavako mandrakariva ny fiderana azy\nHo eo am-bavako mandrakariva ny fiderana azy\nJehovah no\nreharehan'ny fanahiko\nHahare izany ny mpandefitra\nHahare izany ka ho faly\nka ho faly\nMiara mankalaza an'i Jehovah amiko\nary aoka hiara-manandratra\nny Anarany isika\nMiaraha mankalaza\nmankalaza an'i Jehovah amiko\nary aoka hiara-manandratra\nNy Anarany\nny Anarany isika\nMiara mankalaza an'i Jehovah amiko\nary aoka hiara-manandratra\nny Anarany isika\nMiaraha mankalaza\nmankalaza an'i Jehovah amiko\nary aoka hiara-manandratra\nNy Anarany\nny Anarany isika",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ff_58": {
+        "laharana": "58",
+        "sokajy": "ff",
+        "lohateny": "Hianao Jehovah ô (Salamo 71: 1-3)",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Ianao Jehovah ô no itokiako\nAoka tsy ho menatra mandrakizay aho\nVonjeo ny fahamarinanao aho ka afaho\nAtongilano amiko ny sofinao\nKa vonjeo aho, Ka vonjeo aho\nKa vonjeo aho sy afaho\nKa vonjeo aho, Ka vonjeo aho\nIanao Jehovah ô no itokiako\nAoka ho vatolampy fonena\nhohatoniko mandrakariva Ianao\nIzay efa nandidy hamonjy ahy\nIzay efa nandidy hamonjy ahy\nFa harambatoko harambatoko\nSy batery fiarovana Ianao\nAoka ho vatolampy fonena\nhohatoniko mandrakariva Ianao\nIzay efa nandidy hamonjy ahy\nIzay efa nandidy hamonjy ahy\nFa harambatoko harambatoko\nSy batery fiarovana Ianao\nIanao Jehovah ô no itokiako\nAoka tsy ho menatra mandrakizay aho\nVonjeo ny fahamarinanao aho ka afaho\nAtongilano amiko ny sofinao\nKa vonjeo aho, Ka vonjeo aho\nKa vonjeo aho sy afaho\nKa vonjeo aho, Ka vonjeo aho\nIanao Jehovah ô no itokiako",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ff_59": {
+        "laharana": "59",
+        "sokajy": "ff",
+        "lohateny": "Misaora an’i Jehovah, ry fanahiko (Salamo 103: 1-4a)",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Misaora, (Misaora)\nMisaora, (Misaora)\nMisaora an'i Jehovah,\nry fanahiko\nary izay (ary izay),\nrehetra (rehetra)\nary izay rehetra\nato anatiko\nMisaora ny Anarany Masina\nMisaora an'i Jehovah\n(Misaora Misaora) ry fanahiko\nary aza misy adinoinao\nny fitahiany rehetra\nizay mamela ny helokao\nizay manasitrana ny aretinao\nizay manavotra ny ainao\ntsy hidina\nany an-davaka\nMisaora an'i Jehovah\n(Misaora Misaora) ny fanahiko\nary aza misy adinoinao\nny fitahiany rehetra\nizay mamela ny helokao\nizay manasitrana ny aretinao\nizay manavotra ny ainao\ntsy hidina\nany an-davaka\nMisaora, (Misaora)\nMisaora, (Misaora)\nMisaora an'i Jehovah,\nry fanahiko\nary izay (ary izay),\nrehetra (rehetra)\nary izay rehetra\nato anatiko\nMisaora ny Anarany Masina",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ff_61": {
+        "laharana": "61",
+        "sokajy": "ff",
+        "lohateny": "Endrey, tsara sady mahafinaritra (Salamo 133: 1-3)",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Endrey, Endrey\nTsara sady\nmahafinaritra\nraha ny mpirahalahy\nno miara-monina\nEndrey, Endrey\nTsara sady\nmahafinaritra\nraha ny mpirahalahy\nno miara-monina\nTahaka ny diloilo\nTsara\nny diloilo tsara\namin'ny loha\nizay mitsororoka\namin'ny somotra\ndia ny somotr'i Arona\nizay mitsororoka\namin'ny moron-tongotr'\nakanjony;(Tahaka)\nTahaka ny ando any Hermona,\nizay milatsaka amin'ny\ntendrombohitra Ziona;\nFa voadidin'i Jehovah\nho eo ny fitahiana,\nDia fiainana\nfiainana ho mandrakizay\nTahaka ny diloilo\nTsara\nny diloilo tsara\namin'ny loha\nizay mitsororoka\namin'ny somotra\ndia ny somotr'i Arona\nizay mitsororoka\namin'ny moron-tongotr'\nakanjony;(Tahaka)\nTahaka ny ando any Hermona,\nizay milatsaka amin'ny\ntendrombohitra Ziona;\nFa voadidin'i Jehovah\nho eo ny fitahiana,\nDia fiainana\nfiainana ho mandrakizay\no! o! o! o!",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ff_64": {
+        "laharana": "64",
+        "sokajy": "ff",
+        "lohateny": "Hanandratra anao aho (Salamo 145: 1-4)",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Hanandratra anao aho,\nHanandratra anao aho,\nry Andriamanitro Mpanjaka ô! ô! ô!\nSy hankalaza ny anaranao,\nny anaranao mandrakizay doria.\nHankalaza anao\nisan'andro aho\nsy hidera ny anaranao (ny anaranao)\nsy hidera ny anaranao mandrakizay\ndoria, doria, doria, doria\nHanandratra anao aho,\nHanandratra anao aho,\nry Andriamanitro Mpanjaka ô! ô! ô!\nSy hankalaza ny anaranao,\nny anaranao mandrakizay doria.\nHankalaza anao\nisan'andro aho\nsy hidera ny anaranao (ny anaranao)\nsy hidera ny anaranao mandrakizay\ndoria, doria, doria, doria\nLehibe Jehovah\nka tokony hoderaina indrindra\nderaina indrindra\nAry tsy takatry ny saina\nny fahalehibiazany\nny taranaka rehetra\nsamy hidera ny asanao\nsamy hidera ny asanao\namin'izay mandimby azy\nsy hanambara ny Asanao lehibe\nLehibe Jehovah\nka tokony hoderaina indrindra\nderaina indrindra\nAry tsy takatry ny saina\nny fahalehibiazany\nny taranaka rehetra\nsamy hidera ny asanao\nsamy hidera ny asanao\namin'izay mandimby azy\nsy hanambara ny Asanao lehibe",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ff_79": {
+        "laharana": "79",
+        "sokajy": "ff",
+        "lohateny": "Mijoroa (Hira Faneva faha 50 taonan’ny FJKM sy faha 200 taona nahatongavan’ny LMS teto Madagasikara)",
+        "mpanoratra": [
+            "RAMAROLAHY Mahazosoa Nirina"
+        ],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Taona maro no efa nijoroana\nNitoriana Teny mahasoa\nNihazonanao ny finoana\nRy Fiangona-mamin'i Jesoa",
+                "fiverenany": false
+            },
+            {
+                "andininy": 0,
+                "tononkira": "Tsy fanahy osa fa mahery no nomena\nSady be fitiavana no mahafehy tena\nAoka tsy ho menatra fa mba hijoro hatrany\nHo vavolombelon'i Jesoa ihany",
+                "fiverenany": true
+            },
+            {
+                "andininy": 2,
+                "tononkira": "Koa sahia, tano ny fanilo\nEto anivon'ity Nosy ity\nHo fahazavana ka hitsilo\nNy haizina mandrakotra aty",
+                "fiverenany": false
+            },
+            {
+                "andininy": 3,
+                "tononkira": "Mila anao ny Tompo ankehitriny\nRy fiangonana ô!\nKa mijoroa miaingà fa Ianao no iriny\nMba ho irany tokoa tokoa",
                 "fiverenany": false
             }
         ]

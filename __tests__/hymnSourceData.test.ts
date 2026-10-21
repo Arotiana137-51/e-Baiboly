@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import {parseJsonHymns} from '../scripts/source-data/hymns/loaders/jsonHymnLoader';
+import {parseYamlHymns} from '../scripts/source-data/hymns/loaders/yamlHymnLoader';
 
 // The hymn JSON sources were scraped from a hymnbook layout, and layout
 // artefacts kept landing inside the lyrics: "(Maintimolaly)" as stanza 1,
@@ -55,5 +57,47 @@ describe.each(FILES)('%s', file => {
 
   it('keeps labels, cues and credits out of the lyrics', () => {
     expect(problems).toEqual([]);
+  });
+});
+
+// What the build actually inserts. HymnVerses has UNIQUE(hymn_id,
+// verse_number) ON CONFLICT REPLACE, so two stanzas with the same number lose
+// the first one without a word: 36 call-and-response choruses of the
+// Fifohazana went missing that way.
+describe('hymn loaders', () => {
+  const read = (file: string) => fs.readFileSync(path.join(HYMNS_DIR, file), 'utf8');
+  const hymns = [
+    ...parseJsonHymns(read('01_fihirana_ffpm.json'), 'ffpm'),
+    ...parseJsonHymns(read('02_fihirana_fanampiny.json'), 'ff'),
+    ...parseJsonHymns(read('03_antema.json'), 'antema'),
+    ...parseYamlHymns(read('song_song_fifohazana.yaml'), 'fifo'),
+  ];
+  const withLyrics = hymns.filter(h => h.verses.some(v => v.text.trim()));
+
+  it('never gives two stanzas of a hymn the same number', () => {
+    const clashes = hymns
+      .filter(h => new Set(h.verses.map(v => v.number)).size !== h.verses.length)
+      .map(h => h.id);
+    expect(clashes).toEqual([]);
+  });
+
+  it('keeps each call-and-response chorus with its stanza', () => {
+    const fifo80 = hymns.find(h => h.id === 'fifo_80')!;
+    expect(fifo80.verses.map(v => v.number)).toEqual([1, 2, 3, 4]);
+    expect(fifo80.verses[1].text).toContain('Fiadanana no any');
+  });
+
+  it('titles every hymn that has lyrics, FFPM by its first line', () => {
+    expect(withLyrics.filter(h => !h.title.trim()).map(h => h.id)).toEqual([]);
+    expect(hymns.find(h => h.id === 'ffpm_10')!.title).toBe('Ry Tomponay Tsitoha ô!');
+  });
+
+  it('keeps the Fanampiny psalm songs whole, not just their first verse', () => {
+    const ff56 = hymns.find(h => h.id === 'ff_56')!;
+    expect(ff56.verses[0].text).toContain('Ampafantaro ny lalanao aho'); // Sal 25:4
+  });
+
+  it('loads every hymn but the one still waiting for its lyrics', () => {
+    expect(hymns.filter(h => !withLyrics.includes(h)).map(h => h.id)).toEqual(['ffpm_542']);
   });
 });

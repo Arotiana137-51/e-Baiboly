@@ -8,6 +8,15 @@
 
 const fs = require('fs');
 
+// FFPM hymns have no title in the book: they go by their first line. Without
+// this, favorites, search results and the action popover show a blank.
+function firstLineTitle(verses) {
+  const first = verses
+    .filter((v) => !v.isChorus && v.text.trim())
+    .sort((a, b) => a.number - b.number)[0];
+  return first ? first.text.trim().split('\n')[0].trim().replace(/[\s,;:]+$/, '') : '';
+}
+
 /**
  * @param {string} filePath
  * @param {string} fallbackCategory  Used when a hymn's `sokajy` field is
@@ -35,7 +44,7 @@ function* parseJsonHymns(text, fallbackCategory) {
       id: hymnId,
       number: parseInt(hymn.laharana, 10) || 0,
       category: hymn.sokajy || fallbackCategory,
-      title: hymn.lohateny || '',
+      title: hymn.lohateny || firstLineTitle(verses),
       note: String(hymn.fanamarihana || ''),
       authors,
       verses,
