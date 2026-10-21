@@ -689,8 +689,11 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         }
       }
     } else if (mode === 'hymnal' && currentHymnNumber && currentHymnCategory && currentHymnNumber > 1) {
-      // Find previous hymn within the same category
-      const prevHymn = hymns.find(h => h.category === currentHymnCategory && h.number === currentHymnNumber - 1);
+      // Nearest lower number in the category: the Fanampiny psalm songs are
+      // added as their lyrics arrive, so numbers can skip.
+      const prevHymn = hymns
+        .filter(h => h.category === currentHymnCategory && h.number < currentHymnNumber)
+        .sort((a, b) => b.number - a.number)[0];
       if (prevHymn) {
         setCurrentHymnId(prevHymn.id);
         setCurrentHymnNumber(prevHymn.number);
@@ -718,8 +721,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         }
       }
     } else if (mode === 'hymnal' && currentHymnNumber && currentHymnCategory) {
-      // Find next hymn within the same category
-      const nextHymn = hymns.find(h => h.category === currentHymnCategory && h.number === currentHymnNumber + 1);
+      const nextHymn = hymns
+        .filter(h => h.category === currentHymnCategory && h.number > currentHymnNumber)
+        .sort((a, b) => a.number - b.number)[0];
       if (nextHymn) {
         setCurrentHymnId(nextHymn.id);
         setCurrentHymnNumber(nextHymn.number);
