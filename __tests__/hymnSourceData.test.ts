@@ -94,7 +94,12 @@ describe('hymn loaders', () => {
 
   it('keeps the Fanampiny psalm songs whole, not just their first verse', () => {
     const ff56 = hymns.find(h => h.id === 'ff_56')!;
-    expect(ff56.verses[0].text).toContain('Ampafantaro ny lalanao aho'); // Sal 25:4
+    expect(ff56.verses[0].text).toContain('Ampahafantaro ny lalanao aho'); // Sal 25:4
+  });
+
+  it('has every Fanampiny number, psalm songs included', () => {
+    const numbers = hymns.filter(h => h.category === 'ff').map(h => h.number);
+    expect(numbers).toEqual(Array.from({length: 91}, (_, i) => i + 1));
   });
 
   it('loads lyrics for every hymn', () => {
