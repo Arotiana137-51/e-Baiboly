@@ -97,7 +97,7 @@ describe('hymn loaders', () => {
     expect(ff56.verses[0].text).toContain('Ampafantaro ny lalanao aho'); // Sal 25:4
   });
 
-  it('loads every hymn but the one still waiting for its lyrics', () => {
-    expect(hymns.filter(h => !withLyrics.includes(h)).map(h => h.id)).toEqual(['ffpm_542']);
+  it('loads lyrics for every hymn', () => {
+    expect(hymns.filter(h => !withLyrics.includes(h)).map(h => h.id)).toEqual([]);
   });
 });
