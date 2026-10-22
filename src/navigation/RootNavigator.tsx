@@ -23,6 +23,7 @@ import WidgetLookScreen from '../screens/WidgetLookScreen';
 import TenyHoAnaoScreen from '../screens/TenyHoAnaoScreen';
 import DictionaryScreen from '../screens/DictionaryScreen';
 import DictionaryEntryScreen from '../screens/DictionaryEntryScreen';
+import WidgetGuideScreen from '../screens/WidgetGuideScreen';
 
 export type RootStackParamList = {
   Home:
@@ -57,6 +58,7 @@ export type RootStackParamList = {
   Dictionary: undefined;
   // word: the headword as linked, shown as the title while the entry loads.
   DictionaryEntry: {id: number; word: string};
+  WidgetGuide: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -195,6 +197,11 @@ const RootNavigator = ({
         name="DictionaryEntry"
         component={DictionaryEntryScreen}
         options={({route}) => ({title: route.params.word, ...headerOptions})}
+      />
+      <Stack.Screen
+        name="WidgetGuide"
+        component={WidgetGuideScreen}
+        options={{title: 'Widget', ...headerOptions}}
       />
       <Stack.Screen
         name="PrivacyPolicy"
