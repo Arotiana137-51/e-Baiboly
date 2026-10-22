@@ -50,6 +50,7 @@ const getDatabasePaths = () => {
     bible: {
       source: path.join(getSourceDataPaths().bible, 'Bible_MG65.json'),
       crossReferences: path.join(getSourceDataPaths().bible, 'cross_references.txt'),
+      dictionary: path.join(getSourceDataPaths().bible, 'diksionera.json'),
       // Dev mode: uncompressed .db files
       dev: path.join(assets.dev, 'BibleMG65.db'),
       iosDev: path.join(assets.ios.dev, 'BibleMG65.db'),

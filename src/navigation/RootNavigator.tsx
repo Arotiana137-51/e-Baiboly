@@ -21,6 +21,8 @@ import HelpScreen from '../screens/HelpScreen';
 import ReadingReminderScreen from '../screens/ReadingReminderScreen';
 import WidgetLookScreen from '../screens/WidgetLookScreen';
 import TenyHoAnaoScreen from '../screens/TenyHoAnaoScreen';
+import DictionaryScreen from '../screens/DictionaryScreen';
+import DictionaryEntryScreen from '../screens/DictionaryEntryScreen';
 
 export type RootStackParamList = {
   Home:
@@ -52,6 +54,9 @@ export type RootStackParamList = {
   TenyHoAnao: undefined;
   // fromWidget: opened from the widget's own shortcut — "done" leaves the app.
   WidgetLook: {fromWidget?: boolean} | undefined;
+  Dictionary: undefined;
+  // word: the headword as linked, shown as the title while the entry loads.
+  DictionaryEntry: {id: number; word: string};
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -180,6 +185,16 @@ const RootNavigator = ({
         name="WidgetLook"
         component={WidgetLookScreen}
         options={{title: 'Sakafom-panahy', ...headerOptions}}
+      />
+      <Stack.Screen
+        name="Dictionary"
+        component={DictionaryScreen}
+        options={{title: t('dictionary.title'), ...headerOptions}}
+      />
+      <Stack.Screen
+        name="DictionaryEntry"
+        component={DictionaryEntryScreen}
+        options={({route}) => ({title: route.params.word, ...headerOptions})}
       />
       <Stack.Screen
         name="PrivacyPolicy"

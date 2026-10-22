@@ -43,6 +43,7 @@ export type HamburgerMenuItemKey =
   | 'readingReminder'
   | 'tenyHoAnao'
   | 'cultMode'
+  | 'dictionary'
   | 'help';
 
 type MenuEntry = {key: HamburgerMenuItemKey; label: string; icon: MenuIconName};
@@ -205,6 +206,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         [
           {key: 'cultMode' as const, label: t('menu.cultMode'), icon: 'hands' as const},
           {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
+          {key: 'dictionary' as const, label: t('dictionary.menu'), icon: 'bible' as const},
         ],
         [
           // "Widget" is the word in most languages; the feature itself is

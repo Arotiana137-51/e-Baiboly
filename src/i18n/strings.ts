@@ -116,7 +116,12 @@ type TranslationKey =
   | 'about.rateAppHint'
   | 'about.rateButton'
   | 'bible.oldTestament'
-  | 'bible.newTestament';
+  | 'bible.newTestament'
+  | 'dictionary.menu'
+  | 'dictionary.title'
+  | 'dictionary.search'
+  | 'dictionary.empty'
+  | 'dictionary.read';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -255,6 +260,13 @@ const translations: Translations = {
     'about.rateButton': 'Hanome naoty',
     'bible.oldTestament': 'Testamenta taloha',
     'bible.newTestament': 'Testamenta vaovao',
+    // The book's own title, Evans & Randzavola 1952.
+    'dictionary.title': "Diksionera amin'ny Baiboly",
+    // PLACEHOLDER MG copy — needs the app's own wording, not mine.
+    'dictionary.menu': 'Diksionera',
+    'dictionary.search': 'Tadiavina...',
+    'dictionary.empty': 'Tsy nahitana valiny',
+    'dictionary.read': 'Vakio',
   },
 };
 

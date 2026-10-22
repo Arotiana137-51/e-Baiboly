@@ -745,6 +745,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       case 'misc':
         navigation.navigate('Misc');
         return;
+      case 'dictionary':
+        navigation.navigate('Dictionary');
+        return;
       case 'notes':
         navigation.navigate('Notes');
         return;

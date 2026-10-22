@@ -61,8 +61,8 @@ function getBibleSourceFiles() {
   for (let bookId = 1; bookId <= 66; bookId += 1) {
     files.push(path.join(yamlSourceDir, `bible_verse_mg1865_mg_${bookId}.yaml`));
   }
-  if (fs.existsSync(databasePaths.bible.crossReferences)) {
-    files.push(databasePaths.bible.crossReferences);
+  for (const extra of [databasePaths.bible.crossReferences, databasePaths.bible.dictionary]) {
+    if (fs.existsSync(extra)) files.push(extra);
   }
   return files;
 }
@@ -267,6 +267,36 @@ async function importCrossReferences(db, crossRefsPath) {
     `  ↳ ${rows.size} cross references (${refs.length} read, ${refs.length - rows.size - dropped} merged, ` +
       `${dropped} unresolvable, ${unreadable} unreadable)`
   );
+}
+
+// ---- Dictionary (Diksionera amin' ny Baiboly, Evans & Randzavola Henri, 1952) ----
+//
+// diksionera.json is [{word, text}] in the book's order, so the row id gives the
+// A to Z list without sorting. Its Bible refs are MG1865 numbering already.
+async function importDictionary(db, dictionaryPath) {
+  if (!fs.existsSync(dictionaryPath)) {
+    console.log('  ⚠️ diksionera.json not found, no dictionary');
+    return;
+  }
+
+  await runAsync(db, `CREATE TABLE Dictionary (
+    id INTEGER PRIMARY KEY,
+    word TEXT NOT NULL,
+    text TEXT NOT NULL
+  )`);
+
+  const entries = JSON.parse(fs.readFileSync(dictionaryPath, 'utf8'));
+  const insert = db.prepare('INSERT INTO Dictionary (id, word, text) VALUES (?, ?, ?)');
+  await runAsync(db, 'BEGIN');
+  for (const [index, entry] of entries.entries()) {
+    await new Promise((res, rej) =>
+      insert.run([index + 1, entry.word, entry.text], (e) => (e ? rej(e) : res()))
+    );
+  }
+  await runAsync(db, 'COMMIT');
+  await finalizeAsync(insert);
+
+  console.log(`  ↳ ${entries.length} dictionary entries`);
 }
 
 async function buildBible(dbPath, version) {
@@ -482,6 +512,7 @@ async function buildBible(dbPath, version) {
   console.log(`  ↳ ${verseId - 1} verses indexed, ${vocabularySize} distinct words`);
 
   await importCrossReferences(db, databasePaths.bible.crossReferences);
+  await importDictionary(db, databasePaths.bible.dictionary);
 
   console.log('  optimizing FTS + VACUUM ...');
   await runAsync(db, `INSERT INTO VersesFts(VersesFts) VALUES('optimize')`);

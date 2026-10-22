@@ -1,0 +1,198 @@
+/**
+ * Headwords, search and tappable links for the Bible dictionary (Diksionera
+ * amin' ny Baiboly).
+ *
+ * The book cites verses as "Genesisy 17 : 5" or "II Samoela 15 : 1 - 4", often
+ * several in a row where only the first names the book: "(Marka 14 : 36 ;
+ * 15 : 2 ; Romana 8 : 15)". A bare "4 : 15" with no book before it means the
+ * entry's own book, so it stays plain text. "Jereo Vatosoa" points to another
+ * entry.
+ */
+import {BOOKS, escapeRegex} from './bibleRefs';
+import {normalizeForHighlight} from './searchHighlight';
+
+export type DictionaryWord = {id: number; word: string};
+
+export type IndexedWord = DictionaryWord & {
+  // "ABAGITA (Estera 1 : 10)" -> main "ABAGITA", detail "(Estera 1 : 10)".
+  main: string;
+  detail: string;
+  // Normalized spellings, the whole headword first: "ADONIRAMA, na ADORAMA"
+  // gives ["adonirama na adorama", "adonirama", "adorama"].
+  keys: string[];
+};
+
+export type DictionaryRef = {
+  bookId: number;
+  bookName: string;
+  chapter: number;
+  verseStart: number;
+  verseEnd: number;
+};
+
+export type DictionarySegment =
+  | {kind: 'plain'; text: string}
+  | ({kind: 'ref'; text: string} & DictionaryRef)
+  | {kind: 'entry'; text: string; entryId: number};
+
+// A range that runs into the next chapter ("2 : 4 - 3 : 24") is shown to the
+// end of its first chapter; no chapter has this many verses.
+export const END_OF_CHAPTER = 999;
+
+const SPELLINGS = /\s*,\s*(?:na\s+)?|\s+(?:na|sy)\s+/;
+
+export const indexDictionaryWords = (words: DictionaryWord[]): IndexedWord[] =>
+  words.map(w => {
+    const paren = w.word.indexOf(' (');
+    const main = paren === -1 ? w.word : w.word.slice(0, paren);
+    const detail = paren === -1 ? '' : w.word.slice(paren + 1);
+    const keys = [main, ...main.split(SPELLINGS)].map(normalizeForHighlight).filter(Boolean);
+    return {...w, main, detail, keys};
+  });
+
+// Headwords that start with the query first, then those that contain it, each
+// in the book's A to Z order.
+export const searchDictionary = (words: IndexedWord[], query: string): IndexedWord[] => {
+  const q = normalizeForHighlight(query);
+  if (!q) return words;
+  const starts: IndexedWord[] = [];
+  const contains: IndexedWord[] = [];
+  for (const w of words) {
+    if (w.keys.some(k => k.startsWith(q))) starts.push(w);
+    else if (w.keys[0].includes(q)) contains.push(w);
+  }
+  return [...starts, ...contains];
+};
+
+// "Vatosoa" -> the entry it names. Whole headwords win over the alternative
+// spellings, and the first entry of a name (book order) over its homonyms.
+export const buildEntryFinder = (words: IndexedWord[]) => {
+  const byKey = new Map<string, number>();
+  for (const pass of [0, 1]) {
+    for (const w of words) {
+      const keys = pass === 0 ? w.keys.slice(0, 1) : w.keys.slice(1);
+      for (const k of keys) if (!byKey.has(k)) byKey.set(k, w.id);
+    }
+  }
+  return (phrase: string) => byKey.get(normalizeForHighlight(phrase));
+};
+
+// Books.name, plus the dictionary's "Fitomaniana Jeremia" for Lamentations.
+// Longest first so "II Samoela" wins over "I Samoela" and "Fitomaniana
+// Jeremia" over "Jeremia".
+const BOOK_NAMES = [...BOOKS, {id: 25, name: 'Fitomaniana Jeremia'}].sort(
+  (a, b) => b.name.length - a.name.length,
+);
+const BOOK_ID = new Map(BOOK_NAMES.map(b => [b.name, b.id]));
+const BOOK_NAME = new Map(BOOKS.map(b => [b.id, b.name]));
+
+// chapter : verse, then an optional "- verse" or "- chapter : verse".
+const RANGE = '(\\d{1,3})\\s*:\\s*(\\d{1,3})(?:\\s*[-–]\\s*(\\d{1,3})(?:\\s*:\\s*(\\d{1,3}))?)?';
+// The book must start a word: "Rota" is not the end of "Karota". A captured
+// leading character instead of a lookbehind.
+const REF = new RegExp(
+  `(^|[^A-Za-zÀ-ÖØ-öø-ÿ'’-])(${BOOK_NAMES.map(b => escapeRegex(b.name)).join('|')})\\s+${RANGE}`,
+  'g',
+);
+const NEXT_REF = new RegExp(`^(\\s*;\\s*)${RANGE}`);
+const SEE_ALSO = /(\b[Jj]ereo(?:\s+koa)?(?:\s+ny\s+hoe)?\s+[«"“]?\s*)([^.,;:()[\]«»"“”\n]{1,60})/g;
+const WORD = /\S+/g;
+// Headwords are at most a few words long.
+const MAX_SEE_ALSO_WORDS = 4;
+
+const toRef = (bookId: number, groups: Array<string | undefined>): DictionaryRef => {
+  const [chapter, verse, end, endVerse] = groups;
+  const verseStart = Number(verse);
+  const verseEnd =
+    endVerse !== undefined ? END_OF_CHAPTER : end !== undefined ? Math.max(verseStart, Number(end)) : verseStart;
+  return {bookId, bookName: BOOK_NAME.get(bookId) ?? '', chapter: Number(chapter), verseStart, verseEnd};
+};
+
+// "Jereo X" -> the longest run of words after it that names an entry.
+const linkSeeAlso = (
+  text: string,
+  findEntry: (phrase: string) => number | undefined,
+): DictionarySegment[] => {
+  const segments: DictionarySegment[] = [];
+  let plainStart = 0;
+  SEE_ALSO.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = SEE_ALSO.exec(text)) !== null) {
+    const phraseStart = m.index + m[1].length;
+    const wordEnds: number[] = [];
+    WORD.lastIndex = 0;
+    let w: RegExpExecArray | null;
+    while ((w = WORD.exec(m[2])) !== null && wordEnds.length < MAX_SEE_ALSO_WORDS) {
+      wordEnds.push(w.index + w[0].length);
+    }
+    for (let n = wordEnds.length; n > 0; n -= 1) {
+      const phrase = m[2].slice(0, wordEnds[n - 1]);
+      const entryId = findEntry(phrase);
+      if (entryId === undefined) continue;
+      if (phraseStart > plainStart) segments.push({kind: 'plain', text: text.slice(plainStart, phraseStart)});
+      segments.push({kind: 'entry', text: phrase, entryId});
+      plainStart = phraseStart + phrase.length;
+      break;
+    }
+  }
+  if (plainStart < text.length) segments.push({kind: 'plain', text: text.slice(plainStart)});
+  return segments;
+};
+
+// About 1% of the book's refs cite a verse MG1865 doesn't have ("Nomery 37 :
+// 12"): those stay plain text. A range past the chapter's end stops at its
+// last verse. chapterSizes maps "bookId:chapter" to the chapter's last verse.
+export const resolveRef = (
+  ref: DictionaryRef,
+  chapterSizes: Map<string, number>,
+): DictionaryRef | null => {
+  const last = chapterSizes.get(`${ref.bookId}:${ref.chapter}`);
+  if (last === undefined || ref.verseStart < 1 || ref.verseStart > last) return null;
+  return ref.verseEnd > last ? {...ref, verseEnd: last} : ref;
+};
+
+// The app's own "Genesisy 17:5-9", not the book's "Genesisy 17 : 5 - 9".
+export const formatRef = (ref: DictionaryRef): string =>
+  `${ref.bookName} ${ref.chapter}:${ref.verseStart}` +
+  (ref.verseEnd > ref.verseStart ? `-${ref.verseEnd}` : '');
+
+/**
+ * Split one paragraph into plain text, Bible refs and links to other entries.
+ * Concatenating every segment's text gives the paragraph back unchanged.
+ */
+export const parseDictionaryParagraph = (
+  text: string,
+  findEntry: (phrase: string) => number | undefined,
+): DictionarySegment[] => {
+  const segments: DictionarySegment[] = [];
+  let plainStart = 0;
+  const pushPlain = (end: number) => {
+    if (end > plainStart) segments.push(...linkSeeAlso(text.slice(plainStart, end), findEntry));
+  };
+
+  REF.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = REF.exec(text)) !== null) {
+    const bookId = BOOK_ID.get(m[2]) ?? 0;
+    const refStart = m.index + m[1].length;
+    pushPlain(refStart);
+    segments.push({kind: 'ref', text: text.slice(refStart, REF.lastIndex), ...toRef(bookId, m.slice(3))});
+
+    // "; 15 : 2" right after a ref: the same book.
+    let end = REF.lastIndex;
+    let next: RegExpExecArray | null;
+    while ((next = NEXT_REF.exec(text.slice(end))) !== null) {
+      segments.push({kind: 'plain', text: next[1]});
+      segments.push({
+        kind: 'ref',
+        text: next[0].slice(next[1].length),
+        ...toRef(bookId, next.slice(2)),
+      });
+      end += next[0].length;
+    }
+    plainStart = end;
+    REF.lastIndex = end;
+  }
+  pushPlain(text.length);
+  return segments;
+};
