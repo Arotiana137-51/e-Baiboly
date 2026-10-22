@@ -115,9 +115,13 @@ type TranslationKey =
   | 'about.rateApp'
   | 'about.rateAppHint'
   | 'about.rateButton'
-  | 'about.paperBibleNote'
   | 'bible.oldTestament'
-  | 'bible.newTestament';
+  | 'bible.newTestament'
+  | 'dictionary.menu'
+  | 'dictionary.title'
+  | 'dictionary.search'
+  | 'dictionary.empty'
+  | 'dictionary.read';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -254,9 +258,15 @@ const translations: Translations = {
     'about.rateApp': 'Omeo naoty ny application',
     'about.rateAppHint': 'Manampy be ny naoty omenao',
     'about.rateButton': 'Hanome naoty',
-    'about.paperBibleNote': "Natao ity rindran-kajy ity hikarohana soratra masina sy hira an-kamehana. Fa amin'ny fotoana ilaina fifantohana ( adim-panahy, asa sy fampaherezana, sns...) dia asaina ianao ampiasa Baiboly taratasy.",
     'bible.oldTestament': 'Testamenta taloha',
     'bible.newTestament': 'Testamenta vaovao',
+    // The book's own title, Evans & Randzavola 1952.
+    'dictionary.title': "Diksionera amin'ny Baiboly",
+    // PLACEHOLDER MG copy — needs the app's own wording, not mine.
+    'dictionary.menu': 'Diksionera',
+    'dictionary.search': 'Tadiavina...',
+    'dictionary.empty': 'Tsy nahitana valiny',
+    'dictionary.read': 'Vakio',
   },
 };
 

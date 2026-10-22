@@ -180,6 +180,32 @@ function* parseYamlHymns(text, category) {
       nextSequential = Math.max(nextSequential, number) + 1;
     }
 
+    // Call-and-response hymns write a different response after each stanza.
+    // The reader has room for one chorus (verse 0, repeated after every
+    // stanza), and a second verse 0 would overwrite the first in HymnVerses,
+    // so when the choruses differ each one stays with the stanza it follows.
+    const choruses = verses.filter((v) => v.isChorus);
+    const hasStanza = verses.some((v) => !v.isChorus);
+    let lyrics = verses;
+    if (new Set(choruses.map((v) => v.text)).size > 1 && hasStanza) {
+      lyrics = [];
+      let leading = [];
+      for (const v of verses) {
+        const prev = lyrics[lyrics.length - 1];
+        if (!v.isChorus) {
+          lyrics.push({ ...v, text: [...leading, v.text].join('\n\n') });
+          leading = [];
+        } else if (prev) {
+          prev.text += `\n\n${v.text}`;
+        } else {
+          leading.push(v.text);
+        }
+      }
+    } else if (choruses.length > 1) {
+      // The same chorus written out after every stanza: keep it once.
+      lyrics = verses.filter((v) => !v.isChorus || v === choruses[0]);
+    }
+
     const author = value?.song_author;
     const authors =
       author == null || String(author).trim() === ''
@@ -201,7 +227,7 @@ function* parseYamlHymns(text, category) {
       title: stripTitleNumberPrefix(String(value?.song_name || '')),
       note,
       authors,
-      verses,
+      verses: lyrics,
     };
   }
 }

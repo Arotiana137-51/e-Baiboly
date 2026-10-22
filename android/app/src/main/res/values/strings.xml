@@ -4,4 +4,10 @@
     <string name="widget_settings">Loko</string>
     <string name="widget_favorite">Ankafizina</string>
     <string name="widget_daily_verse_description">Sakafom-panahy isan\'andro: andinin-teny iray isan\'andro eo amin\'ny écran.</string>
+    <!-- What the widget picker's preview shows (the layout's default text), so
+         people see a verse there instead of an empty card. Jaona 3:16, MG1865. -->
+    <string name="widget_preview_verse" translatable="false">Fa toy izao no nitiavan\'Andriamanitra izao tontolo izao: nomeny ny Zanani-lahy Tokana, mba tsy ho very izay rehetra mino Azy, fa hanana fiainana mandrakizay.</string>
+    <string name="widget_preview_ref" translatable="false">Jaona 3:16</string>
+    <string name="widget_preview_translation" translatable="false">MG1865</string>
+    <string name="widget_preview_label" translatable="false">Fampaherezana</string>
 </resources>

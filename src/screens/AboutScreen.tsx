@@ -70,6 +70,11 @@ const AboutScreen = () => {
         lines: [
           `Version: ${appVersion || '-'}`,
           t('about.infoLinePlatforms'),
+          // The concordance data is OpenBible.info's, whose CC BY licence
+          // asks for this credit in the app.
+          'Concordance: OpenBible.info (CC BY)',
+          // PLACEHOLDER MG copy: the wording of this credit is the user's call.
+          "Diksionera: Evans sy Randzavola Henri, Diksionera amin' ny Baiboly (Librairie Protestante, 1952)",
         ],
       },
       {
@@ -178,25 +183,6 @@ const AboutScreen = () => {
             </Pressable>
           </View>
         ) : null}
-
-        {/*
-          Deliberately untitled and set apart by an accent rule rather than a
-          card heading: it reads as an aside from the author, not as another
-          feature section.
-        */}
-        <View
-          style={[
-            styles.noteCard,
-            {
-              backgroundColor: theme.colors.backgroundSecondary,
-              borderLeftColor: theme.colors.accentBlue,
-            },
-          ]}
-        >
-          <Text style={[styles.noteText, {color: theme.colors.textSecondary}]}>
-            {t('about.paperBibleNote')}
-          </Text>
-        </View>
 
         {sections.map(section => (
           <View
@@ -388,17 +374,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 8,
-  },
-  noteCard: {
-    borderLeftWidth: 3,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 12,
-  },
-  noteText: {
-    fontSize: 14,
-    lineHeight: 21,
-    fontStyle: 'italic',
   },
   cardText: {
     fontSize: 14,

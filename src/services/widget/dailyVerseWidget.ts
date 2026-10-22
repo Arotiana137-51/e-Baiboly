@@ -386,6 +386,15 @@ const countShown = (shown: Map<ActiveSituation['id'], number>, id: ActiveSituati
   return count;
 };
 
+// Android 8+ launchers that support it (One UI does) add the widget for the
+// app: they show their own "add to home screen?" card. Always false on iOS,
+// which has no such call.
+export const canPinWidget = async (): Promise<boolean> =>
+  Platform.OS === 'android' && !!(await NativeModules.DailyVerseWidget?.canPin?.());
+
+export const pinWidget = async (): Promise<boolean> =>
+  !!(await NativeModules.DailyVerseWidget?.requestPin?.());
+
 /** Today's entry of the feed, as the widget shows it; null before the first sync. */
 export const getWidgetToday = async (): Promise<WidgetDay | null> => {
   try {

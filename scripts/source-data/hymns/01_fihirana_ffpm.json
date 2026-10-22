@@ -269,7 +269,37 @@
             },
             {
                 "andininy": 7,
-                "tononkira": "Ry Kristy ô, Mpanjakanay\nMitovy hery amin-dRay",
+                "tononkira": "Ry Kristy ô, Mpanjakanay\nMitovy hery amin-dRay,\nNy fitiavanao anay\nNo nisoloanao anay.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 8,
+                "tononkira": "Ny lozam-pahafatesana\nNovanao ho fiainana,\nIzany no hiainanay\nNa eto na rahatrizay.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 9,
+                "tononkira": "Ao an-kavanan-dRainao ao\nNo itoeranao izao,\nFa mbola hidina indray\nHitsena sy handray anay.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 10,
+                "tononkira": "Ka faly naiditra\nHo mponina ao an-danitra\nIzahay izay navotanao,\nHiombon-dova aminao.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 11,
+                "tononkira": "Tario làlana izahay,\nVimbinonao ny dianay,\nKa isan-andro vaky izao\nHambaranay ny lazanao.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 12,
+                "tononkira": "Vonjeonao, ry Tompo ô!\nVonoy ny ratsy ao am-po,\nKa hasoavy izahay\nAmbara-pahafatinay.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 13,
+                "tononkira": "Fa lehibe ny antranao,\nMahery koa Hianao,\nKa dia matoky izahay\nRy Tompo Zanaharinay.",
                 "fiverenany": false
             }
         ]
@@ -4708,6 +4738,11 @@
             },
             {
                 "andininy": 3,
+                "tononkira": "Haleloia ! Mifalia !\n:,: ‘Lay Mpamonjy be fitia :,:\nSy Mpanavotra anareo.\n:,: O, ry olom-bery ô :,:\nManatòna, mihobia,\nHaleloia ! Haleloia !",
+                "fiverenany": false
+            },
+            {
+                "andininy": 4,
                 "tononkira": "Raiso re, ry Tompo ô !\n:,: Ny mpanota toa anay :,:\n‘Zay miantoraka Aminao\n:,: Mba henoy ny vavakay :,:\nHo fanatitra madio,\n‘Zay atolotray anio.",
                 "fiverenany": false
             }
@@ -9174,12 +9209,12 @@
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Vory ny mpanomponao\nEto anatrehanao,\nRy Jesosy Tomponay !\nHe ! faly ny fonay,\nFaly, faly, faly,\nHe ! faly ny fonay,\nVory maro toy izao.",
+                "tononkira": "Vory ny mpanomponay\nEto anatrehanao,\nRy Jesosy Tomponay !\nHe ! faly ny fonay,\nFaly, faly, faly,\nHe ! faly ny fonay,\nVory maro toy izao.",
                 "fiverenany": false
             },
             {
                 "andininy": 2,
-                "tononkira": "Mba atrehonao iizahay \nFa mitokana  eto izao\nNy trano ho Anao :\nHe ! faly ..sns.",
+                "tononkira": "Mba atrehonao izahay \nFa mitokana  eto izao\nNy trano ho Anao :\nHe ! faly ..sns.",
                 "fiverenany": false
             },
             {
@@ -15171,7 +15206,13 @@
         "lohateny": "",
         "mpanoratra": [],
         "fanamarihana": "Maintimolaly",
-        "hira": []
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Jehovah no anjarako,\nIzaho tsy halahelo,\nFa Jeso no Mpanavotro.\nIzaho ho ravoravo.\nMaro no tia harena,\nBetsaka no mila vola,\nF’izaho efa manana,\nJehovah no anjarako,\nNy didiny no mamiko,\nNy asany no tiako,\nNy teniny mahahendry,\nNy ran’ny Zanany\nNo mahadio.\nTsy mba mamiko ny tany,\nTsy sitrako ny filàny,\nOmeko veloma izany;\nJehovah no anjarako,\n:,: Anao tokoa, ry Jesosy,\nNy fanahiko, rehetra;\nAtaovy ho Anao aho,\nHianao no anjarako. :,:",
+                "fiverenany": false
+            }
+        ]
     },
     "ffpm_543": {
         "laharana": "543",
@@ -17187,6 +17228,16 @@
                 "andininy": 2,
                 "tononkira": "Ry Jehovah, Ray Mpitahy\nIzay rehetra ory fo !\nNy tsy manana mpiahy\nMora resin’ny manjo ;\nZovy ary no hanahy\nRaha  miankina Aminao ?\nEny, faly ny fanahy\nIzay matoky Aminao.",
                 "fiverenany": false
+            },
+            {
+                "andininy": 3,
+                "tononkira": "Ry Jehovah, Ray Mpiaro !\nHe ny fahavalonay\nIzay masiaka sy maro ;\nHodidinanao izahay,\nFa ety dia mifangaro\nAmin-dratsy izahay,\nKa tsy misy izay maharo\nRaha ilaozanao, ry Ray !",
+                "fiverenany": false
+            },
+            {
+                "andininy": 4,
+                "tononkira": "Ry Jehovah ô ! Vimbino\nItony zanakao ety,\nAza avela hanadino\nNy fonenan-tsoa ary,\nKa omeo fanahy mino\nTsy mivadika Aminao ;\nAry koa, mba sakambino\nTsy hisaraka Aminao.",
+                "fiverenany": false
             }
         ]
     },
@@ -18582,12 +18633,17 @@
             },
             {
                 "andininy": 2,
-                "tononkira": "Nofo no anterintsika\nAo am-pasana anio ;\nNy fanahinay anefa\nTsy mba ao anatin’io.\nJeso no namindra azy,\nLasany ny havanao,\nFa navotany ho Azy,\nKa derao ny Tomponao !",
+                "tononkira": "Sento no anjarantsika,\nIzy kosa faly izao,\nAfa-jaly, afaka ota,\nTapitra ady izy ao,\nTsy mba misy ranomaso\nNa izay mahory ao,\nKoa aza mitomany,\nFa derao ny Tomponao !",
                 "fiverenany": false
             },
             {
                 "andininy": 3,
-                "tononkira": "Mangataha fahendrena,\nKa isao ny andronao ;\nMikatsaha famonjena\nSy fiainana vaovao,\nMba horaisiny tokoa\nHonina  any Aminy,\nKa hekeny ho sakaiza,\nMba ho ao an-tranony.",
+                "tononkira": "Nofo no aterintsika\nAo am-pasana anio ;\nNy fanahiny anefa\nTsy mba ao anatin’io.\nJeso no namindra azy,\nLasany ny havanao,\nFa navotany ho Azy,\nKa derao ny Tomponao !",
+                "fiverenany": false
+            },
+            {
+                "andininy": 4,
+                "tononkira": "Mangataha fahendrena,\nKa isao ny andronao ;\nMikatsaha famonjena\nSy fiainana vaovao,\nMba horaisiny tokoa\nHonina  any Aminy,\nKa ekeny ho sakaiza,\nMba ho ao an-tranony.",
                 "fiverenany": false
             }
         ]
@@ -19295,32 +19351,37 @@
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Ny lapan’Andriamanitra\nNo ivorian’olona\nTsy omby alinalina,\nIzay madio sy masina.",
+                "tononkira": "Ny lapan’Andriamanitra\nNo ivorian’olona\nAmena, Haleloia\nTsy omby alinalina,\nIzay madio sy masina.\nAmena, Haleloia",
                 "fiverenany": false
             },
             {
+                "andininy": 0,
+                "tononkira": ":,: Finaritra hono ny olona\nMitoetra eo Aminao Mandrakizay :,:",
+                "fiverenany": true
+            },
+            {
                 "andininy": 2,
-                "tononkira": "Izao firenen-drehetra  izao\nDia samy afaka hankao ;\nTsy fomban’Andriamanitra\nHizaha tavan’olona.",
+                "tononkira": "Izao firenen-drehetra  izao\nDia samy afaka hankao ;\nAmena, Haleloia\nTsy fomban’Andriamanitra\nHizaha tavan’olona.\nAmena, Haleloia",
                 "fiverenany": false
             },
             {
                 "andininy": 3,
-                "tononkira": "Ireny no naharitra\nNy hazo fijaliana,\nNa dia nanao ny henatra\nHo zava-tsinontsinona.",
+                "tononkira": "Ireny no naharitra\nNy hazo fijaliana,\nAmena, Haleloia\nKa dia nanao ny henatra\nHo zava-tsinontsinona.\nAmena, Haleloia",
                 "fiverenany": false
             },
             {
                 "andininy": 4,
-                "tononkira": "Endrey, ny hafaliany !\nMazava ny tarehiny ;\nFafàn’Andriamanitra\nNy ranomaso latsaka.",
+                "tononkira": "Endrey, ny hafaliany !\nMazava ny tarehiny ;\nAmena, Haleloia\nFafàn’Andriamanitra\nNy ranomaso latsaka.\nAmena, Haleloia",
                 "fiverenany": false
             },
             {
                 "andininy": 5,
-                "tononkira": "Ataony ao ny hira vao\nHoe : “ Voavono Hianao ;\nNy ranao, Zanakondrinay !\nNo nanavotanao anay ”",
+                "tononkira": "Ataony ao ny hira vao\nHoe : “ Voavono Hianao ;\nAmena, Haleloia\nNy ranao, Zanakondrinay !\nNo nanavotanao anay ”\nAmena, Haleloia",
                 "fiverenany": false
             },
             {
                 "andininy": 6,
-                "tononkira": "Ry Jeso ô Mpanavotra !\nIzaho dia milatsaka\nHo isan’ny mpanomponao\nManaraka ny dianao.",
+                "tononkira": "Ry Jeso ô Mpanavotra !\nIzaho dia milatsaka\nAmena, Haleloia\nHo isan’ny mpanomponao\nManaraka ny dianao.\nAmena, Haleloia",
                 "fiverenany": false
             }
         ]
@@ -21526,54 +21587,54 @@
             {
                 "andininy": 1,
                 "lohateny": "Vakio Mat. xi 28.",
-                "tononkira": "Manatòna, manatòna\nAn’i Jeso izao ;\nManatòna an’i Jeso izao.",
+                "tononkira": "Manatòna, manatòna\nAn’i Jeso izao, izao;\nManatòna an’i Jeso izao.",
                 "fiverenany": false
             },
             {
                 "andininy": 2,
                 "lohateny": "Vakio Jao. iii. 16",
-                "tononkira": "Mba minoa, mba minoa\nAn’i Jeso izao,\nMba minoa an’i Jeso izao.",
+                "tononkira": "Mba minoa, mba minoa\nAn’i Jeso izao, izao\nMba minoa an’i Jeso izao.",
                 "fiverenany": false
             },
             {
                 "andininy": 3,
                 "lohateny": "Vakio Heb. vii. 25",
-                "tononkira": "Mahavonjy Jeso Tompo\nMahavonjy izao\nMahavonjy Jeso Tompo izao.",
+                "tononkira": "Mahavonjy Jeso Tompo\nMahavonjy izao, izao\nMahavonjy Jeso Tompo izao.",
                 "fiverenany": false
             },
             {
                 "andininy": 4,
                 "lohateny": "Vakio Jak. v.11.",
-                "tononkira": "Be fiantra, be fiantra\nJeso Tompo izao,\nBe fiantra Jeso Tompo izao.",
+                "tononkira": "Be fiantra, be fiantra\nJeso Tompo izao, izao\nBe fiantra Jeso Tompo izao.",
                 "fiverenany": false
             },
             {
                 "andininy": 5,
                 "lohateny": "Vakio Jao. vi. 37",
-                "tononkira": "Tsy hanary Jeso Tompo,\nTsy hanary anao,\nJeso Tompo tsy hanary anao.",
+                "tononkira": "Tsy hanary Jeso Tompo,\nTsy hanary anao, anao\nJeso Tompo tsy hanary anao.",
                 "fiverenany": false
             },
             {
                 "andininy": 6,
                 "lohateny": "Vakio Mat. x. 47",
-                "tononkira": "Miantsoa, miantsoa\nAn’i Jeso izao\nMiantsoa an’i Jeso izao.",
+                "tononkira": "Miantsoa, miantsoa\nAn’i Jeso izao, izao\nMiantsoa an’i Jeso izao.",
                 "fiverenany": false
             },
             {
                 "andininy": 7,
-                "tononkira": "Fa mamaly Jeso Tompo\nFa hamaly anao,\nFa hamaly Jeso Tompo izao.",
+                "tononkira": "Fa hamaly Jeso Tompo,\nFa hamaly anao, anao\nFa hamaly Jeso Tompo izao.",
                 "fiverenany": false
             },
             {
                 "andininy": 8,
                 "lohateny": "Vakio 1 Jao. i. 7",
-                "tononkira": "Fo madio, fo madio\nNo homeny anao \nFo madio no homeny anao.",
+                "tononkira": "Fo madio, fo madio\nNo homeny anao, anao\nFo madio no homeny anao.",
                 "fiverenany": false
             },
             {
                 "andininy": 9,
                 "lohateny": "Vakio Apok. iii. 5",
-                "tononkira": "Lamba fotsy, lamba fotsy\nNo hatafy anao,\nLamba fotsy no hatafy anao.",
+                "tononkira": "Lamba fotsy, lamba fotsy\nNo hatafy anao, anao\nLamba fotsy no hatafy anao.",
                 "fiverenany": false
             }
         ]
@@ -22772,6 +22833,72 @@
         "hira": [
             {
                 "andininy": 1,
+                "tononkira": "‘Lay ora tao Getsemane\nTsaroako tsara izao,\nFa Tompo tia sy lehibe\nNo ory loatra tao;",
+                "fiverenany": false
+            },
+            {
+                "andininy": 0,
+                "tononkira": "Tsaroako ‘zao Getsemane\n‘Zay niaretanao,\nTsy haiko hadinoina re,\n‘Lay fahoriana tao.",
+                "fiverenany": true
+            },
+            {
+                "andininy": 2,
+                "tononkira": "Ny mpianatrao, malalanao\nNatory avokoa;\nNafoin’izao, rehetra izao,\nJesosy Tompo soa;",
+                "fiverenany": false
+            },
+            {
+                "andininy": 3,
+                "tononkira": "Nanjary ra ny dinitrao\nNoho ny helokay;\nFadiranovana Hianao\nNisolo voina anay;",
+                "fiverenany": false
+            },
+            {
+                "andininy": 4,
+                "tononkira": "Soraty ao am-poko re,\nHo sary velona ao,\nNy sarin’i Getsemane\n‘Zay niaretanao;",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ffpm_816": {
+        "laharana": "816",
+        "sokajy": "ffpm",
+        "lohateny": "",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Ny lohan’ny eklesia\nDia Jeso Tompony,\nNy rano aman-teny\nNo iorenany,\nNitady azy Izy\nHo ampakariny,\nNalatsany ny rany\nHo avo-tsoany",
+                "fiverenany": false
+            },
+            {
+                "andininy": 2,
+                "tononkira": "Na be ny firenena\nIzay ihaviany,\nIray ny famonjena\nIzay inoany\nIray ny antenaina\nRehefa mby ary;\nIray no mofon’aina\nIzay fihinany.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 3,
+                "tononkira": "Na dia mba hita aza\nNy fisarahana,\nNa dia tsy manan-daza\nNy Fiangonana,\nMiambina ny mino,\nKa mitaraina hoe:\n«Aza ela, ry Mpamonjy,\nAvia, mamonje!»",
+                "fiverenany": false
+            },
+            {
+                "andininy": 4,
+                "tononkira": "Tsy ela dia ho hita\nIlay Mpampakatra\nTsy ela dia ho vita\nNy ady masina;\nNy rafy horeseny,\nNy loza tapitra,\nFa Izy ho tonga eny\nAm-pitsaharana.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 5,
+                "tononkira": "Iraisany anefa\nAndriamanitra\nSy ireo izay nahefa\nNy ady masina.\nRy Tompo, miarova\nAnay izay mbola aty,\nHiraisanay handova\nNy lanitra aminy.",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ffpm_817": {
+        "laharana": "817",
+        "sokajy": "ffpm",
+        "lohateny": "",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
                 "tononkira": "Ry Andriamanitra Rainay,\nMihainoa ! (in-3)\nMiondrika eto anatrehanao\nizahay,\nFa Hianao no Andriamanitray,\nKa henoy izahay !",
                 "fiverenany": false
             },
@@ -22787,8 +22914,8 @@
             }
         ]
     },
-    "ffpm_816": {
-        "laharana": "816",
+    "ffpm_818": {
+        "laharana": "818",
         "sokajy": "ffpm",
         "lohateny": "",
         "mpanoratra": [],
@@ -22800,8 +22927,8 @@
             }
         ]
     },
-    "ffpm_817": {
-        "laharana": "817",
+    "ffpm_819": {
+        "laharana": "819",
         "sokajy": "ffpm",
         "lohateny": "",
         "mpanoratra": [],
@@ -22872,112 +22999,6 @@
             {
                 "andininy": 13,
                 "tononkira": "Noho ny herinao tsy toha\nNoho ny voninahitrao,\nNoho ny famindramponao\nMamonje, ry Jeso ô !",
-                "fiverenany": false
-            }
-        ]
-    },
-    "ffpm_818": {
-        "laharana": "818",
-        "sokajy": "ffpm",
-        "lohateny": "",
-        "mpanoratra": [],
-        "hira": [
-            {
-                "andininy": 1,
-                "tononkira": "Jeso Kristy Tomponay,\nZanaka malalan-dRay,\nNo naetry ho anay ;\nMamonje anay anie.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 2,
-                "tononkira": "He ! ny fahatsoranao\nSy ny fahadiovanao,\nTsy mpanota Hianao :\nMamonje anay anie.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 3,
-                "tononkira": "Hianao no marina,\nMora fo sy masina,\nAry tsy mialona :\nMamonje anay anie.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 4,
-                "tononkira": "Tsy niala sasatra,\nTsy nandà ny sarotra,\nFa nitondra henatra :\nMamonje anay anie.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 5,
-                "tononkira": "Heloka tsy rariny,\nHianao najaliny\nTao an-tampon-Kalvary :\nMamonje anay anie.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 6,
-                "tononkira": "Lasanao ny helokay,\nRaha mibebaka izahay\nTsy manao ny sitrakay :\nMamonje anay anie.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 7,
-                "tononkira": "He ! ny fitsangananao,\nResy ny fahavalonao\nTamim-boninahitra :\nMamonje anay anie.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 8,
-                "tononkira": "Hianao, ry Jeso ô !\nAnateranay izao\nSaotra  izay anjaranao :\nMamonje anay anie.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 9,
-                "tononkira": "Fo, fanahy, tena koa,\nHo anao mba hahasoa\nIzay rehetra tia tokoa :\nMamonje anay anie.",
-                "fiverenany": false
-            }
-        ]
-    },
-    "ffpm_819": {
-        "laharana": "819",
-        "sokajy": "ffpm",
-        "lohateny": "",
-        "mpanoratra": [],
-        "hira": [
-            {
-                "andininy": 1,
-                "tononkira": "Rainay ô, Mpamorona !\nJeso ô, Mpanavotra,\nAry ny Mpananatra :\nMihainoa, ry Tompo !",
-                "fiverenany": false
-            },
-            {
-                "andininy": 2,
-                "tononkira": "Hianao no foto-tsoa\nSy harem-panahy koa,\nHandrosoanay tokoa :\nMihainoa, ry Tompo !",
-                "fiverenany": false
-            },
-            {
-                "andininy": 3,
-                "tononkira": "Be ny heloka natao,\nBe ny famindramponao,\nMamelà anay izao :\nMihainoa ry Tompo !",
-                "fiverenany": false
-            },
-            {
-                "andininy": 4,
-                "tononkira": "Malahelo izahay,\nFa maditra hatrizay,\nAza mba mandao anay :\nMihainoa ry Tompo !",
-                "fiverenany": false
-            },
-            {
-                "andininy": 5,
-                "tononkira": "Mba diovy ny fonay,\nHatanjaho ny sainay,\nAhitsio ny dianay :\nMihainoa, ry Tompo !",
-                "fiverenany": false
-            },
-            {
-                "andininy": 6,
-                "tononkira": "Be tokoa ny indrafo\nIzay naseho ho anay,\nTena latsaka ao am-po :\nMihainoa, ry Tompo !",
-                "fiverenany": false
-            },
-            {
-                "andininy": 7,
-                "tononkira": "Eny, famonjena re,\nHahitanay aim-be,\nNo efa vitanao tetý :\nMihainoa, ry Tompo !",
-                "fiverenany": false
-            },
-            {
-                "andininy": 8,
-                "tononkira": "Aina, hery, andro koa\nNo atolotray tokoa,\nMba hahaizanay ny soa :\nMihainoa, ry Tompo !",
-                "fiverenany": false
-            },
-            {
-                "andininy": 9,
-                "tononkira": "Ho Anao tsy tapitra\nHaja, dera, saotra koa\nHo Anao mandrakizay :\nMihainoa, ry Tompo !",
                 "fiverenany": false
             }
         ]

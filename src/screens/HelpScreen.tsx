@@ -5,6 +5,7 @@ import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
 import {TutorialIcon} from '../components/TutorialIcons';
+import {MenuIcon} from '../components/MenuIcons';
 import {useTutorial, type TutorialStatus} from '../contexts/TutorialContext';
 import {TUTORIALS} from '../tutorials/registry';
 import type {RootStackParamList} from '../navigation/RootNavigator';
@@ -90,6 +91,30 @@ const HelpScreen = () => {
               </Pressable>
             );
           })}
+
+        {/* Not a coach-mark tutorial: the widget is added on the home screen,
+            outside the app, so this card opens the steps to read instead. */}
+        <Pressable
+          onPress={() => navigation.navigate('WidgetGuide')}
+          style={({pressed}) => [
+            styles.card,
+            {
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderColor: theme.colors.divider,
+            },
+            pressed && {opacity: 0.85},
+          ]}>
+          <View style={styles.icon}>
+            <MenuIcon name="bubble" color={accent} />
+          </View>
+          <View style={styles.cardBody}>
+            {/* PLACEHOLDER MG copy — needs the app's own wording, not mine. */}
+            <Text style={[styles.cardTitle, {color: theme.colors.textPrimary}]}>
+              Hametraka ny widget
+            </Text>
+          </View>
+          <Text style={[styles.chevron, {color: accent}]}>›</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

@@ -69,13 +69,6 @@ const categoryBarHeight = (rows: number) =>
   RANGE_LINE_HEIGHT +
   CATEGORY_BAR_PADDING;
 
-const CATEGORY_MAX: Record<string, number> = {
-  ffpm: 827,
-  ff: 54,
-  antema: 24,
-  fifo: 370,
-};
-
 const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   visible,
   hymns,
@@ -107,7 +100,15 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory || 'ffpm');
   const [inputNumber, setInputNumber] = useState<string>('');
 
-  const maxNumber = CATEGORY_MAX[selectedCategory] ?? 9999;
+  const filteredHymns = useMemo(() => {
+    return hymns
+      .filter(hymn => hymn.category === selectedCategory)
+      .sort((a, b) => a.number - b.number);
+  }, [hymns, selectedCategory]);
+
+  // The book's last number comes from the data, so the range and the keypad
+  // limit follow new hymns (a hardcoded 54 hid the Fanampiny psalm songs).
+  const maxNumber = filteredHymns.length ? filteredHymns[filteredHymns.length - 1].number : 9999;
   const maxDigits = String(maxNumber).length;
 
   const keypadWidth = useMemo(() => {
@@ -140,12 +141,6 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     () => lightenColor(theme.colors.accentBlue, 15),
     [theme.colors.accentBlue],
   );
-
-  const filteredHymns = useMemo(() => {
-    return hymns
-      .filter(hymn => hymn.category === selectedCategory)
-      .sort((a, b) => a.number - b.number);
-  }, [hymns, selectedCategory]);
 
   const handleCategoryChange = useCallback((category: string) => {
     setSelectedCategory(category);
