@@ -186,8 +186,13 @@ function* parseYamlHymns(text, category) {
     // so when the choruses differ each one stays with the stanza it follows.
     const choruses = verses.filter((v) => v.isChorus);
     const hasStanza = verses.some((v) => !v.isChorus);
+    const differ = new Set(choruses.map((v) => v.text)).size > 1;
     let lyrics = verses;
-    if (new Set(choruses.map((v) => v.text)).size > 1 && hasStanza) {
+    if (differ && !hasStanza) {
+      // Nothing but `{{ … }}` blocks, each different: there is no stanza to
+      // repeat them after, so they read in order as stanzas.
+      lyrics = choruses.map((v, i) => ({ ...v, number: i + 1, isChorus: false }));
+    } else if (differ) {
       lyrics = [];
       let leading = [];
       for (const v of verses) {

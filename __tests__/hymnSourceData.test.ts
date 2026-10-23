@@ -81,6 +81,23 @@ describe('hymn loaders', () => {
     expect(clashes).toEqual([]);
   });
 
+  it('keeps every block of a hymn made only of different choruses', () => {
+    const yaml = [
+      'x::1:',
+      '  song_number: 1',
+      "  song_name: '1. Test'",
+      '  song_text: |-',
+      '    {{Voalohany}}',
+      '    ',
+      '    {{Faharoa}}',
+    ].join('\n');
+    const [hymn] = [...parseYamlHymns(yaml, 'fifo')];
+    expect(hymn.verses.map(v => [v.number, v.text])).toEqual([
+      [1, 'Voalohany'],
+      [2, 'Faharoa'],
+    ]);
+  });
+
   it('keeps each call-and-response chorus with its stanza', () => {
     const fifo80 = hymns.find(h => h.id === 'fifo_80')!;
     expect(fifo80.verses.map(v => v.number)).toEqual([1, 2, 3, 4]);
