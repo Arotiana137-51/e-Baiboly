@@ -32,6 +32,8 @@ export type RootStackParamList = {
         selectedBook?: { id: number; name: string };
         selectedChapter?: number;
         selectedVerse?: number;
+        // The last verse of a range to mark from selectedVerse on.
+        selectedVerseEnd?: number;
         selectedHymnId?: string;
         // From the notes list: open this note's bubble once its text is shown.
         openNoteId?: string;

@@ -4,6 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
+import {useJesusName} from '../contexts/JesusNameContext';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 import {SheetButton, SheetModal} from '../components/SheetModal';
 import {readableAccent} from '../utils/colorUtils';
@@ -34,6 +35,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'DictionaryEntry'>;
 // into the reader; "Jereo X" opens entry X on top of this one.
 const DictionaryEntryScreen = ({route, navigation}: Props) => {
   const {theme, primaryColor} = useTheme();
+  const {transformText} = useJesusName();
   const {entry, failed} = useDictionaryEntry(route.params.id);
   const {words, findEntry} = useDictionaryWords();
   const fontScale = useReaderFontScale();
@@ -48,10 +50,10 @@ const DictionaryEntryScreen = ({route, navigation}: Props) => {
     [entry, route.params.id],
   );
 
-  // Into the list's "recent" row, under its main headword.
+  // Into the list's "recent" row.
   useEffect(() => {
-    if (headword) addRecentLookup({id: headword.id, word: headword.main});
-  }, [headword]);
+    if (entry) addRecentLookup(entry.word);
+  }, [entry]);
 
   const paragraphs = useMemo(
     () =>
@@ -150,6 +152,7 @@ const DictionaryEntryScreen = ({route, navigation}: Props) => {
       selectedBook: {id: ref.bookId, name: ref.bookName},
       selectedChapter: ref.chapter,
       selectedVerse: ref.verseStart,
+      selectedVerseEnd: ref.verseEnd,
     });
   };
 
@@ -239,7 +242,8 @@ const DictionaryEntryScreen = ({route, navigation}: Props) => {
             {passage.verses.map(v => (
               <Text key={v.verse_number} style={styles.verse}>
                 <Text style={styles.verseNumber}>{v.verse_number} </Text>
-                {v.text}
+                {/* Jesoa or Jesosy, as the reader shows it. */}
+                {transformText(v.text)}
               </Text>
             ))}
           </ScrollView>

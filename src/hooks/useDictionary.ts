@@ -134,20 +134,23 @@ export const useChapterSizes = () => {
 const RECENT_KEY = 'dictionary.recent';
 const RECENT_MAX = 8;
 
-export type RecentLookup = {id: number; word: string};
+// Kept by full headword ("ABAGITA (Estera 1 : 10)", unique in the book), not
+// by id: ids follow the book's order and shift when entries are added. A
+// headword that is gone just drops out of the list.
+export type RecentLookup = {word: string};
 
 const readRecent = async (): Promise<RecentLookup[]> => {
   try {
     const list = JSON.parse((await AsyncStorage.getItem(RECENT_KEY)) ?? '[]');
-    return Array.isArray(list) ? list : [];
+    return Array.isArray(list) ? list.filter(r => typeof r?.word === 'string') : [];
   } catch {
     return [];
   }
 };
 
-export const addRecentLookup = async (item: RecentLookup): Promise<void> => {
+export const addRecentLookup = async (word: string): Promise<void> => {
   const list = await readRecent();
-  const next = [item, ...list.filter(r => r.id !== item.id)].slice(0, RECENT_MAX);
+  const next = [{word}, ...list.filter(r => r.word !== word)].slice(0, RECENT_MAX);
   await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(next)).catch(() => {});
 };
 

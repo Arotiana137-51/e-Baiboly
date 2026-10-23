@@ -47,6 +47,8 @@ describe('dictionary paragraphs', () => {
   it('keep ranges, and stop one that runs into the next chapter at its end', () => {
     expect(refs('Genesisy 2 : 4 - 7')).toEqual(['1:2:4-7']);
     expect(refs('Genesisy 2 : 4 - 3 : 24')).toEqual([`1:2:4-${END_OF_CHAPTER}`]);
+    // ISMAELA names the chapter twice: it ends at verse 15, not the chapter's end.
+    expect(refs('Jeremia 41 : 7 - 41 : 15')).toEqual(['24:41:7-15']);
   });
 
   it('only take a book name that starts a word', () => {
@@ -58,6 +60,24 @@ describe('dictionary paragraphs', () => {
   it('link "Jereo X" to entry X', () => {
     const link = parseDictionaryParagraph('Jereo Babela.', findEntry).find(s => s.kind === 'entry');
     expect(link).toEqual({kind: 'entry', text: 'Babela', entryId: 457});
+  });
+
+  it('link every name of a "Jereo X sy Y" list', () => {
+    const linked = parseDictionaryParagraph('Jereo Debora sy Jaela.', findEntry)
+      .filter(s => s.kind === 'entry')
+      .map(s => s.text);
+    expect(linked).toEqual(['Debora', 'Jaela']);
+  });
+
+  it('never let a headword\'s description stand for it', () => {
+    const mainOf = (phrase: string) => words[(findEntry(phrase) ?? 0) - 1]?.main;
+    // "ANJELIN'NY FIANGONANA, Ny" once turned every "Jereo ny ..." into a link.
+    expect(findEntry('ny')).toBeUndefined();
+    // "JEREMIA, Mpaminany" is Jeremiah, not the prophets' entry.
+    expect(mainOf('Mpaminany')).toBe('MPAMINANY sy FAMINANIANA');
+    // Other spellings still count, in capitals or after "na".
+    expect(mainOf('Adorama')).toBe('ADONIRAMA, na ADORAMA');
+    expect(mainOf('Abela-Mizraima')).toBe('Abela-Egyptiana, na Abela-Mizraima');
   });
 });
 

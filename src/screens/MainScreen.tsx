@@ -81,7 +81,7 @@ import {t} from '../i18n/strings';
 import {hexToRgba} from '../utils/colorUtils';
 import {maybeRequestReview, REVIEW_DELAY_DAYS} from '../utils/appReview';
 import {openStorePage, rememberUpdateAnswer, updateToOffer} from '../utils/appUpdate';
-import {FONT_SCALE_KEY, USER_FONT_SCALE_MAX, USER_FONT_SCALE_MIN} from '../utils/readerFontScale';
+import {FONT_SCALE_KEY, USER_FONT_SCALE_MAX, USER_FONT_SCALE_MIN, loadFontScale} from '../utils/readerFontScale';
 import {UpdatePromptModal} from '../components/UpdatePromptModal';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
@@ -207,8 +207,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
       if (typeof params.selectedVerse === 'number') {
         setMode('bible');
-        setSelectedVerseRange(null);
-        setSelectedVerseNumber(params.selectedVerse);
+        // A range (the dictionary's passage sheet) is marked whole, like an
+        // inline ref.
+        if (typeof params.selectedVerseEnd === 'number' && params.selectedVerseEnd > params.selectedVerse) {
+          setSelectedVerseNumber(null);
+          setSelectedVerseRange({start: params.selectedVerse, end: params.selectedVerseEnd});
+        } else {
+          setSelectedVerseRange(null);
+          setSelectedVerseNumber(params.selectedVerse);
+        }
         setShouldScrollToVerse(params.selectedVerse);
       }
     }
@@ -381,13 +388,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // initial default from overwriting the stored value before the read lands.
   const didRestoreFontScale = useRef(false);
   useEffect(() => {
-    (async () => {
-      try {
-        const stored = parseFloat((await AsyncStorage.getItem(FONT_SCALE_KEY)) ?? '');
-        if (stored >= USER_FONT_SCALE_MIN && stored <= USER_FONT_SCALE_MAX) setFontScale(stored);
-      } catch {}
+    loadFontScale().then(scale => {
+      setFontScale(scale);
       didRestoreFontScale.current = true;
-    })();
+    });
   }, []);
 
   useEffect(() => {

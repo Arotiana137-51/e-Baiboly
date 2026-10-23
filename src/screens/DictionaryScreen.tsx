@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useDeferredValue, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -48,20 +48,29 @@ const DictionaryScreen = () => {
   const [query, setQuery] = useState('');
   const [letter, setLetter] = useState<string | null>(null);
 
-  const searching = query.trim().length > 0;
+  // The list follows the field a beat behind, so a letter shows at once even
+  // when the typo pass has the whole book to read.
+  const deferredQuery = useDeferredValue(query);
+  const searching = deferredQuery.trim().length > 0;
   const letters = useMemo(() => (words ? dictionaryLetters(words) : []), [words]);
   const sections = useMemo(() => {
     if (!words) return [];
     if (searching) {
       // Nothing spelled that way: the nearest headwords, as the Bible search does.
-      const exact = searchDictionary(words, query);
-      const found = exact.length ? exact : fuzzyDictionary(words, query);
+      const exact = searchDictionary(words, deferredQuery);
+      const found = exact.length ? exact : fuzzyDictionary(words, deferredQuery);
       // No section at all, or SectionList won't show its empty message.
       return found.length ? [{title: '', data: found}] : [];
     }
     return groupByLetter(letter ? wordsUnderLetter(words, letter) : words);
-  }, [words, searching, query, letter]);
+  }, [words, searching, deferredQuery, letter]);
   const resultCount = searching ? sections[0]?.data.length ?? 0 : 0;
+  // Each recent headword back to its entry in today's list.
+  const recentWords = useMemo(() => {
+    if (!words) return [];
+    const byWord = new Map(words.map(w => [w.word, w]));
+    return recent.map(r => byWord.get(r.word)).filter((w): w is IndexedWord => !!w);
+  }, [words, recent]);
 
   // Full-width grid: the buttons line up with the search field's edges.
   const letterSize = Math.floor((width - 2 * SIDE - (LETTER_COLUMNS - 1) * GAP) / LETTER_COLUMNS);
@@ -183,7 +192,7 @@ const DictionaryScreen = () => {
     <Text style={styles.count}>{t('search.resultCount', {count: resultCount})}</Text>
   ) : (
     <View>
-      {recent.length > 0 ? (
+      {recentWords.length > 0 ? (
         <>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>{t('dictionary.recent')}</Text>
@@ -192,13 +201,13 @@ const DictionaryScreen = () => {
             </Pressable>
           </View>
           <View style={styles.chips}>
-            {recent.map(r => (
+            {recentWords.map(w => (
               <Pressable
-                key={r.id}
+                key={w.id}
                 accessibilityRole="button"
-                onPress={() => open(r.id)}
+                onPress={() => open(w.id)}
                 style={({pressed}) => [styles.chip, pressed ? styles.rowPressed : null]}>
-                <Text style={styles.chipText}>{r.word}</Text>
+                <Text style={styles.chipText}>{w.main}</Text>
               </Pressable>
             ))}
           </View>
