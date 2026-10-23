@@ -3,7 +3,6 @@ import type {WidgetGuide} from './widgetGuide';
 // Google's steps (support.google.com/android/answer/9450271), photographed on
 // a Galaxy A53 (One UI 8, phone in French): other launchers look a little
 // different but follow the same path. The widget is listed as e-Baiboly.
-// PLACEHOLDER MG copy — needs the app's own wording, not mine.
 export const WIDGET_GUIDE: WidgetGuide = {
   intro: "Sakafom-panahy isan'andro: andinin-teny iray isan'andro eo amin'ny écran.",
   sections: [

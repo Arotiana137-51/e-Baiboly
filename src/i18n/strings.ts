@@ -268,7 +268,6 @@ const translations: Translations = {
     'bible.newTestament': 'Testamenta vaovao',
     // The book's own title, Evans & Randzavola 1952.
     'dictionary.title': "Diksionera amin'ny Baiboly",
-    // PLACEHOLDER MG copy — needs the app's own wording, not mine.
     'dictionary.menu': 'Diksionera',
     'dictionary.search': 'Tadiavina...',
     'dictionary.empty': 'Tsy nahitana valiny',

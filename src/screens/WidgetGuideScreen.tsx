@@ -96,7 +96,6 @@ const WidgetGuideScreen = () => {
             accessibilityRole="button"
             onPress={() => pinWidget()}
             style={({pressed}) => [styles.pinButton, themed.pinButton, pressed ? styles.pressed : null]}>
-            {/* PLACEHOLDER MG copy — needs the app's own wording, not mine. */}
             <Text style={styles.pinText}>Apetraho eo amin'ny écran ny widget</Text>
           </Pressable>
         ) : null}

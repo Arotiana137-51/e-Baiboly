@@ -108,7 +108,6 @@ const HelpScreen = () => {
             <MenuIcon name="bubble" color={accent} />
           </View>
           <View style={styles.cardBody}>
-            {/* PLACEHOLDER MG copy — needs the app's own wording, not mine. */}
             <Text style={[styles.cardTitle, {color: theme.colors.textPrimary}]}>
               Hametraka ny widget
             </Text>
