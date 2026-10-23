@@ -20,7 +20,7 @@ export const REVIEW_DELAY_DAYS = 3;
 // Same semantics as PatchManager.isOnline: isInternetReachable is often null on
 // Android (unknown), and treating unknown as offline would suppress the prompt
 // on plenty of working connections.
-const isOnline = async (): Promise<boolean> => {
+export const isOnline = async (): Promise<boolean> => {
   try {
     const state = await NetInfo.fetch();
     return state.isConnected === true && state.isInternetReachable !== false;

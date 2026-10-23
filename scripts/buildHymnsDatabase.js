@@ -76,6 +76,8 @@ async function buildHymns(dbPath, version) {
     note TEXT
   )`);
 
+  // A plain UNIQUE, no ON CONFLICT REPLACE: two blocks with one number used to
+  // drop the first without a word (36 Fifohazana choruses); now the build stops.
   await runAsync(db, `CREATE TABLE HymnVerses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     hymn_id TEXT NOT NULL,
@@ -84,7 +86,7 @@ async function buildHymns(dbPath, version) {
     text TEXT NOT NULL,
     is_chorus BOOLEAN NOT NULL DEFAULT 0,
     FOREIGN KEY (hymn_id) REFERENCES Hymns (id) ON DELETE CASCADE,
-    UNIQUE(hymn_id, verse_number) ON CONFLICT REPLACE
+    UNIQUE(hymn_id, verse_number)
   )`);
 
   // Hymns metadata FTS keeps small UNINDEXED columns so the search hook can
@@ -141,7 +143,7 @@ async function buildHymns(dbPath, version) {
     `INSERT OR REPLACE INTO Hymns (id, number, category, title, authors, note) VALUES (?, ?, ?, ?, ?, ?)`
   );
   const insVerse = db.prepare(
-    `INSERT OR REPLACE INTO HymnVerses (hymn_id, verse_number, heading, text, is_chorus) VALUES (?, ?, ?, ?, ?)`
+    `INSERT INTO HymnVerses (hymn_id, verse_number, heading, text, is_chorus) VALUES (?, ?, ?, ?, ?)`
   );
   const insHymnAsync = (p) =>
     new Promise((res, rej) => insHymn.run(p, (e) => (e ? rej(e) : res())));

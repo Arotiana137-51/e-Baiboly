@@ -7,12 +7,14 @@ import React from 'react';
 import {act, create} from 'react-test-renderer';
 import {Image, Text} from 'react-native';
 import {ShareCard} from '../src/components/ShareCard';
+import {pageOf, stripSlots} from '../src/components/LookPicker';
 import {
   buildBibleShareItems,
   buildHymnShareItems,
   buildSelectionShareItems,
   buildShareReference,
-  buildShareText,
+  cleanShareText,
+  LARGE_WHITE_MIN,
   lookForColor,
   lookForImage,
   MAX_SHARE_ITEMS,
@@ -49,8 +51,6 @@ const bibleData = (count: number): ShareCardData => ({
 test('bible reference appends a single verse or a range', () => {
   expect(buildShareReference(bibleData(5), 1)).toBe('Jaona 3:16');
   expect(buildShareReference(bibleData(5), 3)).toBe('Jaona 3:16-18');
-  expect(buildShareText(bibleData(5), 1)).toBe('Andininy 16\n\nJaona 3:16');
-  expect(buildShareText(bibleData(5), 2)).toBe('16 Andininy 16\n17 Andininy 17\n\nJaona 3:16-17');
 });
 
 test('bible items are capped and stripped of markup', () => {
@@ -123,6 +123,29 @@ test.each(PRIMARY_COLOR_OPTIONS.map(o => [o.name, o.hex]))('%s: white on dark, b
   expect(contrastRatio(look.text, hex)).toBeGreaterThanOrEqual(3); // verse text is large
 });
 
+test('share card: only the nine lightest palette colours keep dark ink', () => {
+  const dark = PRIMARY_COLOR_OPTIONS.filter(o => lookForColor(o.hex, 'large').text === '#1B1B1B').map(o => o.name);
+  expect(dark.sort()).toEqual(
+    ['Amber', 'Cyan', 'Fasika', 'Green', 'Lime', 'Liturgical Gold', 'Mofon-tany Maitso', 'Mustard', 'Teal'].sort(),
+  );
+  expect(LARGE_WHITE_MIN).toBe(2.5);
+});
+
+test('share card: white below 4.5:1 gets the soft shadow, the widget looks never do', () => {
+  expect(lookForColor('#F97316', 'large').softShadow).toBe(true); // orange, 2.8:1
+  expect(lookForColor('#04395E', 'large').softShadow).toBeUndefined(); // deep navy, 12:1
+  expect(lookForColor('#F59E0B', 'large').softShadow).toBeUndefined(); // amber keeps dark ink
+  expect(PRIMARY_COLOR_OPTIONS.some(o => lookForColor(o.hex).softShadow)).toBe(false);
+});
+
+test('share card: orange, blue and coral in white, the yellows stay dark', () => {
+  expect(lookForColor('#F97316', 'large').text).toBe('#FFFFFF');
+  expect(lookForColor('#0A84FF', 'large').text).toBe('#FFFFFF');
+  expect(lookForColor('#F43F5E', 'large').text).toBe('#FFFFFF');
+  expect(lookForColor('#F59E0B', 'large').text).toBe('#1B1B1B');
+  expect(lookForColor('#84CC16', 'large').text).toBe('#1B1B1B');
+});
+
 test.each(
   [...PRESET_LOOKS, ...PRIMARY_COLOR_OPTIONS.map(o => lookForColor(o.hex))].flatMap(l => [
     [l.background, 'white', l] as const,
@@ -165,6 +188,47 @@ test('card on a photo paints the image under a scrim', () => {
   expect(sources).toContain('file:///bg.jpg');
   // The shade overlay is inline data, never a bundled asset or a network fetch.
   expect(sources.filter(uri => uri.startsWith('data:image/png;base64,'))).toHaveLength(1);
+});
+
+describe('footnotes on the card', () => {
+  it('drops the marks in a verse', () => {
+    expect(cleanShareText('tsy manam-pahendrena*, aoka izy')).toBe('tsy manam-pahendrena, aoka izy');
+    expect(cleanShareText('Indreo (Inty*) mpanomponao')).toBe('Indreo (Inty) mpanomponao');
+  });
+
+  it("drops a hymn's note with the lines after it (FFPM 95, 282)", () => {
+    const ffpm95 =
+      'Ny hazo nihomboanao\nDia voninahitray;\nNy nanalam-baraka Anao\nNo isandratanay ! (in-3) *\n' +
+      "Ny nanalam-baraka Anao.\n\n*) Ho an’ny feony (1) ihany";
+    expect(cleanShareText(ffpm95)).toBe(
+      'Ny hazo nihomboanao\nDia voninahitray;\nNy nanalam-baraka Anao\nNo isandratanay ! (in-3)\nNy nanalam-baraka Anao.',
+    );
+    const ffpm282 = 'Dia raiso ny mpanomponao\nHiala sasatra Aminao !\n\n*) Inty, raha olona iray no\natokana';
+    expect(cleanShareText(ffpm282)).toBe('Dia raiso ny mpanomponao\nHiala sasatra Aminao !');
+    expect(cleanShareText('Hanolotra ny tenanay *\nHiasa ho Anao.\n\n* na Haniraka ny namanay')).toBe(
+      'Hanolotra ny tenanay\nHiasa ho Anao.',
+    );
+  });
+
+  it('drops a lone mark line, and a piece that is only a mark (Fifohazana 147)', () => {
+    expect(cleanShareText('*\nMamiko tokoa na dia ho faty,')).toBe('Mamiko tokoa na dia ho faty,');
+    expect(cleanShareText('*')).toBe('');
+  });
+});
+
+describe('share strip and colour pages', () => {
+  it('shows the first colours, a colour picked further on taking the last place', () => {
+    expect(stripSlots(4, 1)).toEqual([0, 1, 2, 3]);
+    expect(stripSlots(4, -1)).toEqual([0, 1, 2, 3]);
+    expect(stripSlots(4, 10)).toEqual([0, 1, 2, 10]);
+  });
+
+  it('opens the grid on the chosen colour page', () => {
+    expect(pageOf(PRESET_LOOKS[0])).toBe(0);
+    expect(pageOf(lookForImage('file:///bg.jpg'))).toBe(0);
+    // Parchment, black, then the palette: orange is the 11th swatch, page 2.
+    expect(pageOf(lookForColor('#F97316', 'large'))).toBe(1);
+  });
 });
 
 test.each([1, 5])('card renders %i item(s) with a height-bounded auto-fit body', count => {

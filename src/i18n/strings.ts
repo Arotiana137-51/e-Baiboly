@@ -85,9 +85,14 @@ type TranslationKey =
   | 'actions.report'
   | 'actions.share'
   | 'actions.viewConcordance'
-  | 'share.title'
   | 'share.image'
-  | 'share.text'
+  | 'share.colors'
+  | 'share.background'
+  | 'share.verseCount'
+  | 'share.fewerVerses'
+  | 'share.moreVerses'
+  | 'share.prevPage'
+  | 'share.nextPage'
   | 'report.title'
   | 'report.comment'
   | 'report.placeholder'
@@ -121,7 +126,13 @@ type TranslationKey =
   | 'dictionary.title'
   | 'dictionary.search'
   | 'dictionary.empty'
-  | 'dictionary.read';
+  | 'dictionary.read'
+  | 'dictionary.recent'
+  | 'dictionary.seeAlso'
+  | 'update.title'
+  | 'update.body'
+  | 'update.later'
+  | 'update.go';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -227,9 +238,19 @@ const translations: Translations = {
     'actions.share': 'Zarao',
     'actions.viewConcordance': 'Jereo ny concordance',
     // PLACEHOLDER MG copy — needs the app's own wording, not mine.
-    'share.title': 'Zarao',
+    // The share card's photo and "every colour" buttons, and the heading over
+    // the colour grid.
     'share.image': 'Sary',
-    'share.text': 'Lahatsoratra',
+    'share.colors': 'Loko',
+    'share.background': 'Fond',
+    // Between the share card's - and + : how many verses (or hymn stanzas) it shows.
+    'share.verseCount': '{{count}} andininy',
+    // Read out by screen readers only: the - / + of the verse count and the
+    // colour grid's arrows.
+    'share.fewerVerses': 'Esory andininy iray',
+    'share.moreVerses': 'Ampio andininy iray',
+    'share.prevPage': 'Pejy teo aloha',
+    'share.nextPage': 'Pejy manaraka',
     'report.title': 'Tatero',
     'report.comment': 'Fanamarihana',
     'report.placeholder': 'Farito ny olana tokony ahitsy...',
@@ -262,11 +283,18 @@ const translations: Translations = {
     'bible.newTestament': 'Testamenta vaovao',
     // The book's own title, Evans & Randzavola 1952.
     'dictionary.title': "Diksionera amin'ny Baiboly",
-    // PLACEHOLDER MG copy — needs the app's own wording, not mine.
     'dictionary.menu': 'Diksionera',
     'dictionary.search': 'Tadiavina...',
     'dictionary.empty': 'Tsy nahitana valiny',
     'dictionary.read': 'Vakio',
+    'dictionary.recent': 'Vao nojerena',
+    // The book's own "see also" wording.
+    'dictionary.seeAlso': 'Jereo koa',
+    // Android only: the Play update prompt.
+    'update.title': 'Misy version vaovao',
+    'update.body': "Misy fanavaozana ny e-Baiboly ao amin'ny Play Store.",
+    'update.later': 'Avy eo',
+    'update.go': 'Havaozina',
   },
 };
 

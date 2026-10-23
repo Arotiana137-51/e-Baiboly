@@ -80,6 +80,9 @@ import {getBibleBookShortName} from '../utils/bibleBookNames';
 import {t} from '../i18n/strings';
 import {hexToRgba} from '../utils/colorUtils';
 import {maybeRequestReview, REVIEW_DELAY_DAYS} from '../utils/appReview';
+import {openStorePage, rememberUpdateAnswer, updateToOffer} from '../utils/appUpdate';
+import {FONT_SCALE_KEY, USER_FONT_SCALE_MAX, USER_FONT_SCALE_MIN, loadFontScale} from '../utils/readerFontScale';
+import {UpdatePromptModal} from '../components/UpdatePromptModal';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
   enqueueIssueReport,
@@ -94,10 +97,6 @@ const LAST_READ_BIBLE_KEY = 'last_read_bible';
 // closed the app on a hymn reopens on that hymn, not the Bible default.
 const LAST_READ_MODE_KEY = 'last_read_mode';
 const LAST_READ_HYMN_KEY = 'last_read_hymn';
-// Persisted in-app font scale so the reader size survives a relaunch.
-const FONT_SCALE_KEY = 'font_scale';
-const USER_FONT_SCALE_MIN = 0.8;
-const USER_FONT_SCALE_MAX = 1.6;
 
 const TOP_BAR_TOOLBAR_BASE = Platform.OS === 'android' ? 56 : 44;
 const TOP_BAR_EXTRA_TOP_PADDING = 6;
@@ -208,8 +207,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
       if (typeof params.selectedVerse === 'number') {
         setMode('bible');
-        setSelectedVerseRange(null);
-        setSelectedVerseNumber(params.selectedVerse);
+        // A range (the dictionary's passage sheet) is marked whole, like an
+        // inline ref.
+        if (typeof params.selectedVerseEnd === 'number' && params.selectedVerseEnd > params.selectedVerse) {
+          setSelectedVerseNumber(null);
+          setSelectedVerseRange({start: params.selectedVerse, end: params.selectedVerseEnd});
+        } else {
+          setSelectedVerseRange(null);
+          setSelectedVerseNumber(params.selectedVerse);
+        }
         setShouldScrollToVerse(params.selectedVerse);
       }
     }
@@ -242,6 +248,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [selectedVerse, setSelectedVerse] = useState<BibleVerse | null>(null);
   const [crossRefs, setCrossRefs] = useState<BibleCrossReference[]>([]);
   const [isCrossRefsLoading, setIsCrossRefsLoading] = useState(false);
+  // The Play versionCode to offer, once updateToOffer has found one.
+  const [updateOffer, setUpdateOffer] = useState<number | null>(null);
 
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
@@ -378,13 +386,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // initial default from overwriting the stored value before the read lands.
   const didRestoreFontScale = useRef(false);
   useEffect(() => {
-    (async () => {
-      try {
-        const stored = parseFloat((await AsyncStorage.getItem(FONT_SCALE_KEY)) ?? '');
-        if (stored >= USER_FONT_SCALE_MIN && stored <= USER_FONT_SCALE_MAX) setFontScale(stored);
-      } catch {}
+    loadFontScale().then(scale => {
+      setFontScale(scale);
       didRestoreFontScale.current = true;
-    })();
+    });
   }, []);
 
   useEffect(() => {
@@ -902,8 +907,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     const unsub = NetInfo.addEventListener((state: NetInfoState) => {
       if (state.isConnected) {
         maybeFlushReports();
-        // Once per app version; the store decides whether the dialog shows.
-        maybeRequestReview(REVIEW_DELAY_DAYS);
+        // A waiting update comes first: no point rating a version that is
+        // about to be replaced. Otherwise the review prompt, once per app
+        // version; the store decides whether its dialog shows.
+        updateToOffer().then(versionCode => {
+          if (versionCode !== null) setUpdateOffer(versionCode);
+          else maybeRequestReview(REVIEW_DELAY_DAYS);
+        });
       }
     });
 
@@ -1662,6 +1672,21 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           closeReportModal();
           await enqueueIssueReport(report);
           await maybeFlushReports();
+        }}
+      />
+
+      {/* Held back while a tutorial runs or another screen is on top; it
+          shows once Home is back. */}
+      <UpdatePromptModal
+        visible={updateOffer !== null && !tutorial.activeTutorial}
+        onLater={() => {
+          if (updateOffer !== null) rememberUpdateAnswer(updateOffer);
+          setUpdateOffer(null);
+        }}
+        onUpdate={() => {
+          if (updateOffer !== null) rememberUpdateAnswer(updateOffer);
+          setUpdateOffer(null);
+          openStorePage();
         }}
       />
 

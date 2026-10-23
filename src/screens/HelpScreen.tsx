@@ -70,7 +70,7 @@ const HelpScreen = () => {
                     backgroundColor: theme.colors.backgroundSecondary,
                     borderColor: theme.colors.divider,
                   },
-                  pressed && {opacity: 0.85},
+                  pressed && styles.pressed,
                 ]}>
                 <View style={styles.icon}>
                   <TutorialIcon
@@ -102,13 +102,12 @@ const HelpScreen = () => {
               backgroundColor: theme.colors.backgroundSecondary,
               borderColor: theme.colors.divider,
             },
-            pressed && {opacity: 0.85},
+            pressed && styles.pressed,
           ]}>
           <View style={styles.icon}>
             <MenuIcon name="bubble" color={accent} />
           </View>
           <View style={styles.cardBody}>
-            {/* PLACEHOLDER MG copy — needs the app's own wording, not mine. */}
             <Text style={[styles.cardTitle, {color: theme.colors.textPrimary}]}>
               Hametraka ny widget
             </Text>
@@ -137,6 +136,7 @@ const styles = StyleSheet.create({
   cardTitle: {fontSize: 17, fontWeight: '700', marginBottom: 4},
   badge: {fontSize: 13, fontWeight: '600'},
   chevron: {fontSize: 28, fontWeight: '300', marginLeft: 8},
+  pressed: {opacity: 0.85},
 });
 
 export default HelpScreen;

@@ -108,7 +108,9 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 
   // The book's last number comes from the data, so the range and the keypad
   // limit follow new hymns (a hardcoded 54 hid the Fanampiny psalm songs).
-  const maxNumber = filteredHymns.length ? filteredHymns[filteredHymns.length - 1].number : 9999;
+  // Before the hymns have loaded there is no range to show and nothing to
+  // find, so the keypad waits (0) instead of offering 1 to 9999.
+  const maxNumber = filteredHymns.length ? filteredHymns[filteredHymns.length - 1].number : 0;
   const maxDigits = String(maxNumber).length;
 
   const keypadWidth = useMemo(() => {
@@ -331,7 +333,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
               allowFontScaling={false}
               style={styles.categoryRange}
             >
-              {`Hira 1 – ${maxNumber}`}
+              {maxNumber ? `Hira 1 – ${maxNumber}` : ' '}
             </Text>
           </View>
 

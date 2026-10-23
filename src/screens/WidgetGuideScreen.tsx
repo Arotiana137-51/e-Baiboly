@@ -5,8 +5,11 @@ import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../contexts/ThemeContext';
 import {canPinWidget, pinWidget} from '../services/widget/dailyVerseWidget';
 import {WIDGET_GUIDE, type WidgetGuideStep} from '../tutorials/widgetGuide';
+import {SegmentedToggle} from '../components/SegmentedToggle';
 
 const RING = '#FF3B30';
+// iPhone: home screen / lock screen. Android has one section, no tabs.
+const SECTION_OPTIONS = WIDGET_GUIDE.sections.map((s, index) => ({key: String(index), label: s.title}));
 
 // A pulsing ring over the place to tap, so the picture says where before the
 // words do. Still on low-end phones.
@@ -67,18 +70,16 @@ const WidgetGuideScreen = () => {
         container: {backgroundColor: theme.colors.backgroundPrimary},
         intro: {color: theme.colors.textSecondary},
         pinButton: {backgroundColor: accent},
-        segment: {borderColor: accent},
-        segmentOn: {backgroundColor: accent},
-        segmentText: {color: accent},
         counter: {color: theme.colors.textSecondary},
         stepText: {color: theme.colors.textPrimary},
         back: {borderColor: accent},
         backText: {color: accent},
         next: {backgroundColor: accent},
         tip: {color: theme.colors.textSecondary, backgroundColor: theme.colors.backgroundSecondary},
-        imageFrame: {backgroundColor: theme.colors.backgroundSecondary},
+        // Each picture keeps its own shape.
+        imageFrame: {backgroundColor: theme.colors.backgroundSecondary, aspectRatio: step.aspect ?? 1},
       }),
-    [theme, accent],
+    [theme, accent, step.aspect],
   );
 
   const pickSection = (index: number) => {
@@ -96,26 +97,18 @@ const WidgetGuideScreen = () => {
             accessibilityRole="button"
             onPress={() => pinWidget()}
             style={({pressed}) => [styles.pinButton, themed.pinButton, pressed ? styles.pressed : null]}>
-            {/* PLACEHOLDER MG copy — needs the app's own wording, not mine. */}
             <Text style={styles.pinText}>Apetraho eo amin'ny écran ny widget</Text>
           </Pressable>
         ) : null}
 
-        {WIDGET_GUIDE.sections.length > 1 ? (
-          <View style={[styles.segments, themed.segment]}>
-            {WIDGET_GUIDE.sections.map((s, index) => (
-              <Pressable
-                key={s.title}
-                accessibilityRole="tab"
-                accessibilityState={{selected: index === sectionIndex}}
-                onPress={() => pickSection(index)}
-                style={[styles.segmentItem, index === sectionIndex ? themed.segmentOn : null]}>
-                <Text
-                  style={[styles.segmentLabel, index === sectionIndex ? styles.segmentLabelOn : themed.segmentText]}>
-                  {s.title}
-                </Text>
-              </Pressable>
-            ))}
+        {SECTION_OPTIONS.length > 1 ? (
+          // The toggle brings its own screen margins; the scroll has them already.
+          <View style={styles.sections}>
+            <SegmentedToggle
+              options={SECTION_OPTIONS}
+              selected={String(sectionIndex)}
+              onChange={key => pickSection(Number(key))}
+            />
           </View>
         ) : null}
 
@@ -128,7 +121,7 @@ const WidgetGuideScreen = () => {
         <Text style={[styles.stepText, themed.stepText]}>{step.text}</Text>
 
         {step.image ? (
-          <View style={[styles.imageFrame, themed.imageFrame, {aspectRatio: step.aspect ?? 1}]}>
+          <View style={[styles.imageFrame, themed.imageFrame]}>
             <Image source={step.image} style={styles.image} resizeMode="contain" />
             {step.highlight ? <TapRing key={`${sectionIndex}-${stepIndex}`} box={step.highlight} still={isLowEndMode} /> : null}
           </View>
@@ -172,10 +165,7 @@ const styles = StyleSheet.create({
   intro: {fontSize: 15, lineHeight: 22, marginBottom: 16},
   pinButton: {borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18, marginBottom: 20, alignItems: 'center'},
   pinText: {color: '#FFFFFF', fontSize: 18, fontWeight: '700', textAlign: 'center'},
-  segments: {flexDirection: 'row', borderWidth: 1.5, borderRadius: 12, overflow: 'hidden', marginBottom: 16},
-  segmentItem: {flex: 1, paddingVertical: 10, alignItems: 'center'},
-  segmentLabel: {fontSize: 15, fontWeight: '600'},
-  segmentLabelOn: {color: '#FFFFFF'},
+  sections: {marginHorizontal: -16, marginTop: -12, marginBottom: 8},
   counter: {fontSize: 14, fontWeight: '600', marginBottom: 8},
   imageFrame: {width: '100%', borderRadius: 12, overflow: 'hidden', marginBottom: 14},
   image: {width: '100%', height: '100%'},

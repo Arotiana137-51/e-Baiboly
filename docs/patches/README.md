@@ -27,6 +27,8 @@ docs/patches/
 
 The app reads `index.json` first, then fetches every `<version>.json` newer than its on-disk `PRAGMA user_version`. Devices below `minBaseline` skip patching and wait for the next APK release (full re-extract).
 
+A DB change no patch can carry (a new table, new or renumbered hymns) raises that target's floor in `scripts/utils/patchFloors.js`. Leave `minBaseline` alone: `build:patch` lifts it to the floor when it writes the next patch, so older devices keep the patches already published until then.
+
 ## URLs
 
 - Index: `https://arotiana137-51.github.io/e-Baiboly/patches/bible/index.json`

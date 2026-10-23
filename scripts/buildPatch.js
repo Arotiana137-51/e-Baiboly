@@ -42,6 +42,7 @@ const {execSync} = require('child_process');
 const yaml = require('js-yaml');
 
 const {getSourceDataPaths} = require('./utils/paths');
+const PATCH_FLOORS = require('./utils/patchFloors');
 const {normalizeForFtsContent, normalizeHymnAuthors} = require('./utils/buildDb');
 const {
   createJsonHymnLoader,
@@ -394,6 +395,9 @@ function main() {
       idx.minBaseline = maybe;
     }
   }
+  // This patch is built against today's DB: devices older than the last
+  // change a patch can't carry wait for the APK instead.
+  idx.minBaseline = Math.max(idx.minBaseline || 0, PATCH_FLOORS[target]);
   writeIndex(target, idx);
 
   console.log(`\nWrote ${path.relative(REPO_ROOT, patchPath)}`);

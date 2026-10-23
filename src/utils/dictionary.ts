@@ -17,8 +17,9 @@ export type IndexedWord = DictionaryWord & {
   // "ABAGITA (Estera 1 : 10)" -> main "ABAGITA", detail "(Estera 1 : 10)".
   main: string;
   detail: string;
-  // Normalized spellings, the whole headword first: "ADONIRAMA, na ADORAMA"
-  // gives ["adonirama na adorama", "adonirama", "adorama"].
+  // Normalized spellings, each once, the whole headword first: "ADONIRAMA,
+  // na ADORAMA" gives ["adonirama na adorama", "adonirama", "adorama"],
+  // "ABAGITA" just ["abagita"].
   keys: string[];
 };
 
@@ -39,14 +40,27 @@ export type DictionarySegment =
 // end of its first chapter; no chapter has this many verses.
 export const END_OF_CHAPTER = 999;
 
-const SPELLINGS = /\s*,\s*(?:na\s+)?|\s+(?:na|sy)\s+/;
+const SPELLINGS = /(\s*,\s*(?:na\s+)?|\s+(?:na|sy)\s+)/;
+
+// The other spellings are the parts after "na", or in capitals like the
+// headword: "ADONIRAMA, na ADORAMA", "VOLON-JAVATRA sy SORA-JAVATRA". A part
+// in small letters otherwise describes the word ("JEREMIA, Mpaminany",
+// "MPANJAKA, Ny bokin'ny") and must not stand for it in a "Jereo" link.
+const spellings = (main: string): string[] => {
+  const parts = main.split(SPELLINGS);
+  const kept = [parts[0]];
+  for (let i = 2; i < parts.length; i += 2) {
+    if (/\bna\b/.test(parts[i - 1]) || parts[i] === parts[i].toUpperCase()) kept.push(parts[i]);
+  }
+  return kept;
+};
 
 export const indexDictionaryWords = (words: DictionaryWord[]): IndexedWord[] =>
   words.map(w => {
     const paren = w.word.indexOf(' (');
     const main = paren === -1 ? w.word : w.word.slice(0, paren);
     const detail = paren === -1 ? '' : w.word.slice(paren + 1);
-    const keys = [main, ...main.split(SPELLINGS)].map(normalizeForHighlight).filter(Boolean);
+    const keys = [...new Set([main, ...spellings(main)].map(normalizeForHighlight))].filter(Boolean);
     return {...w, main, detail, keys};
   });
 
@@ -62,6 +76,66 @@ export const searchDictionary = (words: IndexedWord[], query: string): IndexedWo
     else if (w.keys[0].includes(q)) contains.push(w);
   }
   return [...starts, ...contains];
+};
+
+// Letters to change, add or drop to turn a into b, or max + 1 as soon as it
+// can't be max or less: it runs on every keystroke, over the whole book.
+const editDistance = (a: string, b: string, max: number): number => {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({length: b.length + 1}, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    const row = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      best = Math.min(best, row[j]);
+    }
+    if (best > max) return max + 1;
+    prev = row;
+  }
+  return prev[b.length];
+};
+
+// Typo tolerance like the Bible search's, used when nothing matches: the
+// headwords within a letter or two of what was typed, against the whole word
+// or its start ("abrahma" finds ABRAHAMA), closest first.
+export const fuzzyDictionary = (words: IndexedWord[], query: string, limit = 20): IndexedWord[] => {
+  const q = normalizeForHighlight(query);
+  if (q.length < 4) return [];
+  const max = q.length <= 5 ? 1 : 2;
+  const close: Array<{w: IndexedWord; d: number}> = [];
+  for (const w of words) {
+    let d = Infinity;
+    for (const k of w.keys) d = Math.min(d, editDistance(q, k, max), editDistance(q, k.slice(0, q.length), max));
+    if (d <= max) close.push({w, d});
+  }
+  return close
+    .sort((a, b) => a.d - b.d)
+    .slice(0, limit)
+    .map(c => c.w);
+};
+
+const firstLetter = (w: IndexedWord) => w.keys[0].charAt(0).toUpperCase();
+
+// The A to Z buttons: only the letters the headwords start with (the text
+// both apps carry has no P or R), sorted.
+export const dictionaryLetters = (words: IndexedWord[]): string[] =>
+  [...new Set(words.map(firstLetter))].filter(Boolean).sort();
+
+export const wordsUnderLetter = (words: IndexedWord[], letter: string): IndexedWord[] =>
+  words.filter(w => firstLetter(w) === letter);
+
+// One section per letter, A to Z, each in the book's order: the headers that
+// stay pinned at the top of the list while it scrolls.
+export const groupByLetter = (words: IndexedWord[]): Array<{title: string; data: IndexedWord[]}> => {
+  const groups = new Map<string, IndexedWord[]>();
+  for (const w of words) {
+    const letter = firstLetter(w);
+    const group = groups.get(letter);
+    if (group) group.push(w);
+    else groups.set(letter, [w]);
+  }
+  return [...groups.keys()].sort().map(title => ({title, data: groups.get(title)!}));
 };
 
 // "Vatosoa" -> the entry it names. Whole headwords win over the alternative
@@ -95,20 +169,55 @@ const REF = new RegExp(
   'g',
 );
 const NEXT_REF = new RegExp(`^(\\s*;\\s*)${RANGE}`);
-const SEE_ALSO = /(\b[Jj]ereo(?:\s+koa)?(?:\s+ny\s+hoe)?\s+[«"“]?\s*)([^.,;:()[\]«»"“”\n]{1,60})/g;
+const SEE_ALSO = /\b[Jj]ereo(?:\s+koa)?(?:\s+ny\s+hoe)?\s+[«"“]?\s*/g;
+// What can follow a linked name to list another: "Jereo Debora sy Jaela",
+// "Jereo X, Y na Z".
+const LIST_NEXT = /\s*,\s*(?:sy\s+|na\s+)?|\s+(?:sy|na)\s+/y;
+const PHRASE_END = /[.,;:()[\]«»"“”\n]/;
 const WORD = /\S+/g;
 // Headwords are at most a few words long.
 const MAX_SEE_ALSO_WORDS = 4;
+const MAX_SEE_ALSO_CHARS = 60;
 
 const toRef = (bookId: number, groups: Array<string | undefined>): DictionaryRef => {
   const [chapter, verse, end, endVerse] = groups;
   const verseStart = Number(verse);
-  const verseEnd =
-    endVerse !== undefined ? END_OF_CHAPTER : end !== undefined ? Math.max(verseStart, Number(end)) : verseStart;
+  let verseEnd = verseStart;
+  if (endVerse === undefined) {
+    if (end !== undefined) verseEnd = Math.max(verseStart, Number(end));
+  } else if (Number(end) === Number(chapter)) {
+    // "41 : 7 - 41 : 15" only names its own chapter again.
+    verseEnd = Math.max(verseStart, Number(endVerse));
+  } else {
+    verseEnd = END_OF_CHAPTER;
+  }
   return {bookId, bookName: BOOK_NAME.get(bookId) ?? '', chapter: Number(chapter), verseStart, verseEnd};
 };
 
-// "Jereo X" -> the longest run of words after it that names an entry.
+// The longest run of words at the start of text that names an entry, up to
+// the first punctuation.
+const entryAtStart = (
+  text: string,
+  findEntry: (phrase: string) => number | undefined,
+): {phrase: string; entryId: number} | null => {
+  const stop = text.search(PHRASE_END);
+  const run = text.slice(0, Math.min(stop === -1 ? text.length : stop, MAX_SEE_ALSO_CHARS));
+  const wordEnds: number[] = [];
+  WORD.lastIndex = 0;
+  let w: RegExpExecArray | null;
+  while ((w = WORD.exec(run)) !== null && wordEnds.length < MAX_SEE_ALSO_WORDS) {
+    wordEnds.push(w.index + w[0].length);
+  }
+  for (let n = wordEnds.length; n > 0; n -= 1) {
+    const phrase = run.slice(0, wordEnds[n - 1]);
+    const entryId = findEntry(phrase);
+    if (entryId !== undefined) return {phrase, entryId};
+  }
+  return null;
+};
+
+// "Jereo X" -> the longest run of words after it that names an entry, then
+// each one listed after it ("Jereo Debora sy Jaela").
 const linkSeeAlso = (
   text: string,
   findEntry: (phrase: string) => number | undefined,
@@ -118,22 +227,19 @@ const linkSeeAlso = (
   SEE_ALSO.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = SEE_ALSO.exec(text)) !== null) {
-    const phraseStart = m.index + m[1].length;
-    const wordEnds: number[] = [];
-    WORD.lastIndex = 0;
-    let w: RegExpExecArray | null;
-    while ((w = WORD.exec(m[2])) !== null && wordEnds.length < MAX_SEE_ALSO_WORDS) {
-      wordEnds.push(w.index + w[0].length);
-    }
-    for (let n = wordEnds.length; n > 0; n -= 1) {
-      const phrase = m[2].slice(0, wordEnds[n - 1]);
-      const entryId = findEntry(phrase);
-      if (entryId === undefined) continue;
+    let phraseStart = m.index + m[0].length;
+    let found = entryAtStart(text.slice(phraseStart), findEntry);
+    while (found) {
       if (phraseStart > plainStart) segments.push({kind: 'plain', text: text.slice(plainStart, phraseStart)});
-      segments.push({kind: 'entry', text: phrase, entryId});
-      plainStart = phraseStart + phrase.length;
-      break;
+      segments.push({kind: 'entry', text: found.phrase, entryId: found.entryId});
+      plainStart = phraseStart + found.phrase.length;
+      LIST_NEXT.lastIndex = plainStart;
+      const next = LIST_NEXT.exec(text);
+      if (!next) break;
+      phraseStart = plainStart + next[0].length;
+      found = entryAtStart(text.slice(phraseStart), findEntry);
     }
+    SEE_ALSO.lastIndex = Math.max(SEE_ALSO.lastIndex, plainStart);
   }
   if (plainStart < text.length) segments.push({kind: 'plain', text: text.slice(plainStart)});
   return segments;
@@ -155,6 +261,18 @@ export const resolveRef = (
 export const formatRef = (ref: DictionaryRef): string =>
   `${ref.bookName} ${ref.chapter}:${ref.verseStart}` +
   (ref.verseEnd > ref.verseStart ? `-${ref.verseEnd}` : '');
+
+// Every entry the text sends to with "Jereo X", once each, in reading order:
+// gathered at the end like a dictionary's "see also".
+export const linkedEntries = (paragraphs: DictionarySegment[][], selfId: number): number[] => {
+  const ids: number[] = [];
+  for (const segments of paragraphs) {
+    for (const s of segments) {
+      if (s.kind === 'entry' && s.entryId !== selfId && !ids.includes(s.entryId)) ids.push(s.entryId);
+    }
+  }
+  return ids;
+};
 
 /**
  * Split one paragraph into plain text, Bible refs and links to other entries.

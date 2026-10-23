@@ -76,15 +76,19 @@ type SheetButtonProps = {
   // 'filled' for the main action, 'outline' for the others.
   variant?: 'filled' | 'outline';
   disabled?: boolean;
+  // The button's colour when it isn't the link colour (the share card's
+  // "Zarao" takes the theme colour).
+  color?: string;
 };
 
 // One footer button; several share the footer row equally.
-export const SheetButton = ({label, onPress, variant = 'outline', disabled}: SheetButtonProps) => {
+export const SheetButton = ({label, onPress, variant = 'outline', disabled, color}: SheetButtonProps) => {
   const {theme} = useTheme();
+  const base = color ?? theme.colors.accentBlue;
   // Light theme colors (gold, sky…) would leave white text or a pale outline
   // unreadable, so both are adjusted to reach 4.5:1.
-  const fill = accentFill(theme.colors.accentBlue);
-  const accent = readableAccent(theme.colors.accentBlue, theme.colors.backgroundSecondary);
+  const fill = accentFill(base);
+  const accent = readableAccent(base, theme.colors.backgroundSecondary);
   const filled = variant === 'filled';
   return (
     <Pressable

@@ -32,6 +32,8 @@ export type RootStackParamList = {
         selectedBook?: { id: number; name: string };
         selectedChapter?: number;
         selectedVerse?: number;
+        // The last verse of a range to mark from selectedVerse on.
+        selectedVerseEnd?: number;
         selectedHymnId?: string;
         // From the notes list: open this note's bubble once its text is shown.
         openNoteId?: string;
@@ -56,8 +58,7 @@ export type RootStackParamList = {
   // fromWidget: opened from the widget's own shortcut — "done" leaves the app.
   WidgetLook: {fromWidget?: boolean} | undefined;
   Dictionary: undefined;
-  // word: the headword as linked, shown as the title while the entry loads.
-  DictionaryEntry: {id: number; word: string};
+  DictionaryEntry: {id: number};
   WidgetGuide: undefined;
 };
 
@@ -196,7 +197,8 @@ const RootNavigator = ({
       <Stack.Screen
         name="DictionaryEntry"
         component={DictionaryEntryScreen}
-        options={({route}) => ({title: route.params.word, ...headerOptions})}
+        // The word itself is the entry's big heading, so the bar says where we are.
+        options={{title: t('dictionary.menu'), ...headerOptions}}
       />
       <Stack.Screen
         name="WidgetGuide"

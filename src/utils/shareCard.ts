@@ -30,6 +30,24 @@ export type ShareCardLook = {
   text: string;
   accent: string;
   imageUri?: string;
+  // White on a mid-tone colour (orange, sky...): ShareCard adds a soft
+  // shadow under the text so it reads.
+  softShadow?: boolean;
+};
+
+// The reader's footnotes lead nowhere on a picture. A hymn's note sits at
+// the end of its stanza ("*) Ho an'ny feony (1) ihany", "* na Haniraka ...",
+// sometimes over two lines) and goes with everything after it; the marks
+// themselves ("(in-3) *", "manam-pahendrena*", a lone "*") are dropped.
+const FOOTNOTE_BODY = /^\*\)?\s*\S/;
+export const cleanShareText = (text: string): string => {
+  const lines = text.split('\n');
+  const note = lines.findIndex(line => FOOTNOTE_BODY.test(line.trim()));
+  return (note === -1 ? lines : lines.slice(0, note))
+    .map(line => line.replace(/\*/g, '').replace(/\s+$/, ''))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 };
 
 export const PRESET_LOOKS: ShareCardLook[] = [
@@ -44,11 +62,22 @@ const WHITE = '#FFFFFF';
 const DARK_TEXT = '#1B1B1B';
 const LIGHT_INK = {text: WHITE, accent: '#FFD60A'};
 
-// A palette colour as a card: white on a dark colour, black on a light one
-// (whichever reads better), for the verse and the reference alike.
-export const lookForColor = (hex: string): ShareCardLook => {
-  const ink = contrastRatio(hex, WHITE) >= contrastRatio(hex, DARK_TEXT) ? WHITE : DARK_TEXT;
-  return {background: hex, text: ink, accent: ink};
+// The share card's verse is big (42pt on a 540pt card), and most of the
+// palette looks better under it in white (the owner's call): white wins down
+// to this ratio, so only the light colours (yellows, golds, limes, light
+// greens, cyan, teal, sand) keep dark ink. ShareCard adds a soft shadow under
+// white that reads below 4.5:1.
+export const LARGE_WHITE_MIN = 2.5;
+
+// A palette colour as a card, the same ink for the verse and the reference.
+// 'small' (the widget) takes whichever of white or black reads better;
+// 'large' (the share card) prefers white.
+export const lookForColor = (hex: string, size: 'small' | 'large' = 'small'): ShareCardLook => {
+  const white = contrastRatio(hex, WHITE);
+  const useWhite = size === 'large' ? white >= LARGE_WHITE_MIN : white >= contrastRatio(hex, DARK_TEXT);
+  const ink = useWhite ? WHITE : DARK_TEXT;
+  const softShadow = size === 'large' && useWhite && white < 4.5;
+  return {background: hex, text: ink, accent: ink, ...(softShadow ? {softShadow} : {})};
 };
 
 // The night version of a flat look, for a widget that follows the phone's
@@ -123,15 +152,6 @@ export const buildShareReference = (data: ShareCardData, count: number): string 
   return first === last ? `${data.reference}${first}` : `${data.reference}${first}-${last}`;
 };
 
-export const buildShareText = (data: ShareCardData, count: number): string => {
-  const shown = data.items.slice(0, count);
-  const body =
-    shown.length === 1 && data.appendRange
-      ? shown[0].text
-      : shown.map(item => `${item.label} ${item.text}`).join('\n');
-  return `${body}\n\n${buildShareReference(data, count)}`;
-};
-
 export const buildBibleShareItems = (
   verses: BibleVerse[],
   startIndex: number,
@@ -139,7 +159,7 @@ export const buildBibleShareItems = (
 ): ShareCardItem[] =>
   verses.slice(startIndex, startIndex + MAX_SHARE_ITEMS).map(verse => ({
     label: String(verse.verse_number),
-    text: buildVerseDisplay(verse, transformText).displayText,
+    text: cleanShareText(buildVerseDisplay(verse, transformText).displayText),
   }));
 
 // Tapped stanza first, then the chorus once (if any), then the following
@@ -157,7 +177,7 @@ export const buildHymnShareItems = (
   const ordered = [stanzas[0], ...(chorus ? [chorus] : []), ...stanzas.slice(1)];
   return ordered.slice(0, MAX_SHARE_ITEMS).map(v => ({
     label: v.verseNumber === 0 ? chorusLabel : String(v.verseNumber),
-    text: v.displayText,
+    text: cleanShareText(v.displayText),
   }));
 };
 
@@ -174,9 +194,7 @@ export const buildSelectionShareItems = (
     .filter(span => span.start < end && span.end > start)
     .map(span => ({
       label: span.verseNumber === 0 ? chorusLabel : String(span.verseNumber),
-      text: chapter.chapterText
-        .slice(Math.max(start, span.start), Math.min(end, span.end))
-        .trim(),
+      text: cleanShareText(chapter.chapterText.slice(Math.max(start, span.start), Math.min(end, span.end))),
     }))
     .filter(item => item.text.length > 0);
 };

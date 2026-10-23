@@ -2,11 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import {
   buildEntryFinder,
+  dictionaryLetters,
   END_OF_CHAPTER,
+  fuzzyDictionary,
+  groupByLetter,
   indexDictionaryWords,
+  linkedEntries,
   parseDictionaryParagraph,
   resolveRef,
   searchDictionary,
+  wordsUnderLetter,
   type DictionaryRef,
 } from '../src/utils/dictionary';
 
@@ -42,6 +47,8 @@ describe('dictionary paragraphs', () => {
   it('keep ranges, and stop one that runs into the next chapter at its end', () => {
     expect(refs('Genesisy 2 : 4 - 7')).toEqual(['1:2:4-7']);
     expect(refs('Genesisy 2 : 4 - 3 : 24')).toEqual([`1:2:4-${END_OF_CHAPTER}`]);
+    // ISMAELA names the chapter twice: it ends at verse 15, not the chapter's end.
+    expect(refs('Jeremia 41 : 7 - 41 : 15')).toEqual(['24:41:7-15']);
   });
 
   it('only take a book name that starts a word', () => {
@@ -53,6 +60,24 @@ describe('dictionary paragraphs', () => {
   it('link "Jereo X" to entry X', () => {
     const link = parseDictionaryParagraph('Jereo Babela.', findEntry).find(s => s.kind === 'entry');
     expect(link).toEqual({kind: 'entry', text: 'Babela', entryId: 457});
+  });
+
+  it('link every name of a "Jereo X sy Y" list', () => {
+    const linked = parseDictionaryParagraph('Jereo Debora sy Jaela.', findEntry)
+      .filter(s => s.kind === 'entry')
+      .map(s => s.text);
+    expect(linked).toEqual(['Debora', 'Jaela']);
+  });
+
+  it('never let a headword\'s description stand for it', () => {
+    const mainOf = (phrase: string) => words[(findEntry(phrase) ?? 0) - 1]?.main;
+    // "ANJELIN'NY FIANGONANA, Ny" once turned every "Jereo ny ..." into a link.
+    expect(findEntry('ny')).toBeUndefined();
+    // "JEREMIA, Mpaminany" is Jeremiah, not the prophets' entry.
+    expect(mainOf('Mpaminany')).toBe('MPAMINANY sy FAMINANIANA');
+    // Other spellings still count, in capitals or after "na".
+    expect(mainOf('Adorama')).toBe('ADONIRAMA, na ADORAMA');
+    expect(mainOf('Abela-Mizraima')).toBe('Abela-Egyptiana, na Abela-Mizraima');
   });
 });
 
@@ -77,9 +102,54 @@ describe('dictionary refs', () => {
   });
 });
 
+describe('dictionary letters', () => {
+  it('offers only the letters the headwords start with, in order', () => {
+    expect(dictionaryLetters(words)).toEqual(
+      ['A', 'B', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'S', 'T', 'V', 'Z'],
+    );
+  });
+
+  it('groups the whole book into one section per letter, losing no word', () => {
+    const sections = groupByLetter(words);
+    expect(sections.map(s => s.title)).toEqual(dictionaryLetters(words));
+    expect(sections.reduce((n, s) => n + s.data.length, 0)).toBe(words.length);
+  });
+
+  it('lists every headword under its letter, none under another', () => {
+    const underB = wordsUnderLetter(words, 'B');
+    expect(underB).toHaveLength(234);
+    expect(underB.every(w => w.main.toUpperCase().startsWith('B'))).toBe(true);
+  });
+});
+
 describe('dictionary search', () => {
   it('finds an entry by its other spelling, words starting with the query first', () => {
     const found = searchDictionary(words, 'adoram').map(w => w.id);
     expect(found[0]).toBe(72); // ADONIRAMA, na ADORAMA
+  });
+});
+
+describe('dictionary typo tolerance', () => {
+  const mains = (query: string) => fuzzyDictionary(words, query).map(w => w.main);
+
+  it('finds a headword with a letter wrong, missing or swapped', () => {
+    expect(mains('abrahma')).toContain('ABRAHAMA');
+    expect(mains('babila')).toContain('BABELA');
+  });
+
+  it('stays quiet on short queries, where one letter off matches too much', () => {
+    expect(mains('abx')).toEqual([]);
+  });
+});
+
+describe('dictionary see also', () => {
+  it('lists each linked entry once, never the entry itself', () => {
+    const paragraphs = ['Jereo Babela. Jereo koa Babela.', 'Jereo Babylona.'].map(p =>
+      parseDictionaryParagraph(p, findEntry),
+    );
+    const ids = linkedEntries(paragraphs, 1);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain(457);
+    expect(linkedEntries(paragraphs, 457)).not.toContain(457);
   });
 });

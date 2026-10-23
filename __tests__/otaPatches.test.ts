@@ -14,6 +14,8 @@ import {
 
 type Row = Record<string, unknown>;
 
+const PATCH_FLOORS: Record<PatchTarget, number> = require('../scripts/utils/patchFloors');
+
 const patchDir = (target: PatchTarget) =>
   path.join(__dirname, '../docs/patches', target);
 const readJson = (file: string) => JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -77,12 +79,14 @@ describe.each(['bible', 'hymns'] as const)('%s', target => {
   });
 
   // A device patched up to `latest` must read what a fresh install reads.
-  // Patches below minBaseline no longer apply anywhere, so they don't count.
+  // Patches below the floor were built for DBs older than the last change no
+  // patch can carry: the devices that take them re-extract with the next APK.
   test('the patches still in use leave the rows the bundled database has', async () => {
     const t = TARGETS[target];
+    const floor = Math.max(index.minBaseline, PATCH_FLOORS[target]);
     const final = new Map<string, Row>();
     for (const version of [...index.patches].sort((a, b) => a - b)) {
-      if (version < index.minBaseline) continue;
+      if (version < floor) continue;
       for (const row of t.rows(patch(version))) final.set(t.key(row), row);
     }
     for (const [key, row] of final) {

@@ -73,7 +73,6 @@ const AboutScreen = () => {
           // The concordance data is OpenBible.info's, whose CC BY licence
           // asks for this credit in the app.
           'Concordance: OpenBible.info (CC BY)',
-          // PLACEHOLDER MG copy: the wording of this credit is the user's call.
           "Diksionera: Evans sy Randzavola Henri, Diksionera amin' ny Baiboly (Librairie Protestante, 1952)",
         ],
       },
