@@ -31,6 +31,7 @@ type ShareCardProps = {
 export const ShareCard = ({items, reference, look: colors, ref}: ShareCardProps) => {
   const showLabels = items.length > 1;
   const onPhoto = !!colors.imageUri;
+  const inkShadow = onPhoto ? styles.onPhotoText : colors.softShadow ? styles.softShadow : null;
 
   return (
     <View
@@ -57,7 +58,7 @@ export const ShareCard = ({items, reference, look: colors, ref}: ShareCardProps)
           numberOfLines={24}
           minimumFontScale={0.3}
           allowFontScaling={false}
-          style={[styles.bodyText, {color: colors.text}, onPhoto && styles.onPhotoText]}
+          style={[styles.bodyText, {color: colors.text}, inkShadow]}
         >
           {items.map((item, index) => (
             <React.Fragment key={`${item.label}-${index}`}>
@@ -73,7 +74,7 @@ export const ShareCard = ({items, reference, look: colors, ref}: ShareCardProps)
         <View style={[styles.rule, {backgroundColor: colors.accent}]} />
         <Text
           allowFontScaling={false}
-          style={[styles.reference, {color: colors.accent}, onPhoto && styles.onPhotoText]}
+          style={[styles.reference, {color: colors.accent}, inkShadow]}
         >
           {reference}
         </Text>
@@ -111,6 +112,11 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: {width: 0, height: 1},
     textShadowRadius: 4,
+  },
+  softShadow: {
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: {width: 0, height: 1},
+    textShadowRadius: 3,
   },
   footer: {
     height: FOOTER_HEIGHT,

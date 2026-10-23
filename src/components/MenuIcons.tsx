@@ -19,7 +19,8 @@ export type MenuIconName =
   | 'note'
   | 'bible'
   | 'dictionary'
-  | 'trash';
+  | 'trash'
+  | 'photo';
 
 // NOTE: geometry is hardcoded to a 24px box (the one size the menu grid
 // uses). Parameterise on size if a second caller ever needs another.
@@ -141,6 +142,28 @@ const Dictionary: React.FC<IconProps> = ({color}) => (
   </View>
 );
 
+// A photo: a frame with the sun over two hills, the usual sign for "a picture
+// from the phone".
+const Photo: React.FC<IconProps> = ({color}) => {
+  const tint = React.useMemo(
+    () =>
+      StyleSheet.create({
+        line: {borderColor: color},
+        fill: {backgroundColor: color},
+        hill: {borderBottomColor: color},
+      }),
+    [color],
+  );
+  return (
+    <View style={styles.box}>
+      <View style={[styles.photoFrame, tint.line]} />
+      <View style={[styles.photoSun, tint.fill]} />
+      <View style={[styles.photoHill, styles.photoHillBig, tint.hill]} />
+      <View style={[styles.photoHill, styles.photoHillSmall, tint.hill]} />
+    </View>
+  );
+};
+
 // Trash can: handle, lid, open-topped body with two ribs.
 const Trash: React.FC<IconProps> = ({color}) => (
   <View style={styles.box}>
@@ -166,6 +189,7 @@ const ICONS: Record<MenuIconName, React.FC<IconProps>> = {
   bible: Bible,
   dictionary: Dictionary,
   trash: Trash,
+  photo: Photo,
 };
 
 export const MenuIcon: React.FC<IconProps & {name: MenuIconName}> = ({name, color}) => {
@@ -291,6 +315,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     includeFontPadding: false,
   },
+
+  photoFrame: {position: 'absolute', left: 1, top: 3, width: 22, height: 18, borderWidth: STROKE, borderRadius: 3},
+  photoSun: {position: 'absolute', left: 15, top: 7, width: 4, height: 4, borderRadius: 2},
+  // Hills are border triangles standing on the frame's inner bottom edge.
+  photoHill: {position: 'absolute', width: 0, height: 0, borderLeftColor: 'transparent', borderRightColor: 'transparent'},
+  photoHillBig: {left: 4, top: 11, borderLeftWidth: 6, borderRightWidth: 6, borderBottomWidth: 8},
+  photoHillSmall: {left: 11, top: 14, borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 5},
 
   trashHandle: {position: 'absolute', left: 9, top: 2, width: 6, height: 4, borderWidth: STROKE, borderBottomWidth: 0, borderTopLeftRadius: 1, borderTopRightRadius: 1},
   trashLid: {position: 'absolute', left: 3, top: 5, width: 18, height: STROKE, borderRadius: 1},
