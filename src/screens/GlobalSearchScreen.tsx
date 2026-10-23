@@ -26,38 +26,9 @@ import {
   segmentTextForHighlight,
 } from '../utils/searchHighlight';
 import { t } from '../i18n/strings';
+import {MagnifyingGlass} from '../components/MagnifyingGlass';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
-
-// Simple View-drawn magnifier — no icon lib.
-const MagnifyingGlass = ({ color, size = 18 }: { color: string; size?: number }) => (
-  <View style={{ width: size, height: size }}>
-    <View
-      style={{
-        position: 'absolute',
-        borderWidth: 2,
-        borderRadius: 50,
-        borderColor: color,
-        width: size * 0.8,
-        height: size * 0.8,
-        top: 0,
-        left: 0,
-      }}
-    />
-    <View
-      style={{
-        position: 'absolute',
-        backgroundColor: color,
-        width: size * 0.3,
-        height: size * 0.15,
-        bottom: -size * 0.05,
-        right: -size * 0.05,
-        borderRadius: 2,
-        transform: [{ rotate: '45deg' }],
-      }}
-    />
-  </View>
-);
 
 // One flat, virtualized list standing in for a nested accordion: Baiboly /
 // Fihirana totals -> Testament / hymn category -> genre / theme (where we

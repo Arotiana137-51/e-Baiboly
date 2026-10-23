@@ -81,6 +81,7 @@ import {t} from '../i18n/strings';
 import {hexToRgba} from '../utils/colorUtils';
 import {maybeRequestReview, REVIEW_DELAY_DAYS} from '../utils/appReview';
 import {openStorePage, rememberUpdateAnswer, updateToOffer} from '../utils/appUpdate';
+import {FONT_SCALE_KEY, USER_FONT_SCALE_MAX, USER_FONT_SCALE_MIN} from '../utils/readerFontScale';
 import {UpdatePromptModal} from '../components/UpdatePromptModal';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
@@ -96,10 +97,6 @@ const LAST_READ_BIBLE_KEY = 'last_read_bible';
 // closed the app on a hymn reopens on that hymn, not the Bible default.
 const LAST_READ_MODE_KEY = 'last_read_mode';
 const LAST_READ_HYMN_KEY = 'last_read_hymn';
-// Persisted in-app font scale so the reader size survives a relaunch.
-const FONT_SCALE_KEY = 'font_scale';
-const USER_FONT_SCALE_MIN = 0.8;
-const USER_FONT_SCALE_MAX = 1.6;
 
 const TOP_BAR_TOOLBAR_BASE = Platform.OS === 'android' ? 56 : 44;
 const TOP_BAR_EXTRA_TOP_PADDING = 6;

@@ -64,6 +64,60 @@ export const searchDictionary = (words: IndexedWord[], query: string): IndexedWo
   return [...starts, ...contains];
 };
 
+const editDistance = (a: string, b: string): number => {
+  let prev = Array.from({length: b.length + 1}, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = row;
+  }
+  return prev[b.length];
+};
+
+// Typo tolerance like the Bible search's, used when nothing matches: the
+// headwords within a letter or two of what was typed, against the whole word
+// or its start ("abrahma" finds ABRAHAMA), closest first.
+export const fuzzyDictionary = (words: IndexedWord[], query: string, limit = 20): IndexedWord[] => {
+  const q = normalizeForHighlight(query);
+  if (q.length < 4) return [];
+  const max = q.length <= 5 ? 1 : 2;
+  const close: Array<{w: IndexedWord; d: number}> = [];
+  for (const w of words) {
+    let d = Infinity;
+    for (const k of w.keys) d = Math.min(d, editDistance(q, k), editDistance(q, k.slice(0, q.length)));
+    if (d <= max) close.push({w, d});
+  }
+  return close
+    .sort((a, b) => a.d - b.d)
+    .slice(0, limit)
+    .map(c => c.w);
+};
+
+const firstLetter = (w: IndexedWord) => w.keys[0].charAt(0).toUpperCase();
+
+// The A to Z buttons: only the letters the headwords start with (the text
+// both apps carry has no P or R), sorted.
+export const dictionaryLetters = (words: IndexedWord[]): string[] =>
+  [...new Set(words.map(firstLetter))].filter(Boolean).sort();
+
+export const wordsUnderLetter = (words: IndexedWord[], letter: string): IndexedWord[] =>
+  words.filter(w => firstLetter(w) === letter);
+
+// One section per letter, A to Z, each in the book's order: the headers that
+// stay pinned at the top of the list while it scrolls.
+export const groupByLetter = (words: IndexedWord[]): Array<{title: string; data: IndexedWord[]}> => {
+  const groups = new Map<string, IndexedWord[]>();
+  for (const w of words) {
+    const letter = firstLetter(w);
+    const group = groups.get(letter);
+    if (group) group.push(w);
+    else groups.set(letter, [w]);
+  }
+  return [...groups.keys()].sort().map(title => ({title, data: groups.get(title)!}));
+};
+
 // "Vatosoa" -> the entry it names. Whole headwords win over the alternative
 // spellings, and the first entry of a name (book order) over its homonyms.
 export const buildEntryFinder = (words: IndexedWord[]) => {
@@ -155,6 +209,18 @@ export const resolveRef = (
 export const formatRef = (ref: DictionaryRef): string =>
   `${ref.bookName} ${ref.chapter}:${ref.verseStart}` +
   (ref.verseEnd > ref.verseStart ? `-${ref.verseEnd}` : '');
+
+// Every entry the text sends to with "Jereo X", once each, in reading order:
+// gathered at the end like a dictionary's "see also".
+export const linkedEntries = (paragraphs: DictionarySegment[][], selfId: number): number[] => {
+  const ids: number[] = [];
+  for (const segments of paragraphs) {
+    for (const s of segments) {
+      if (s.kind === 'entry' && s.entryId !== selfId && !ids.includes(s.entryId)) ids.push(s.entryId);
+    }
+  }
+  return ids;
+};
 
 /**
  * Split one paragraph into plain text, Bible refs and links to other entries.

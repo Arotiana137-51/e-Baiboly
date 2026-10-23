@@ -2,11 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import {
   buildEntryFinder,
+  dictionaryLetters,
   END_OF_CHAPTER,
+  fuzzyDictionary,
+  groupByLetter,
   indexDictionaryWords,
+  linkedEntries,
   parseDictionaryParagraph,
   resolveRef,
   searchDictionary,
+  wordsUnderLetter,
   type DictionaryRef,
 } from '../src/utils/dictionary';
 
@@ -77,9 +82,54 @@ describe('dictionary refs', () => {
   });
 });
 
+describe('dictionary letters', () => {
+  it('offers only the letters the headwords start with, in order', () => {
+    expect(dictionaryLetters(words)).toEqual(
+      ['A', 'B', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'S', 'T', 'V', 'Z'],
+    );
+  });
+
+  it('groups the whole book into one section per letter, losing no word', () => {
+    const sections = groupByLetter(words);
+    expect(sections.map(s => s.title)).toEqual(dictionaryLetters(words));
+    expect(sections.reduce((n, s) => n + s.data.length, 0)).toBe(words.length);
+  });
+
+  it('lists every headword under its letter, none under another', () => {
+    const underB = wordsUnderLetter(words, 'B');
+    expect(underB).toHaveLength(234);
+    expect(underB.every(w => w.main.toUpperCase().startsWith('B'))).toBe(true);
+  });
+});
+
 describe('dictionary search', () => {
   it('finds an entry by its other spelling, words starting with the query first', () => {
     const found = searchDictionary(words, 'adoram').map(w => w.id);
     expect(found[0]).toBe(72); // ADONIRAMA, na ADORAMA
+  });
+});
+
+describe('dictionary typo tolerance', () => {
+  const mains = (query: string) => fuzzyDictionary(words, query).map(w => w.main);
+
+  it('finds a headword with a letter wrong, missing or swapped', () => {
+    expect(mains('abrahma')).toContain('ABRAHAMA');
+    expect(mains('babila')).toContain('BABELA');
+  });
+
+  it('stays quiet on short queries, where one letter off matches too much', () => {
+    expect(mains('abx')).toEqual([]);
+  });
+});
+
+describe('dictionary see also', () => {
+  it('lists each linked entry once, never the entry itself', () => {
+    const paragraphs = ['Jereo Babela. Jereo koa Babela.', 'Jereo Babylona.'].map(p =>
+      parseDictionaryParagraph(p, findEntry),
+    );
+    const ids = linkedEntries(paragraphs, 1);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain(457);
+    expect(linkedEntries(paragraphs, 457)).not.toContain(457);
   });
 });

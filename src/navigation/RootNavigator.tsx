@@ -56,8 +56,7 @@ export type RootStackParamList = {
   // fromWidget: opened from the widget's own shortcut — "done" leaves the app.
   WidgetLook: {fromWidget?: boolean} | undefined;
   Dictionary: undefined;
-  // word: the headword as linked, shown as the title while the entry loads.
-  DictionaryEntry: {id: number; word: string};
+  DictionaryEntry: {id: number};
   WidgetGuide: undefined;
 };
 
@@ -196,7 +195,8 @@ const RootNavigator = ({
       <Stack.Screen
         name="DictionaryEntry"
         component={DictionaryEntryScreen}
-        options={({route}) => ({title: route.params.word, ...headerOptions})}
+        // The word itself is the entry's big heading, so the bar says where we are.
+        options={{title: t('dictionary.menu'), ...headerOptions}}
       />
       <Stack.Screen
         name="WidgetGuide"

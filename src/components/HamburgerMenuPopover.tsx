@@ -206,7 +206,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         [
           {key: 'cultMode' as const, label: t('menu.cultMode'), icon: 'hands' as const},
           {key: 'misc' as const, label: t('menu.misc'), icon: 'book' as const},
-          {key: 'dictionary' as const, label: t('dictionary.menu'), icon: 'bible' as const},
+          {key: 'dictionary' as const, label: t('dictionary.menu'), icon: 'dictionary' as const},
         ],
         [
           // "Widget" is the word in most languages; the feature itself is

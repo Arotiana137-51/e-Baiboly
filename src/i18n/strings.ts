@@ -122,6 +122,8 @@ type TranslationKey =
   | 'dictionary.search'
   | 'dictionary.empty'
   | 'dictionary.read'
+  | 'dictionary.recent'
+  | 'dictionary.seeAlso'
   | 'update.title'
   | 'update.body'
   | 'update.later'
@@ -271,6 +273,9 @@ const translations: Translations = {
     'dictionary.search': 'Tadiavina...',
     'dictionary.empty': 'Tsy nahitana valiny',
     'dictionary.read': 'Vakio',
+    'dictionary.recent': 'Vao nojerena',
+    // The book's own "see also" wording.
+    'dictionary.seeAlso': 'Jereo koa',
     // Android only: the Play update prompt.
     'update.title': 'Misy version vaovao',
     'update.body': "Misy fanavaozana ny e-Baiboly ao amin'ny Play Store.",

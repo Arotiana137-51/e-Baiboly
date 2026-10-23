@@ -1,6 +1,9 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useFocusEffect} from '@react-navigation/native';
 import {bibleDatabaseService} from '../services/database/DatabaseService';
 import {extractBracketFootnotes} from '../utils/bibleTextUtils';
+import {loadFontScale} from '../utils/readerFontScale';
 import {
   buildEntryFinder,
   indexDictionaryWords,
@@ -124,6 +127,69 @@ export const useChapterSizes = () => {
   }, []);
 
   return sizes;
+};
+
+// The last entries opened, newest first: what dictionary apps show before
+// anything is typed, so a word looked up yesterday is one tap away.
+const RECENT_KEY = 'dictionary.recent';
+const RECENT_MAX = 8;
+
+export type RecentLookup = {id: number; word: string};
+
+const readRecent = async (): Promise<RecentLookup[]> => {
+  try {
+    const list = JSON.parse((await AsyncStorage.getItem(RECENT_KEY)) ?? '[]');
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addRecentLookup = async (item: RecentLookup): Promise<void> => {
+  const list = await readRecent();
+  const next = [item, ...list.filter(r => r.id !== item.id)].slice(0, RECENT_MAX);
+  await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(next)).catch(() => {});
+};
+
+// Re-read on focus, so coming back from an entry shows it at the top.
+export const useRecentLookups = () => {
+  const [recent, setRecent] = useState<RecentLookup[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      readRecent().then(list => {
+        if (active) setRecent(list);
+      });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  const clear = useCallback(() => {
+    setRecent([]);
+    AsyncStorage.removeItem(RECENT_KEY).catch(() => {});
+  }, []);
+
+  return {recent, clear};
+};
+
+// The reader's A+ / A- size, re-read on focus in case it changed on Home.
+export const useReaderFontScale = () => {
+  const [scale, setScale] = useState(1);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      loadFontScale().then(value => {
+        if (active) setScale(value);
+      });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+  return scale;
 };
 
 export type PassageVerse = {verse_number: number; text: string};

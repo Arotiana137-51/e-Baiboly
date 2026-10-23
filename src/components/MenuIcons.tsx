@@ -4,7 +4,7 @@
 // with no cut-outs, so it reads on any cell background (except the colour
 // picker, which shows colours).
 import React from 'react';
-import {Image, StyleSheet, View} from 'react-native';
+import {Image, StyleSheet, Text, View} from 'react-native';
 
 export type MenuIconName =
   | 'heart'
@@ -18,6 +18,7 @@ export type MenuIconName =
   | 'signpost'
   | 'note'
   | 'bible'
+  | 'dictionary'
   | 'trash';
 
 // NOTE: geometry is hardcoded to a 24px box (the one size the menu grid
@@ -128,6 +129,18 @@ const Bible: React.FC<IconProps> = ({color}) => (
   </View>
 );
 
+// The Bible's closed book with "Aa" on the cover instead of the cross: the
+// usual mark of a dictionary, and unlike search's magnifier.
+const Dictionary: React.FC<IconProps> = ({color}) => (
+  <View style={styles.box}>
+    <View style={[styles.bibleCover, {borderColor: color}]} />
+    <View style={[styles.bibleSpine, {backgroundColor: color}]} />
+    <Text style={[styles.dictionaryLetters, {color}]} allowFontScaling={false}>
+      Aa
+    </Text>
+  </View>
+);
+
 // Trash can: handle, lid, open-topped body with two ribs.
 const Trash: React.FC<IconProps> = ({color}) => (
   <View style={styles.box}>
@@ -151,6 +164,7 @@ const ICONS: Record<MenuIconName, React.FC<IconProps>> = {
   signpost: Signpost,
   note: Note,
   bible: Bible,
+  dictionary: Dictionary,
   trash: Trash,
 };
 
@@ -264,6 +278,19 @@ const styles = StyleSheet.create({
   bibleSpine: {position: 'absolute', left: 4, top: 2, width: 4, height: 20, borderTopLeftRadius: 2, borderBottomLeftRadius: 2},
   bibleCrossV: {position: 'absolute', left: 13, top: 6, width: STROKE, height: 10},
   bibleCrossH: {position: 'absolute', left: 10.5, top: 8.5, width: 7, height: STROKE},
+  // Centred in the cover between the spine (x 8) and the right edge (x 19).
+  dictionaryLetters: {
+    position: 'absolute',
+    left: 8,
+    top: 6,
+    width: 11,
+    fontSize: 9,
+    lineHeight: 11,
+    letterSpacing: -0.3,
+    fontWeight: '800',
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
 
   trashHandle: {position: 'absolute', left: 9, top: 2, width: 6, height: 4, borderWidth: STROKE, borderBottomWidth: 0, borderTopLeftRadius: 1, borderTopRightRadius: 1},
   trashLid: {position: 'absolute', left: 3, top: 5, width: 18, height: STROKE, borderRadius: 1},
