@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {StyleSheet, Text} from 'react-native';
 import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
@@ -13,6 +13,13 @@ type Props = {
 // "A new version is waiting on Play": later, or off to the store page.
 export const UpdatePromptModal = ({visible, onUpdate, onLater}: Props) => {
   const {theme} = useTheme();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        body: {fontSize: 17, lineHeight: 25, color: theme.colors.textPrimary},
+      }),
+    [theme],
+  );
   return (
     <SheetModal
       visible={visible}
@@ -24,11 +31,7 @@ export const UpdatePromptModal = ({visible, onUpdate, onLater}: Props) => {
           <SheetButton label={t('update.go')} variant="filled" onPress={onUpdate} />
         </>
       }>
-      <Text style={[styles.body, {color: theme.colors.textPrimary}]}>{t('update.body')}</Text>
+      <Text style={styles.body}>{t('update.body')}</Text>
     </SheetModal>
   );
 };
-
-const styles = StyleSheet.create({
-  body: {fontSize: 17, lineHeight: 25},
-});

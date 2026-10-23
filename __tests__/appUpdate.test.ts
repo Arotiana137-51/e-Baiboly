@@ -1,4 +1,7 @@
-import {ASK_AGAIN_DAYS, shouldOffer} from '../src/utils/appUpdate';
+import {NativeModules, Platform} from 'react-native';
+import {ASK_AGAIN_DAYS, shouldOffer, updateToOffer} from '../src/utils/appUpdate';
+
+jest.mock('../src/utils/appReview', () => ({isOnline: () => Promise.resolve(true)}));
 
 const DAY = 24 * 60 * 60 * 1000;
 const now = 100 * DAY;
@@ -20,5 +23,13 @@ describe('update prompt', () => {
 
   it('offers a newer version at once, even right after answering the last one', () => {
     expect(shouldOffer(32, {versionCode: 31, at: now - DAY}, now)).toBe(true);
+  });
+
+  it('gives a second caller the same answer while Play is still being asked', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    const availableVersion = jest.fn(() => Promise.resolve(31));
+    NativeModules.AppUpdate = {availableVersion};
+    expect(await Promise.all([updateToOffer(), updateToOffer()])).toEqual([31, 31]);
+    expect(availableVersion).toHaveBeenCalledTimes(1);
   });
 });

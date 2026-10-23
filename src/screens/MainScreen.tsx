@@ -10,7 +10,7 @@ import {
   PanResponder,
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useIsFocused, useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
@@ -243,6 +243,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [isCrossRefsLoading, setIsCrossRefsLoading] = useState(false);
   // The Play versionCode to offer, once updateToOffer has found one.
   const [updateOffer, setUpdateOffer] = useState<number | null>(null);
+  // Home stays mounted under the screens pushed on it: its sheets wait for it.
+  const isFocused = useIsFocused();
 
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
@@ -1644,9 +1646,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         }}
       />
 
-      {/* Held back while a tutorial runs; it shows once the tutorial ends. */}
+      {/* Held back while a tutorial runs or another screen is on top; it
+          shows once Home is back. */}
       <UpdatePromptModal
-        visible={updateOffer !== null && !tutorial.activeTutorial}
+        visible={updateOffer !== null && !tutorial.activeTutorial && isFocused}
         onLater={() => {
           if (updateOffer !== null) rememberUpdateAnswer(updateOffer);
           setUpdateOffer(null);

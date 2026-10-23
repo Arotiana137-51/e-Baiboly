@@ -25,12 +25,7 @@ export const shouldOffer = (
   available !== null &&
   !(answered && answered.versionCode === available && now - answered.at < ASK_AGAIN_DAYS * DAY_MS);
 
-let inFlight = false;
-
-/** The versionCode to offer, or null: none waiting, offline, iOS, or asked lately. */
-export const updateToOffer = async (): Promise<number | null> => {
-  if (Platform.OS !== 'android' || inFlight) return null;
-  inFlight = true;
+const checkPlay = async (): Promise<number | null> => {
   try {
     if (!(await isOnline())) return null;
     const available: number | null = (await NativeModules.AppUpdate?.availableVersion?.()) ?? null;
@@ -40,9 +35,22 @@ export const updateToOffer = async (): Promise<number | null> => {
   } catch {
     // An update prompt is never worth an error.
     return null;
-  } finally {
-    inFlight = false;
   }
+};
+
+let inFlight: Promise<number | null> | null = null;
+
+/** The versionCode to offer, or null: none waiting, offline, iOS, or asked lately. */
+export const updateToOffer = (): Promise<number | null> => {
+  if (Platform.OS !== 'android') return Promise.resolve(null);
+  // NetInfo often fires twice at start-up: the second caller gets the same
+  // answer, not a null it would read as "no update".
+  if (!inFlight) {
+    inFlight = checkPlay().finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
 };
 
 export const rememberUpdateAnswer = (versionCode: number) =>
