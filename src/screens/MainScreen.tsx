@@ -80,6 +80,8 @@ import {getBibleBookShortName} from '../utils/bibleBookNames';
 import {t} from '../i18n/strings';
 import {hexToRgba} from '../utils/colorUtils';
 import {maybeRequestReview, REVIEW_DELAY_DAYS} from '../utils/appReview';
+import {openStorePage, rememberUpdateAnswer, updateToOffer} from '../utils/appUpdate';
+import {UpdatePromptModal} from '../components/UpdatePromptModal';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
   enqueueIssueReport,
@@ -242,6 +244,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [selectedVerse, setSelectedVerse] = useState<BibleVerse | null>(null);
   const [crossRefs, setCrossRefs] = useState<BibleCrossReference[]>([]);
   const [isCrossRefsLoading, setIsCrossRefsLoading] = useState(false);
+  // The Play versionCode to offer, once updateToOffer has found one.
+  const [updateOffer, setUpdateOffer] = useState<number | null>(null);
 
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
@@ -876,8 +880,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     const unsub = NetInfo.addEventListener((state: NetInfoState) => {
       if (state.isConnected) {
         maybeFlushReports();
-        // Once per app version; the store decides whether the dialog shows.
-        maybeRequestReview(REVIEW_DELAY_DAYS);
+        // A waiting update comes first: no point rating a version that is
+        // about to be replaced. Otherwise the review prompt, once per app
+        // version; the store decides whether its dialog shows.
+        updateToOffer().then(versionCode => {
+          if (versionCode !== null) setUpdateOffer(versionCode);
+          else maybeRequestReview(REVIEW_DELAY_DAYS);
+        });
       }
     });
 
@@ -1635,6 +1644,20 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           closeReportModal();
           await enqueueIssueReport(report);
           await maybeFlushReports();
+        }}
+      />
+
+      {/* Held back while a tutorial runs; it shows once the tutorial ends. */}
+      <UpdatePromptModal
+        visible={updateOffer !== null && !tutorial.activeTutorial}
+        onLater={() => {
+          if (updateOffer !== null) rememberUpdateAnswer(updateOffer);
+          setUpdateOffer(null);
+        }}
+        onUpdate={() => {
+          if (updateOffer !== null) rememberUpdateAnswer(updateOffer);
+          setUpdateOffer(null);
+          openStorePage();
         }}
       />
 

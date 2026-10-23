@@ -121,7 +121,11 @@ type TranslationKey =
   | 'dictionary.title'
   | 'dictionary.search'
   | 'dictionary.empty'
-  | 'dictionary.read';
+  | 'dictionary.read'
+  | 'update.title'
+  | 'update.body'
+  | 'update.later'
+  | 'update.go';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -267,6 +271,11 @@ const translations: Translations = {
     'dictionary.search': 'Tadiavina...',
     'dictionary.empty': 'Tsy nahitana valiny',
     'dictionary.read': 'Vakio',
+    // Android only: the Play update prompt.
+    'update.title': 'Misy version vaovao',
+    'update.body': "Misy fanavaozana ny e-Baiboly ao amin'ny Play Store.",
+    'update.later': 'Avy eo',
+    'update.go': 'Havaozina',
   },
 };
 

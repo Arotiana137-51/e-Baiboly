@@ -220,6 +220,10 @@ dependencies {
     // / navigationBarColor APIs flagged by Play Console.
     implementation("androidx.activity:activity-ktx:1.9.3")
 
+    // Play In-App Updates: asks Play whether this phone has an update waiting
+    // (AppUpdateModule), so the app can offer to open the store page.
+    implementation("com.google.android.play:app-update:2.1.0")
+
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
