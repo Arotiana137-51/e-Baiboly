@@ -25,6 +25,20 @@ export const normalizeForFtsQuery = (value: unknown): string => {
     .trim();
 };
 
+// The exact text the build put in a contentless `*_plain` column, copied from
+// scripts/utils/buildDb.js#normalizeForFtsContent (ASCII class, unlike the
+// query side). A patch removes a row's old index entry with FTS5's 'delete'
+// command, which needs this text back word for word; otaPatchApply.test
+// checks the two copies agree on every bundled verse.
+export const normalizeForFtsContent = (text: string): string =>
+  text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 // A token expander lets callers add dataset-specific synonyms WITHOUT this
 // generic module knowing about them. Given one normalized token, it returns the
 // alternative base words to also try (the builder appends `*` and substitutes

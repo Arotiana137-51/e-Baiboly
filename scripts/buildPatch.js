@@ -17,33 +17,31 @@
  *   --since    any git ref: SHA, tag, branch name, or
  *              HEAD~N. Compared against the working tree
  *              to discover changed rows.                (required)
- *   --version  YYYYMMDD integer for this patch. Must be
- *              strictly greater than the on-disk version
- *              we're patching FROM. Should equal the
- *              value you also bumped in dbVersions.ts.  (required)
+ *   --version  the version `yarn build:<target>` just
+ *              stamped into dbVersions.ts.              (required)
  *   --dry-run  print the diff but do not write files.   (optional)
  *
  * Output:
  *   docs/patches/<target>/<version>.json   (the patch payload)
  *   docs/patches/<target>/index.json       (updated, version appended)
  *
- * Workflow after running:
- *   1. yarn bump:db-version -- --target=<target> --version=<version>
- *   2. yarn build:patch  -- --target=<target> --since=<prev> --version=<version>
- *   3. yarn build:<target>            (rebuild bundled DB so fresh installs
- *                                       also get the fix; ships in next APK)
- *   4. git add docs/patches/... && git push
+ * Workflow (docs/patches/README.md):
+ *   1. yarn build:<target>            (bumps the version when the content
+ *                                       changed and prints it)
+ *   2. yarn build:patch  -- --target=<target> --since=<prev> --version=<printed>
+ *   3. git add docs/patches/... && git push
  *      GitHub Pages republishes → connected users pick it up.
  */
 
 const fs = require('fs');
 const path = require('path');
-const {execSync} = require('child_process');
+const {execFileSync, execSync} = require('child_process');
 const yaml = require('js-yaml');
 
 const {getSourceDataPaths} = require('./utils/paths');
 const PATCH_FLOORS = require('./utils/patchFloors');
-const {normalizeForFtsContent, normalizeHymnAuthors} = require('./utils/buildDb');
+const DB_VERSIONS = require('./utils/dbVersions');
+const {cleanDisplayText, normalizeForFtsContent, normalizeHymnAuthors} = require('./utils/buildDb');
 const {
   createJsonHymnLoader,
 } = require('./source-data/hymns/loaders/jsonHymnLoader');
@@ -149,14 +147,18 @@ function diffBibleVerses(sinceRef) {
 }
 
 function buildBiblePatch(sinceRef, version) {
-  const verses = diffBibleVerses(sinceRef).map(v => ({
-    book_id: v.book_id,
-    chapter: v.chapter,
-    verse_number: v.verse_number,
-    text: v.text,
-    text_plain: normalizeForFtsContent(v.text),
-    title: v.title,
-  }));
+  // The text as buildBibleDatabase stores and indexes it.
+  const verses = diffBibleVerses(sinceRef).map(v => {
+    const text = cleanDisplayText(v.text);
+    return {
+      book_id: v.book_id,
+      chapter: v.chapter,
+      verse_number: v.verse_number,
+      text,
+      text_plain: normalizeForFtsContent(text),
+      title: v.title,
+    };
+  });
   return {
     version,
     appliesTo: 'bible',
@@ -328,10 +330,40 @@ function main() {
     console.error('Error: --since=<git-ref> is required.');
     process.exit(1);
   }
+  // gitShow reads a missing ref as "no file", which would emit every row.
+  try {
+    execFileSync('git', ['rev-parse', '--verify', '--quiet', `${sinceRef}^{commit}`], {
+      cwd: REPO_ROOT,
+      stdio: 'ignore',
+    });
+  } catch {
+    console.error(`Error: --since=${sinceRef} is not a commit in this repo.`);
+    process.exit(1);
+  }
+  const versionKey = `${target.toUpperCase()}_DB_VERSION`;
   const version = Number(args.version);
-  if (!Number.isInteger(version) || version < 20000000 || version > 99999999) {
+  // Phones that apply the patch are stamped with this version and then keep
+  // their copy against an APK of the same version, so it must be the one the
+  // bundled DB carries.
+  if (version !== DB_VERSIONS[versionKey]) {
     console.error(
-      `Error: --version=${args.version} is not a valid YYYYMMDD integer.`
+      `Error: --version=${args.version} is not the bundled ${target} version ` +
+        `(${DB_VERSIONS[versionKey]}). Run yarn build:${target} first and pass the version it prints.`
+    );
+    process.exit(1);
+  }
+  const idx = loadIndex(target);
+  const patchRel = `docs/patches/${target}/${version}.json`;
+  // GitHub Pages serves main: what is published is what origin/main holds now.
+  try {
+    execFileSync('git', ['fetch', '--quiet', 'origin', 'main'], {cwd: REPO_ROOT, stdio: 'ignore'});
+  } catch {
+    console.warn('Warning: could not fetch origin/main; checking against the last fetched state.');
+  }
+  if (version < idx.latest || gitShow('origin/main', patchRel) !== null) {
+    console.error(
+      `Error: ${version} is older than the latest patch (${idx.latest}) or already published. ` +
+        `Change the source, rebuild with yarn build:${target} and use the new version.`
     );
     process.exit(1);
   }
@@ -379,7 +411,13 @@ function main() {
   const patchPath = path.join(targetDir, `${version}.json`);
   fs.writeFileSync(patchPath, JSON.stringify(patch, null, 2) + '\n', 'utf8');
 
-  const idx = loadIndex(target);
+  // A --since newer than the latest patch means some content reached phones
+  // only by APK; a phone below it would apply this patch and be stamped
+  // current without those changes.
+  const sinceVersions = gitShow(sinceRef, 'src/services/database/dbVersions.ts') || '';
+  const sinceVersion = Number((sinceVersions.match(new RegExp(`${versionKey} = (\\d+)`)) || [])[1]) || 0;
+  const gapFloor = sinceVersion > idx.latest ? sinceVersion : 0;
+
   if (!idx.patches.includes(version)) {
     idx.patches = [...new Set([...idx.patches, version])].sort((a, b) => a - b);
   }
@@ -397,14 +435,13 @@ function main() {
   }
   // This patch is built against today's DB: devices older than the last
   // change a patch can't carry wait for the APK instead.
-  idx.minBaseline = Math.max(idx.minBaseline || 0, PATCH_FLOORS[target]);
+  idx.minBaseline = Math.max(idx.minBaseline || 0, PATCH_FLOORS[target], gapFloor);
   writeIndex(target, idx);
 
   console.log(`\nWrote ${path.relative(REPO_ROOT, patchPath)}`);
-  console.log(`Updated ${target}/index.json (latest=${idx.latest})`);
+  console.log(`Updated ${target}/index.json (latest=${idx.latest}, minBaseline=${idx.minBaseline})`);
   console.log('\nNext:');
-  console.log(`  yarn build:${target}      # rebuild bundled DB for new installs`);
-  console.log(`  git add docs/patches/${target}/  src/services/database/dbVersions.ts`);
+  console.log(`  git add docs/patches/${target}/ src/services/database/dbVersions.ts scripts/utils/ assets/ ios/`);
   console.log(`  git commit && git push    # GitHub Pages republishes`);
 }
 

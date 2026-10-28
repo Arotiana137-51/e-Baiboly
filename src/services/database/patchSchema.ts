@@ -130,7 +130,8 @@ function isValidHymnVerseRow(raw: unknown): raw is HymnVersePatchRow {
   const r = raw as Record<string, unknown>;
   return (
     isNonEmptyString(r.hymn_id) &&
-    isIntInRange(r.verse_number, 1, 50) &&
+    // A chorus is verse 0.
+    isIntInRange(r.verse_number, 0, 50) &&
     // Patches published before the column existed carry no `heading` key.
     (r.heading == null || typeof r.heading === 'string') &&
     typeof r.text === 'string' &&
