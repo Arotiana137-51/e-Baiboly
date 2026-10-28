@@ -23,6 +23,7 @@ import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
 import CustomBottomNav from '../components/CustomBottomNav';
+import {CultProgressBar} from '../components/CultProgressBar';
 import ReportIssueModal from '../components/ReportIssueModal';
 import SelectionTopBar from '../components/SelectionTopBar';
 import VerseActionPopover from '../components/VerseActionPopover';
@@ -643,7 +644,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // (mode + book/chapter/range or hymn id/number/category) from it.
   // Whole-chapter Bible entries translate back to a null range so no banner
   // shows. isWholeChapterEntry also covers entries saved before
-  // isWholeChapter existed.
+  // isWholeChapter existed. revealTick re-runs it when a playlist tap picks the
+  // entry already playing, after the reader has moved away from it.
   useEffect(() => {
     if (!cultMode.isActive || !cultMode.currentEntry) return;
     const entry = cultMode.currentEntry;
@@ -670,7 +672,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       setCurrentHymnNumber(entry.hymnNumber);
       setCurrentHymnCategory(entry.category || null);
     }
-  }, [cultMode.isActive, cultMode.currentEntry]);
+  }, [cultMode.isActive, cultMode.currentEntry, cultMode.revealTick]);
 
   // Topnav chevrons always navigate chapters (Bible) or hymns within the
   // current category (hymnal) — even when cult mode is active. Playlist
@@ -1555,6 +1557,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           )
         )}
 
+        {cultMode.isActive && cultMode.entries.length > 0 ? (
+          <CultProgressBar current={cultMode.currentIndex} count={cultMode.entries.length} />
+        ) : null}
       </View>
       <CustomBottomNav
         activeMode={mode}

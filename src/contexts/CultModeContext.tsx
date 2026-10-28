@@ -20,7 +20,8 @@ const CULT_PLAYLIST_KEY = 'cult_playlist_v1';
 const CULT_MODE_ACTIVE_KEY = 'cult_mode_active_v1';
 
 type StoredPlaylist = {entries: CultEntry[]};
-type StoredActive = {isActive: boolean};
+// index: where the session is, or where ▶ resumes it (absent before resume).
+type StoredActive = {isActive: boolean; index?: number};
 
 type CultEntryInput =
   | Omit<CultBibleEntry, 'id'>
@@ -46,6 +47,9 @@ type CultModeContextValue = {
   goNext: () => void;
   goPrev: () => void;
   goTo: (index: number) => void;
+  // Bumped by goTo, so a tap on the entry already playing still brings the
+  // reader back to it.
+  revealTick: number;
   isFirst: boolean;
   isLast: boolean;
   isLoading: boolean;
@@ -59,14 +63,20 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
   const [entries, setEntries] = useState<CultEntry[]>([]);
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [revealTick, setRevealTick] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   // While the tutorial runs we work on a throwaway in-memory playlist: persists
   // are suppressed and the real one is stashed here, restored by endTutorial.
-  const tutorialSnapshot = useRef<{entries: CultEntry[]; isActive: boolean} | null>(
-    null,
-  );
+  const tutorialSnapshot = useRef<{
+    entries: CultEntry[];
+    isActive: boolean;
+    currentIndex: number;
+  } | null>(null);
   const inTutorial = () => tutorialSnapshot.current !== null;
+  // Read by the playlist edits, which are stable callbacks.
+  const isActiveRef = useRef(isActive);
+  isActiveRef.current = isActive;
 
   // Hydrate both stores in parallel.
   useEffect(() => {
@@ -84,10 +94,9 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
         }
         if (activeRaw) {
           const parsed = JSON.parse(activeRaw) as Partial<StoredActive>;
-          if (parsed.isActive === true) {
-            setIsActive(true);
-            setCurrentIndex(0);
-          }
+          if (parsed.isActive === true) setIsActive(true);
+          const index = parsed.index;
+          if (typeof index === 'number' && Number.isInteger(index) && index >= 0) setCurrentIndex(index);
         }
       } catch (err) {
         console.error('Error loading cult mode state:', err);
@@ -111,21 +120,28 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
     }
   }, [entries.length, currentIndex]);
 
-  const persistPlaylist = (next: CultEntry[]) => {
-    if (inTutorial()) return; // tutorial slate never overwrites the real playlist
+  // Stable (refs and setters only), so the playlist edits can list it.
+  const persistPlaylist = useCallback((next: CultEntry[]) => {
+    if (tutorialSnapshot.current) return; // tutorial slate never overwrites the real playlist
     AsyncStorage.setItem(
       CULT_PLAYLIST_KEY,
       JSON.stringify({entries: next} satisfies StoredPlaylist),
     ).catch(err => console.error('Error saving cult playlist:', err));
-  };
+  }, []);
 
-  const persistActive = (active: boolean) => {
-    if (inTutorial()) return; // tutorial slate never overwrites the real state
+  // The session and its position survive a restart, so ▶ resumes there.
+  useEffect(() => {
+    if (isLoading || inTutorial()) return; // tutorial slate never overwrites the real state
     AsyncStorage.setItem(
       CULT_MODE_ACTIVE_KEY,
-      JSON.stringify({isActive: active} satisfies StoredActive),
+      JSON.stringify({isActive, index: currentIndex} satisfies StoredActive),
     ).catch(err => console.error('Error saving cult mode active flag:', err));
-  };
+  }, [isActive, currentIndex, isLoading]);
+
+  // An edit while stopped makes a new service: ▶ starts it from the top.
+  const restartIfStopped = useCallback(() => {
+    if (!isActiveRef.current) setCurrentIndex(0);
+  }, []);
 
   const addEntry = useCallback((entry: CultEntryInput) => {
     const id = generateCultEntryId();
@@ -135,16 +151,22 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
       persistPlaylist(next);
       return next;
     });
+    restartIfStopped();
     return id;
-  }, []);
+  }, [persistPlaylist, restartIfStopped]);
 
   const removeEntry = useCallback((id: string) => {
+    const at = entries.findIndex(e => e.id === id);
     setEntries(prev => {
       const next = prev.filter(e => e.id !== id);
       persistPlaylist(next);
       return next;
     });
-  }, []);
+    // During a session, an entry removed above the current one must not
+    // shift the session onto the next entry.
+    if (isActiveRef.current) setCurrentIndex(i => (at !== -1 && at < i ? i - 1 : i));
+    else restartIfStopped();
+  }, [entries, persistPlaylist, restartIfStopped]);
 
   const reorderEntries = useCallback(
     (fromIndex: number, toIndex: number) => {
@@ -163,35 +185,37 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
         persistPlaylist(next);
         return next;
       });
+      restartIfStopped();
     },
-    [],
+    [persistPlaylist, restartIfStopped],
   );
 
   const beginTutorial = useCallback(() => {
     if (tutorialSnapshot.current) return; // already isolated
-    tutorialSnapshot.current = {entries, isActive};
+    tutorialSnapshot.current = {entries, isActive, currentIndex};
     setEntries([]);
     setIsActive(false);
     setCurrentIndex(0);
-  }, [entries, isActive]);
+  }, [entries, isActive, currentIndex]);
 
   const endTutorial = useCallback(() => {
     const snap = tutorialSnapshot.current;
     tutorialSnapshot.current = null; // clear FIRST so restored state persists
     setEntries(snap?.entries ?? []);
     setIsActive(snap?.isActive ?? false);
-    setCurrentIndex(0);
+    setCurrentIndex(snap?.currentIndex ?? 0);
   }, []);
 
+  // ▶ resumes where ■ left the session, like pause; stopped on the last
+  // entry, the service was over, so it starts again from the top.
   const toggleActive = useCallback(
     (next?: boolean) => {
       const target = typeof next === 'boolean' ? next : !isActive;
       if (target && entries.length === 0) return;
       setIsActive(target);
-      if (target) setCurrentIndex(0);
-      persistActive(target);
+      if (target && currentIndex >= entries.length - 1) setCurrentIndex(0);
     },
-    [isActive, entries.length],
+    [isActive, entries.length, currentIndex],
   );
 
   const goNext = useCallback(() => {
@@ -208,6 +232,7 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
   const goTo = useCallback(
     (index: number) => {
       setCurrentIndex(Math.max(0, Math.min(index, entries.length - 1)));
+      setRevealTick(tick => tick + 1);
     },
     [entries.length],
   );
@@ -236,6 +261,7 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
       goNext,
       goPrev,
       goTo,
+      revealTick,
       isFirst,
       isLast,
       isLoading,
@@ -254,6 +280,7 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
       goNext,
       goPrev,
       goTo,
+      revealTick,
       isFirst,
       isLast,
       isLoading,
