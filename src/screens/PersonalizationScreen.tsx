@@ -71,7 +71,7 @@ const PersonalizationScreen = () => {
       // resets to Home itself once answered.
       navigation.reset({index: 0, routes: [{name: 'OnboardingGate'}]});
     } else {
-      navigation.navigate('Home');
+      navigation.popTo('Home');
     }
   };
 

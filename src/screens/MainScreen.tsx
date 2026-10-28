@@ -1222,7 +1222,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         case 'showCultReaderNav':
           // Cult mode is genuinely active by this step, so the real ‹ ›
           // chevrons render on the reader — just return there to show them.
-          navigation.navigate('Home');
+          navigation.popTo('Home');
           return;
         case 'showBibleReader':
           // Highlight tutorial: just make sure we're on the Bible reader. The

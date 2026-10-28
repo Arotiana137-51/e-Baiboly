@@ -23,7 +23,7 @@ const CultIntroScreen = () => {
   const {start} = useTutorial();
   const accent = primaryColor ?? theme.colors.navBackground;
 
-  const goHome = () => navigation.navigate('Home');
+  const goHome = () => navigation.popTo('Home');
 
   const startCultTutorial = () => {
     goHome();
