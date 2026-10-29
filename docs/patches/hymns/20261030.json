@@ -1,0 +1,167 @@
+{
+  "version": 20261030,
+  "appliesTo": "hymns",
+  "hymns": [],
+  "hymnVerses": [
+    {
+      "hymn_id": "ffpm_4",
+      "verse_number": 3,
+      "heading": null,
+      "text": "Mamy ny fitianao,\nIzay andraisanao anay\nHonina ao an-dapanao\nRaha ho faty izahay\nNoho ny ratsy izay natao,\nLoza no anjaranay,\nNefa namboaranao\nParadisa izahay.",
+      "text_plain": "mamy ny fitianao izay andraisanao anay honina ao an dapanao raha ho faty izahay noho ny ratsy izay natao loza no anjaranay nefa namboaranao paradisa izahay",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_9",
+      "verse_number": 1,
+      "heading": null,
+      "text": "Ry Tompo Zanaharinay!\nManati-tsaotra izahay,\nFa efa novelominao,\nKa tratr'izao maraina izao.",
+      "text_plain": "ry tompo zanaharinay manati tsaotra izahay fa efa novelominao ka tratr izao maraina izao",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_9",
+      "verse_number": 3,
+      "heading": null,
+      "text": "Ny asanay hatao anio\nAtrehonao ka mba tahio,\nHatao ho voninahitrao,\nHandraisanay ny antranao",
+      "text_plain": "ny asanay hatao anio atrehonao ka mba tahio hatao ho voninahitrao handraisanay ny antranao",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_181",
+      "verse_number": 3,
+      "heading": null,
+      "text": "Fanahy Mpampahery\nIzay reraka sy voa,\nNy foko re dia tery\nHiantoraka Aminao.\nIzay mandrebireby,\nRoahy re izao,\nNy fo mitebiteby,\nHiondana Aminao !\nAmen.",
+      "text_plain": "fanahy mpampahery izay reraka sy voa ny foko re dia tery hiantoraka aminao izay mandrebireby roahy re izao ny fo mitebiteby hiondana aminao amen",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_202",
+      "verse_number": 1,
+      "heading": null,
+      "text": "Ry Ray malala ô !\nMba raisonao\nNy haja entiko\nHidera Anao.\nNy fitiavanao\nNo mamiko izao\nIzaho dia Anao,\nRy Raiko ô !",
+      "text_plain": "ry ray malala o mba raisonao ny haja entiko hidera anao ny fitiavanao no mamiko izao izaho dia anao ry raiko o",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_205",
+      "verse_number": 2,
+      "heading": null,
+      "text": "Ny tenin’ny Baiboly\nNo sabatra entinay\nHandresy ny devoly,\nIlay fahavalonay ;\nRaha misy mampahory,\nKa osa izahay,\nNy teninao mahery\nManjary tanjakay.",
+      "text_plain": "ny tenin ny baiboly no sabatra entinay handresy ny devoly ilay fahavalonay raha misy mampahory ka osa izahay ny teninao mahery manjary tanjakay",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_205",
+      "verse_number": 3,
+      "heading": null,
+      "text": "Fa teny mamy koa\nHo an’ny mpankatò\nKa loharano soa\nMiboika ao am-po,\nHo fanomezan-toky\nNy azon’ny manjo,\nSy hani-mahavoky\nMamelona ny fo.",
+      "text_plain": "fa teny mamy koa ho an ny mpankato ka loharano soa miboika ao am po ho fanomezan toky ny azon ny manjo sy hani mahavoky mamelona ny fo",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_268",
+      "verse_number": 1,
+      "heading": null,
+      "text": "Jesosy no Mpiandry\nNy Fiangonanay ;\nNy feon’Izy irery\nNo feo fantatray,\nKa tsy mba vala maro\nNy Fiangonanay ;\nIray tsy hay zaraina,\nTapahin-Tompo iray.",
+      "text_plain": "jesosy no mpiandry ny fiangonanay ny feon izy irery no feo fantatray ka tsy mba vala maro ny fiangonanay iray tsy hay zaraina tapahin tompo iray",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_268",
+      "verse_number": 2,
+      "heading": null,
+      "text": "Iray no Vatolampy\nIzay iorenanay,\nIray no Fehizoro\nIzay ikambananay,\nIray no Mofon’aina\nFihinanay etý,\nIray no antenaina\nHo azonay arý.",
+      "text_plain": "iray no vatolampy izay iorenanay iray no fehizoro izay ikambananay iray no mofon aina fihinanay ety iray no antenaina ho azonay ary",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_268",
+      "verse_number": 3,
+      "heading": null,
+      "text": "Tabain’ny hevi-diso,\nKanefa mbola iray ;\nNy saina tsy mitovy\nTsy mahazara anay ;\nFisoko maromaro,\nKanefa vala iray\nNy Tompo no mpiaro\nNy Fiangonanay.",
+      "text_plain": "tabain ny hevi diso kanefa mbola iray ny saina tsy mitovy tsy mahazara anay fisoko maromaro kanefa vala iray ny tompo no mpiaro ny fiangonanay",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_317",
+      "verse_number": 2,
+      "heading": null,
+      "text": "Enga ka handroso tsara\nny mazava e,\nMba ho fantatray tokoa\nIlay manao hoe :\n« Izaho no fahazavan’izao\ntontolo izao ».\nHanazava sy hanitsy\nizay alehanao.",
+      "text_plain": "enga ka handroso tsara ny mazava e mba ho fantatray tokoa ilay manao hoe izaho no fahazavan izao tontolo izao hanazava sy hanitsy izay alehanao",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_353",
+      "verse_number": 3,
+      "heading": null,
+      "text": "Heveronao ange,\nNy nisoloana anao ;\nNangidy indrindra anie\nNy nahazoana anao :\n:,: Hevero, ka lazao, lazao\nIzay mba nentinao :,:",
+      "text_plain": "heveronao ange ny nisoloana anao nangidy indrindra anie ny nahazoana anao hevero ka lazao lazao izay mba nentinao",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_452",
+      "verse_number": 1,
+      "heading": null,
+      "text": "Tompo ô ! ovay ny foko\nMba ho mora anarina\nToy ny an’ny zazakely\nTsotra sady marina,\n:,: Tsy mialona, tsy maditra,\nFa manao ny sitrakao :,:",
+      "text_plain": "tompo o ovay ny foko mba ho mora anarina toy ny an ny zazakely tsotra sady marina tsy mialona tsy maditra fa manao ny sitrakao",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_460",
+      "verse_number": 2,
+      "heading": null,
+      "text": "Mpanjaka lehibe\nNo itokianao ;\nNy tanany mahery re\nNo hamonjena anao ;\nTsy misy mahalala\nIzay tiany hatao :\nHandositra amin-tahotra\nNy fahavalonao.",
+      "text_plain": "mpanjaka lehibe no itokianao ny tanany mahery re no hamonjena anao tsy misy mahalala izay tiany hatao handositra amin tahotra ny fahavalonao",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_461",
+      "verse_number": 2,
+      "heading": null,
+      "text": "Fa inona no azonao\nAmin’ny fiahiana ?\nTsy afaka  ory hianao\nNoho ny fisentoana ;\nNa be herehina hianao,\nHo be ny alahelonao.",
+      "text_plain": "fa inona no azonao amin ny fiahiana tsy afaka ory hianao noho ny fisentoana na be herehina hianao ho be ny alahelonao",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ffpm_461",
+      "verse_number": 6,
+      "heading": null,
+      "text": "Misaora ny Anarany,\nFa aza ketraka hianao\nFa ho tanteraka aminao\nNy soa lazain’ny Teniny ;\nFa toky tsy mamitaka\nNy Tenin’Andriamanitra.",
+      "text_plain": "misaora ny anarany fa aza ketraka hianao fa ho tanteraka aminao ny soa lazain ny teniny fa toky tsy mamitaka ny tenin andriamanitra",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ff_19",
+      "verse_number": 1,
+      "heading": null,
+      "text": "Raha Jehovah no Mpiandry,\nTsy mba hisy mampahory ;\nAhi-maitso no handriana,\nNy fanahy velombelona ;\nEny, tsy hanahy akory\nLala-marina, lala-tsambatra\n(Sambatra ifaliana).",
+      "text_plain": "raha jehovah no mpiandry tsy mba hisy mampahory ahi maitso no handriana ny fanahy velombelona eny tsy hanahy akory lala marina lala tsambatra sambatra ifaliana",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ff_19",
+      "verse_number": 0,
+      "heading": null,
+      "text": "Raha Jehovah no mpiandry\n(Tsy mba ... hisy)\nTsy mba hisy izay mampahory,\nAhi-maitso no handriako\n(Ranon'aina ho sotroiko)\nNy fanahiko ho velominy\nMiasa Izy tsy mba matory,\nLala-marina itondrany\ntsy ho foiko.",
+      "text_plain": "raha jehovah no mpiandry tsy mba hisy tsy mba hisy izay mampahory ahi maitso no handriako ranon aina ho sotroiko ny fanahiko ho velominy miasa izy tsy mba matory lala marina itondrany tsy ho foiko",
+      "is_chorus": 1
+    },
+    {
+      "hymn_id": "ff_19",
+      "verse_number": 3,
+      "heading": null,
+      "text": "Eo imasom-pahavalo\nNy latabatro velariny ;\nDiloilo feno hanitra\n(Efa namontosany ahy)\nSafononoka tantely\nNy kapoakako namboariny\nFahasoavana no sisa\nAfaka ahiahy\n(Afaka ahiahy).",
+      "text_plain": "eo imasom pahavalo ny latabatro velariny diloilo feno hanitra efa namontosany ahy safononoka tantely ny kapoakako namboariny fahasoavana no sisa afaka ahiahy afaka ahiahy",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ff_19",
+      "verse_number": 4,
+      "heading": null,
+      "text": "Ao an-tranonao ry Tompo\nNo iriko hialofana ;\nKa tsy afa-miditra any\n(Ny hetraketraky ny tany)\nRaha ny fonao feno antra\nNo ho lamba hirakofana,\nAry ny androm-pifaliana\nTsy ho lany (Tsy ho lany).\n(ANDRIAMANJATO R.\nRAJOELISOLO R.)",
+      "text_plain": "ao an tranonao ry tompo no iriko hialofana ka tsy afa miditra any ny hetraketraky ny tany raha ny fonao feno antra no ho lamba hirakofana ary ny androm pifaliana tsy ho lany tsy ho lany andriamanjato r rajoelisolo r",
+      "is_chorus": 0
+    }
+  ]
+}

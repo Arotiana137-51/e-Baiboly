@@ -16,5 +16,5 @@
  * `yarn bump:db-version` script — it updates both files atomically.
  */
 
-export const BIBLE_DB_VERSION = 20261021;
-export const HYMNS_DB_VERSION = 20261029;
+export const BIBLE_DB_VERSION = 20261030;
+export const HYMNS_DB_VERSION = 20261031;

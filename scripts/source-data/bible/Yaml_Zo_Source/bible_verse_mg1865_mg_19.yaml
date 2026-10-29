@@ -157,7 +157,7 @@ mg1865::mg_19::3::2:
   verse_number: 2
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Maro no milaza ny fanahiko hoe: tsy manam-pamonjena amin''Andriamanitra izy.'
+  verse_text: 'Maro no milaza ny fanahiko hoe: tsy manam-pamonjena amin''Andriamanitra izy. [Sela.]'
 mg1865::mg_19::3::3:
   verse_version: mg1865
   verse_book: mg_19
@@ -181,7 +181,7 @@ mg1865::mg_19::3::5:
   verse_number: 5
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Izaho nandry ka natory; nifoha aho, satria Jehovah no manohana ahy.'
+  verse_text: 'Izaho nandry ka natory; nifoha aho, satria Jehovah no manohana ahy. [Sela.]'
 mg1865::mg_19::3::6:
   verse_version: mg1865
   verse_book: mg_19
@@ -205,7 +205,7 @@ mg1865::mg_19::3::8:
   verse_number: 8
   verse_date_revised: null
   verse_title: null
-  verse_text: 'An''i Jehovah ny famonjena; Ho amin''ny olonao anie ny fitahianao*. [*Na: Ho amin''ny olonao ny fitahianao]'
+  verse_text: 'An''i Jehovah ny famonjena; Ho amin''ny olonao anie ny fitahianao*. [*Na: Ho amin''ny olonao ny fitahianao] [Sela.]'
 mg1865::mg_19::4::1:
   verse_version: mg1865
   verse_book: mg_19
@@ -221,7 +221,7 @@ mg1865::mg_19::4::2:
   verse_number: 2
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ry lehibe, mandra-pahoviana no hataonareo ho henatra ny voninahitro, ary ho tia zava-poana sy hamoron-dainga ianareo?'
+  verse_text: 'Ry lehibe, mandra-pahoviana no hataonareo ho henatra ny voninahitro, ary ho tia zava-poana sy hamoron-dainga ianareo? [Sela.]'
 mg1865::mg_19::4::3:
   verse_version: mg1865
   verse_book: mg_19
@@ -237,7 +237,7 @@ mg1865::mg_19::4::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Tezera*, fa aza manota; mieritrereta eo am-pandrianareo, ka mangina. [*Na: Mangovita]'
+  verse_text: 'Tezera*, fa aza manota; mieritrereta eo am-pandrianareo, ka mangina. [*Na: Mangovita] [Sela.]'
 mg1865::mg_19::4::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -485,7 +485,7 @@ mg1865::mg_19::7::5:
   verse_number: 5
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Dia aoka ny fahavalo hanenjika ny fanahiko ka hahatratra azy; eny, aoka izy hanitsaka ny aiko amin''ny tany, ary hampandry ny voninahitro amin''ny vovoka.'
+  verse_text: 'Dia aoka ny fahavalo hanenjika ny fanahiko ka hahatratra azy; eny, aoka izy hanitsaka ny aiko amin''ny tany, ary hampandry ny voninahitro amin''ny vovoka. [Sela.]'
 mg1865::mg_19::7::6:
   verse_version: mg1865
   verse_book: mg_19
@@ -813,7 +813,7 @@ mg1865::mg_19::9::20:
   verse_number: 20
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Asio fampahatahorana* izy, Jehovah ô; aoka ho fantatry ny jentilisa fa olona ihany izy. [*Na: fampianarana]'
+  verse_text: 'Asio fampahatahorana* izy, Jehovah ô; aoka ho fantatry ny jentilisa fa olona ihany izy. [*Na: fampianarana] [Sela.]'
 mg1865::mg_19::10::1:
   verse_version: mg1865
   verse_book: mg_19
@@ -933,7 +933,7 @@ mg1865::mg_19::10::15:
   verse_number: 15
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Torotoroy ny sandrin''ny ratsy fanahy; ary adinoy ny heloky ny mpanao ratsy mandra-paha-tsy hisy hitanao intsony.'
+  verse_text: 'Torotoroy ny sandrin''ny ratsy fanahy; ary adino ny heloky ny mpanao ratsy mandra-paha-tsy hisy hitanao intsony.'
 mg1865::mg_19::10::16:
   verse_version: mg1865
   verse_book: mg_19
@@ -1965,7 +1965,7 @@ mg1865::mg_19::20::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Hahatsiaro ny fanatitra hohaninao rehetra anie Izy, ary hankasitraka ny fanatitra doranao.'
+  verse_text: 'Hahatsiaro ny fanatitra hohaninao rehetra anie Izy, ary hankasitraka ny fanatitra doranao. [Sela.]'
 mg1865::mg_19::20::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -2029,7 +2029,7 @@ mg1865::mg_19::21::2:
   verse_number: 2
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ny nirin''ny fony dia nomenao azy, ary ny nangatahin''ny molony tsy mba nolavinao.'
+  verse_text: 'Ny nirin''ny fony dia nomenao azy, ary ny nangatahin''ny molony tsy mba nolavinao. [Sela.]'
 mg1865::mg_19::21::3:
   verse_version: mg1865
   verse_book: mg_19
@@ -2461,7 +2461,7 @@ mg1865::mg_19::24::6:
   verse_number: 6
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Izany no taranaka mitady Azy, izay mitady ny tavanao, dia Jakoba*. [*Na: Izay mitady ny tavanao, ry Andriamanitr''i Jakoba]'
+  verse_text: 'Izany no taranaka mitady Azy, izay mitady ny tavanao, dia Jakoba*. [*Na: Izay mitady ny tavanao, ry Andriamanitr''i Jakoba] [Sela.]'
 mg1865::mg_19::24::7:
   verse_version: mg1865
   verse_book: mg_19
@@ -2493,7 +2493,7 @@ mg1865::mg_19::24::10:
   verse_number: 10
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Iza ary izao Mpanjakan''ny voninahitra izao? Jehovah, Tompon''ny maro, Izy no Mpanjakan''ny voninahitra.'
+  verse_text: 'Iza ary izao Mpanjakan''ny voninahitra izao? Jehovah, Tompon''ny maro, Izy no Mpanjakan''ny voninahitra. [Sela.]'
 mg1865::mg_19::25::1:
   verse_version: mg1865
   verse_book: mg_19
@@ -3357,7 +3357,7 @@ mg1865::mg_19::32::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa efa navesatra tamiko andro aman''alina ny tananao; niova ny fahatanjahako toy ny azon''ny fahamainana amin''ny lohataona.'
+  verse_text: 'Fa efa navesatra tamiko andro aman''alina ny tananao; niova ny fahatanjahako toy ny azon''ny fahamainana amin''ny lohataona. [Sela.]'
 mg1865::mg_19::32::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -3365,7 +3365,7 @@ mg1865::mg_19::32::5:
   verse_number: 5
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ny fahotako nambarako taminao, ary ny heloko tsy mba nafeniko. Hoy izaho: hiaiky ny fahadisoako amin''i Jehovah aho; ary Ianao dia namela ny heloky ny fahotako.'
+  verse_text: 'Ny fahotako nambarako taminao, ary ny heloko tsy mba nafeniko. Hoy izaho: hiaiky ny fahadisoako amin''i Jehovah aho; ary Ianao dia namela ny heloky ny fahotako. [Sela.]'
 mg1865::mg_19::32::6:
   verse_version: mg1865
   verse_book: mg_19
@@ -3381,7 +3381,7 @@ mg1865::mg_19::32::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ianao no fiereko, miaro ahy tsy ho azon''ny fahoriana Ianao; fihobiam-pamonjena no ahodidinao ahy.'
+  verse_text: 'Ianao no fiereko, miaro ahy tsy ho azon''ny fahoriana Ianao; fihobiam-pamonjena no ahodidinao ahy. [Sela.]'
 mg1865::mg_19::32::8:
   verse_version: mg1865
   verse_book: mg_19
@@ -3869,7 +3869,7 @@ mg1865::mg_19::35::13:
   verse_number: 13
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ary ny amiko, raha narary izy ireo, dia lamba fisaonana no nitafiako; nampahory ny tenako tamin''ny ny fifadian-kanina aho; ary ny fivavako nody tao an-tratrako.'
+  verse_text: 'Ary ny amiko, raha narary izy ireo, dia lamba fisaonana no nitafiako; nampahory ny tenako tamin''ny fifadian-kanina aho; ary ny fivavako nody tao an-tratrako.'
 mg1865::mg_19::35::14:
   verse_version: mg1865
   verse_book: mg_19
@@ -4621,7 +4621,7 @@ mg1865::mg_19::39::5:
   verse_number: 5
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Indro efa nataonao vodivoam-pelatanana ny androko, ary ny fiainako toy ny tsinontsinona eo anatrehanao. Zava-poana ihany tokoa ny olon-drehetra, na dia matanjaka aza*. [*Na: Natao ho zava-poana ihany tokoa ny olona rehetra]'
+  verse_text: 'Indro efa nataonao vodivoam-pelatanana ny androko, ary ny fiainako toy ny tsinontsinona eo anatrehanao. Zava-poana ihany tokoa ny olon-drehetra, na dia matanjaka aza*. [*Na: Natao ho zava-poana ihany tokoa ny olona rehetra] [Sela.]'
 mg1865::mg_19::39::6:
   verse_version: mg1865
   verse_book: mg_19
@@ -4669,7 +4669,7 @@ mg1865::mg_19::39::11:
   verse_number: 11
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Anatra noho ny fahadisoany no ananaranao ny olona, ka manimba ny hatsaran-tarehiny tahaka ny kalalao ianao; zava-poana tokoa ny olona rehetra.'
+  verse_text: 'Anatra noho ny fahadisoany no ananaranao ny olona, ka manimba ny hatsaran-tarehiny tahaka ny kalalao ianao; zava-poana tokoa ny olona rehetra. [Sela.]'
 mg1865::mg_19::39::12:
   verse_version: mg1865
   verse_book: mg_19
@@ -5117,7 +5117,7 @@ mg1865::mg_19::44::8:
   verse_number: 8
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Andriamanitra no ankalazainay mandrakariva; ary ny anaranao no hoderainay mandrakizay.'
+  verse_text: 'Andriamanitra no ankalazainay mandrakariva; ary ny anaranao no hoderainay mandrakizay. [Sela.]'
 mg1865::mg_19::44::9:
   verse_version: mg1865
   verse_book: mg_19
@@ -5421,7 +5421,7 @@ mg1865::mg_19::46::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Na mirohondrohona sy misamboaravoara aza ny onjany, ka mihorohoro ny tendrombohitra noho ny fisafoakany.'
+  verse_text: 'Na mirohondrohona sy misamboaravoara aza ny onjany, ka mihorohoro ny tendrombohitra noho ny fisafoakany. [Sela.]'
 mg1865::mg_19::46::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -5453,7 +5453,7 @@ mg1865::mg_19::46::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah, Tompon''ny maro, no momba antsika; Andriamanitr''i Jakoba no fiarovana avo ho antsika.'
+  verse_text: 'Jehovah, Tompon''ny maro, no momba antsika; Andriamanitr''i Jakoba no fiarovana avo ho antsika. [Sela.]'
 mg1865::mg_19::46::8:
   verse_version: mg1865
   verse_book: mg_19
@@ -5485,7 +5485,7 @@ mg1865::mg_19::46::11:
   verse_number: 11
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah, Tompon''ny maro, no momba antsika; Andriamanitr''i Jakoba no aro ho antsika.'
+  verse_text: 'Jehovah, Tompon''ny maro, no momba antsika; Andriamanitr''i Jakoba no aro ho antsika. [Sela.]'
 mg1865::mg_19::47::1:
   verse_version: mg1865
   verse_book: mg_19
@@ -5509,7 +5509,7 @@ mg1865::mg_19::47::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Mandresy firenena maro Izy ho ambanintsika , ary firenen-tsamy hafa ho ambanin''ny tongotsika.'
+  verse_text: 'Mandresy firenena maro Izy ho ambanintsika, ary firenen-tsamy hafa ho ambanin''ny tongotsika.'
 mg1865::mg_19::47::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -5517,7 +5517,7 @@ mg1865::mg_19::47::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Mifidy ny lovantsika ho antsika Izy, dia ny voninahitr''i Jakoba izay tiany.'
+  verse_text: 'Mifidy ny lovantsika ho antsika Izy, dia ny voninahitr''i Jakoba izay tiany. [Sela.]'
 mg1865::mg_19::47::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -5621,7 +5621,7 @@ mg1865::mg_19::48::8:
   verse_number: 8
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Araka izay efa rentsika no hitantsika, tao an-tanànan''i Jehovah, Tompon''ny maro, tao an-tanànan''Andriamanitsika. Andriamanitra mampitoetra azy mandrakizay.'
+  verse_text: 'Araka izay efa rentsika no hitantsika, tao an-tanànan''i Jehovah, Tompon''ny maro, tao an-tanànan''Andriamanitsika. Andriamanitra mampitoetra azy mandrakizay. [Sela.]'
 mg1865::mg_19::48::9:
   verse_version: mg1865
   verse_book: mg_19
@@ -5645,7 +5645,7 @@ mg1865::mg_19::48::11:
   verse_number: 11
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Aoka hifaly ny tendrombohitra Ziona, aoka ho ravoravo ny zanaka-vavin''Joda, noho ny fitsaranao.'
+  verse_text: 'Aoka hifaly ny tendrombohitra Ziona, aoka ho ravoravo ny zanaka-vavin''i Joda, noho ny fitsaranao.'
 mg1865::mg_19::48::12:
   verse_version: mg1865
   verse_book: mg_19
@@ -5773,7 +5773,7 @@ mg1865::mg_19::49::13:
   verse_number: 13
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Izany no falehan''ny olona adala; ary ny taranany mandimby azy mankasitraka ny teniny.'
+  verse_text: 'Izany no falehan''ny olona adala; ary ny taranany mandimby azy mankasitraka ny teniny. [Sela.]'
 mg1865::mg_19::49::14:
   verse_version: mg1865
   verse_book: mg_19
@@ -5789,7 +5789,7 @@ mg1865::mg_19::49::15:
   verse_number: 15
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa Andriamanitra kosa hamonjy ny aiko amin''ny herin''ny fiainan-tsy hita, 3 satria handray ahy Izy*. [*Na: Rehefa azony aho]'
+  verse_text: 'Fa Andriamanitra kosa hamonjy ny aiko amin''ny herin''ny fiainan-tsy hita, 3 satria handray ahy Izy*. [*Na: Rehefa azony aho] [Sela.]'
 mg1865::mg_19::49::16:
   verse_version: mg1865
   verse_book: mg_19
@@ -5877,7 +5877,7 @@ mg1865::mg_19::50::6:
   verse_number: 6
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Hasehon''ny lanitra ny fahamarinany; fa Andriamanitra no Mpitsara.'
+  verse_text: 'Hasehon''ny lanitra ny fahamarinany; fa Andriamanitra no Mpitsara. [Sela.]'
 mg1865::mg_19::50::7:
   verse_version: mg1865
   verse_book: mg_19
@@ -6189,7 +6189,7 @@ mg1865::mg_19::52::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Efa tia ny ratsy noho ny tsara ianao, ary ny lainga noho ny miteny ny marina.'
+  verse_text: 'Efa tia ny ratsy noho ny tsara ianao, ary ny lainga noho ny miteny ny marina. [Sela.]'
 mg1865::mg_19::52::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -6205,7 +6205,7 @@ mg1865::mg_19::52::5:
   verse_number: 5
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Andriamanitra kosa hanimba* anao mandrakizay; hisambotra anao sy hanongotra anao hiala ao an-day Izy, ary hamongotra anao tsy ho eo amin''ny tanin''ny velona. [*Na: hanongana]'
+  verse_text: 'Andriamanitra kosa hanimba* anao mandrakizay; hisambotra anao sy hanongotra anao hiala ao an-day Izy, ary hamongotra anao tsy ho eo amin''ny tanin''ny velona. [*Na: hanongana] [Sela.]'
 mg1865::mg_19::52::6:
   verse_version: mg1865
   verse_book: mg_19
@@ -6309,7 +6309,7 @@ mg1865::mg_19::54::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa olona hafa firenena no mitsangana hamely ahy, ary olon-dozabe no mitady ny aiko; tsy mihevitra an''Andriamanitra ho eo anatrehany izy.'
+  verse_text: 'Fa olona hafa firenena no mitsangana hamely ahy, ary olon-dozabe no mitady ny aiko; tsy mihevitra an''Andriamanitra ho eo anatrehany izy. [Sela.]'
 mg1865::mg_19::54::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -6397,7 +6397,7 @@ mg1865::mg_19::55::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Eny, handositra lavitra aho ka hitoetra any an''efitra.'
+  verse_text: 'Eny, handositra lavitra aho ka hitoetra any an''efitra. [Sela.]'
 mg1865::mg_19::55::8:
   verse_version: mg1865
   verse_book: mg_19
@@ -6493,7 +6493,7 @@ mg1865::mg_19::55::19:
   verse_number: 19
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Hihaino Andriamanitra, Izay mipetraka hatramin''ny taloha, ka hamaly ireo olona tsy miova toetra, sady tsy matahotra an''Andriamanitra.'
+  verse_text: 'Hihaino Andriamanitra, Izay mipetraka hatramin''ny taloha, [Sela.] ka hamaly ireo olona tsy miova toetra, sady tsy matahotra an''Andriamanitra.'
 mg1865::mg_19::55::20:
   verse_version: mg1865
   verse_book: mg_19
@@ -6653,7 +6653,7 @@ mg1865::mg_19::57::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Haniraka avy any an-danitra Izy ka hamonjy ahy, raha miteny ratsy izay misafoaka manenjika ahy; eny, Andriamanitra haniraka ny famindram-pony sy ny fahamarinany.'
+  verse_text: 'Haniraka avy any an-danitra Izy ka hamonjy ahy, raha miteny ratsy izay misafoaka manenjika ahy; [Sela.] eny, Andriamanitra haniraka ny famindram-pony sy ny fahamarinany.'
 mg1865::mg_19::57::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -6677,7 +6677,7 @@ mg1865::mg_19::57::6:
   verse_number: 6
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Efa namela-pandrika harato haningotra ny diako izy, ary nampitanondrika ny fanahiko*; nihady lavaka teo anoloako izy, kanjo ny tenany ihany no latsaka ao anatiny. [*Na: nitanondrika ny fanahiko]'
+  verse_text: 'Efa namela-pandrika harato haningotra ny diako izy, ary nampitanondrika ny fanahiko*; nihady lavaka teo anoloako izy, kanjo ny tenany ihany no latsaka ao anatiny. [*Na: nitanondrika ny fanahiko] [Sela.]'
 mg1865::mg_19::57::7:
   verse_version: mg1865
   verse_book: mg_19
@@ -6845,7 +6845,7 @@ mg1865::mg_19::59::5:
   verse_number: 5
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ary Ianao, Jehovah ô, Andriamanitry ny maro, Andriamanitry ny Isiraely, mifohaza hitsara ny firenen-tsamy hafa; aza mamindra fo amin''izay mpivadika ratsy fanahy.'
+  verse_text: 'Ary Ianao, Jehovah ô, Andriamanitry ny maro, Andriamanitry ny Isiraely, mifohaza hitsara ny firenen-tsamy hafa; aza mamindra fo amin''izay mpivadika ratsy fanahy. [Sela.]'
 mg1865::mg_19::59::6:
   verse_version: mg1865
   verse_book: mg_19
@@ -6909,7 +6909,7 @@ mg1865::mg_19::59::13:
   verse_number: 13
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Aringano an-katezerana izy, aringano mba tsy ho ao intsony; ary aoka ho fantany fa Andriamanitra no manapaka eo amin''ny Jakoba ka hatramin''ny faran''ny tany.'
+  verse_text: 'Aringano an-katezerana izy, aringano mba tsy ho ao intsony; ary aoka ho fantany fa Andriamanitra no manapaka eo amin''ny Jakoba ka hatramin''ny faran''ny tany. [Sela.]'
 mg1865::mg_19::59::14:
   verse_version: mg1865
   verse_book: mg_19
@@ -6973,7 +6973,7 @@ mg1865::mg_19::60::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Efa notoloranao faneva ny matahotra Anao, hatsangany noho ny fahamarinana.'
+  verse_text: 'Efa notoloranao faneva ny matahotra Anao, hatsangany noho ny fahamarinana. [Sela.]'
 mg1865::mg_19::60::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -7133,7 +7133,7 @@ mg1865::mg_19::62::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Misaina hanongana azy hiala amin''ny voninahiny ireny; lainga no ifaliany, misaotra amin''ny vavany izy, fa manozona amin''ny fony.'
+  verse_text: 'Misaina hanongana azy hiala amin''ny voninahiny ireny; lainga no ifaliany, misaotra amin''ny vavany izy, fa manozona amin''ny fony. [Sela.]'
 mg1865::mg_19::62::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -7165,7 +7165,7 @@ mg1865::mg_19::62::8:
   verse_number: 8
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Matokia Azy mandrakariva ianareo, ry olona; loary eo anatrehany ny fonareo; Andriamanitra no aro ho antsika.'
+  verse_text: 'Matokia Azy mandrakariva ianareo, ry olona; loary eo anatrehany ny fonareo; Andriamanitra no aro ho antsika. [Sela.]'
 mg1865::mg_19::62::9:
   verse_version: mg1865
   verse_book: mg_19
@@ -7501,7 +7501,7 @@ mg1865::mg_19::66::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ny tany rehetra hiankohoka eo anatrehanao ka hankalaza Anao; eny, hankalaza ny anaranao izy.'
+  verse_text: 'Ny tany rehetra hiankohoka eo anatrehanao ka hankalaza Anao; eny, hankalaza ny anaranao izy. [Sela.]'
 mg1865::mg_19::66::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -7525,7 +7525,7 @@ mg1865::mg_19::66::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Manjaka mandrakizay amin''ny heriny Izy, ary ny masony mandinika ny firenen-tsamy hafa; aoka tsy hanandra-tena ny maditra.'
+  verse_text: 'Manjaka mandrakizay amin''ny heriny Izy, ary ny masony mandinika ny firenen-tsamy hafa; aoka tsy hanandra-tena ny maditra. [Sela.]'
 mg1865::mg_19::66::8:
   verse_version: mg1865
   verse_book: mg_19
@@ -7589,7 +7589,7 @@ mg1865::mg_19::66::15:
   verse_number: 15
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Hateriko aminao ho fanatitra dorana ny matavy mbamin''ny setroky ny ondrilahy; hanatitra omby sy osilahy aho.'
+  verse_text: 'Hateriko aminao ho fanatitra dorana ny matavy mbamin''ny setroky ny ondrilahy; hanatitra omby sy osilahy aho. [Sela.]'
 mg1865::mg_19::66::16:
   verse_version: mg1865
   verse_book: mg_19
@@ -7637,7 +7637,7 @@ mg1865::mg_19::67::1:
   verse_number: 1
   verse_date_revised: null
   verse_title: 'Fanirian''ny olo-marina mba hanaiky an''Andriamanitra avokoa ny firenena rehetra. Ho an''ny mpiventy hira'
-  verse_text: 'Hampiarahina amin''ny valiha. Salamo. Tonon-kira. Andriamanitra anie hamindra fo aminay sy hitahy anay; hampamirapiratra ny tavany aminay anie Izy;'
+  verse_text: 'Hampiarahina amin''ny valiha. Salamo. Tonon-kira. Andriamanitra anie hamindra fo aminay sy hitahy anay; [Sela.] hampamirapiratra ny tavany aminay anie Izy;'
 mg1865::mg_19::67::2:
   verse_version: mg1865
   verse_book: mg_19
@@ -7661,7 +7661,7 @@ mg1865::mg_19::67::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Hifaly sy hihoby ny firenentsamy hafa, Satria mitsara marina ny firenena Ianao; ny firenen-tsamy hafa ambonin''ny tany dia entinao;'
+  verse_text: 'Hifaly sy hihoby ny firenentsamy hafa, Satria mitsara marina ny firenena Ianao; ny firenen-tsamy hafa ambonin''ny tany dia entinao; [Sela.]'
 mg1865::mg_19::67::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -7741,7 +7741,7 @@ mg1865::mg_19::68::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Andriamanitra o, raha nandeha teo alohan''ny olonao Ianao ka namaky ny efitra,'
+  verse_text: 'Andriamanitra o, raha nandeha teo alohan''ny olonao Ianao ka namaky ny efitra, [Sela.]'
 mg1865::mg_19::68::8:
   verse_version: mg1865
   verse_book: mg_19
@@ -7837,7 +7837,7 @@ mg1865::mg_19::68::19:
   verse_number: 19
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Isaorana anie ny Tompo Izay mitondra ny entan-tsika isan''andro isan''andro*, eny, Andriamanitra Izay famonjena antsika. [*Na: Isaorana isan''andro isan''andro anie ny Tompo; Raha misy mahavesatra antsika, dia Andriamanitra no famonjena antsika; na: Isaorana anie ny Tompo, Izay mampitondra entana antsika isan''andro isan''andro]'
+  verse_text: 'Isaorana anie ny Tompo Izay mitondra ny entan-tsika isan''andro isan''andro*, eny, Andriamanitra Izay famonjena antsika. [*Na: Isaorana isan''andro isan''andro anie ny Tompo; Raha misy mahavesatra antsika, dia Andriamanitra no famonjena antsika; na: Isaorana anie ny Tompo, Izay mampitondra entana antsika isan''andro isan''andro] [Sela.]'
 mg1865::mg_19::68::20:
   verse_version: mg1865
   verse_book: mg_19
@@ -7941,7 +7941,7 @@ mg1865::mg_19::68::32:
   verse_number: 32
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ry fanjakana ambonin''ny tany, mihirà ho an''Andriamanitra; mankalazà ny Tompo,'
+  verse_text: 'Ry fanjakana ambonin''ny tany, mihirà ho an''Andriamanitra; mankalazà ny Tompo, [Sela.]'
 mg1865::mg_19::68::33:
   verse_version: mg1865
   verse_book: mg_19
@@ -8069,7 +8069,7 @@ mg1865::mg_19::69::13:
   verse_number: 13
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa izaho hivavaka aminao amin''ny andro fankasitrahana, Jehovah ô, dia aminao , Andriamanitra o noho ny haben''ny famindram-ponao; valio aho araka ny hamarinan''ny famonjenao.'
+  verse_text: 'Fa izaho hivavaka aminao amin''ny andro fankasitrahana, Jehovah ô, dia aminao, Andriamanitra o noho ny haben''ny famindram-ponao; valio aho araka ny hamarinan''ny famonjenao.'
 mg1865::mg_19::69::14:
   verse_version: mg1865
   verse_book: mg_19
@@ -9077,7 +9077,7 @@ mg1865::mg_19::75::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Mihorohoro ny tany sy ny mponina rehetra eo aminy, nefa Izaho no nanorina ny andriny.'
+  verse_text: 'Mihorohoro ny tany sy ny mponina rehetra eo aminy, nefa Izaho no nanorina ny andriny. [Sela.]'
 mg1865::mg_19::75::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -9157,7 +9157,7 @@ mg1865::mg_19::76::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Teo no nanapatapahany ny zana-tsipïka manelatra, sy ny ampinga sy ny sabatra ary ny fiadiana.'
+  verse_text: 'Teo no nanapatapahany ny zana-tsipïka manelatra, sy ny ampinga sy ny sabatra ary ny fiadiana. [Sela.]'
 mg1865::mg_19::76::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -9205,7 +9205,7 @@ mg1865::mg_19::76::9:
   verse_number: 9
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Raha nitsangana hitsara Andriamanitra mba hamonjy ny mpandefitra rehetra ambonin''ny tany.'
+  verse_text: 'Raha nitsangana hitsara Andriamanitra mba hamonjy ny mpandefitra rehetra ambonin''ny tany. [Sela.]'
 mg1865::mg_19::76::10:
   verse_version: mg1865
   verse_book: mg_19
@@ -9253,7 +9253,7 @@ mg1865::mg_19::77::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ta-hahatsiaro an''Andriamanitra aho, ka dia nisento; te-hieritreritra aho, ka dia reraka ny fanahiko.'
+  verse_text: 'Ta-hahatsiaro an''Andriamanitra aho, ka dia nisento; te-hieritreritra aho, ka dia reraka ny fanahiko. [Sela.]'
 mg1865::mg_19::77::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -9301,7 +9301,7 @@ mg1865::mg_19::77::9:
   verse_number: 9
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Efa nanadino hamindra fo va Andriamanitra? Efa nohidiany an-katezerana va ny fiantràny?'
+  verse_text: 'Efa nanadino hamindra fo va Andriamanitra? Efa nohidiany an-katezerana va ny fiantràny? [Sela.]'
 mg1865::mg_19::77::10:
   verse_version: mg1865
   verse_book: mg_19
@@ -9349,7 +9349,7 @@ mg1865::mg_19::77::15:
   verse_number: 15
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Navotan''ny sandrinao ny olonao, dia ny taranak''i Jakoba sy Josefa.'
+  verse_text: 'Navotan''ny sandrinao ny olonao, dia ny taranak''i Jakoba sy Josefa. [Sela.]'
 mg1865::mg_19::77::16:
   verse_version: mg1865
   verse_book: mg_19
@@ -10277,7 +10277,7 @@ mg1865::mg_19::81::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fony azom-pahoriana ianao, dia niantso Ahy, ka namonjy anao Aho; namaly anao tao amin''ny fiafenan''ny kotrokorana Aho, ary nizaha toetra anao tao amin''ny ranon''i Meriba.'
+  verse_text: 'Fony azom-pahoriana ianao, dia niantso Ahy, ka namonjy anao Aho; namaly anao tao amin''ny fiafenan''ny kotrokorana Aho, ary nizaha toetra anao tao amin''ny ranon''i Meriba. [Sela.]'
 mg1865::mg_19::81::8:
   verse_version: mg1865
   verse_book: mg_19
@@ -10365,7 +10365,7 @@ mg1865::mg_19::82::2:
   verse_number: 2
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Mandra-pahoviana no hitsarànareo tsy marina ka ihenaranareo maso ny ratsy fanahy?'
+  verse_text: 'Mandra-pahoviana no hitsarànareo tsy marina ka ihenaranareo maso ny ratsy fanahy? [Sela.]'
 mg1865::mg_19::82::3:
   verse_version: mg1865
   verse_book: mg_19
@@ -10477,7 +10477,7 @@ mg1865::mg_19::83::8:
   verse_number: 8
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ny Asyriana koa nikambana taminy; tonga sandrin''ny taranak''i Lota ireo.'
+  verse_text: 'Ny Asyriana koa nikambana taminy; tonga sandrin''ny taranak''i Lota ireo. [Sela.]'
 mg1865::mg_19::83::9:
   verse_version: mg1865
   verse_book: mg_19
@@ -10589,7 +10589,7 @@ mg1865::mg_19::84::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Sambatra izay mitoetra ao an-tranonao; hidera Anao mandrakariva izy.'
+  verse_text: 'Sambatra izay mitoetra ao an-tranonao; hidera Anao mandrakariva izy. [Sela.]'
 mg1865::mg_19::84::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -10621,7 +10621,7 @@ mg1865::mg_19::84::8:
   verse_number: 8
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah, Andriamanitry ny maro o, henoy ny fivavako; mandrenesa ry Andriamanitr''i Jakoba o.'
+  verse_text: 'Jehovah, Andriamanitry ny maro o, henoy ny fivavako; mandrenesa ry Andriamanitr''i Jakoba o. [Sela.]'
 mg1865::mg_19::84::9:
   verse_version: mg1865
   verse_book: mg_19
@@ -10669,7 +10669,7 @@ mg1865::mg_19::85::2:
   verse_number: 2
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Voaisotrao ny heloky ny olonao, Voasaronao ny fahotany rehetra.'
+  verse_text: 'Voaisotrao ny heloky ny olonao, Voasaronao ny fahotany rehetra. [Sela.]'
 mg1865::mg_19::85::3:
   verse_version: mg1865
   verse_book: mg_19
@@ -10917,7 +10917,7 @@ mg1865::mg_19::87::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Zava-malaza no anambarana anao Ry tanànan''Andriamanitra'
+  verse_text: 'Zava-malaza no anambarana anao Ry tanànan''Andriamanitra [Sela.]'
 mg1865::mg_19::87::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -10941,7 +10941,7 @@ mg1865::mg_19::87::6:
   verse_number: 6
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah hanisa, raha manoratra ny firenena Izy: Ity no efa teraka teo.'
+  verse_text: 'Jehovah hanisa, raha manoratra ny firenena Izy: Ity no efa teraka teo. [Sela.]'
 mg1865::mg_19::87::7:
   verse_version: mg1865
   verse_book: mg_19
@@ -11005,7 +11005,7 @@ mg1865::mg_19::88::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ny fahatezeranao manindry ahy mafy, Ary ny alon-dranonao rehetra azeranao amiko.'
+  verse_text: 'Ny fahatezeranao manindry ahy mafy, Ary ny alon-dranonao rehetra azeranao amiko. [Sela.]'
 mg1865::mg_19::88::8:
   verse_version: mg1865
   verse_book: mg_19
@@ -11125,7 +11125,7 @@ mg1865::mg_19::89::4:
   verse_number: 4
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Hampitoetra ny taranakao ho mandrakizay Aho Ka hanangana ny seza fiandriananao hatramin''ny taranaka fara mandimby.'
+  verse_text: 'Hampitoetra ny taranakao ho mandrakizay Aho Ka hanangana ny seza fiandriananao hatramin''ny taranaka fara mandimby. [Sela.]'
 mg1865::mg_19::89::5:
   verse_version: mg1865
   verse_book: mg_19
@@ -11389,7 +11389,7 @@ mg1865::mg_19::89::37:
   verse_number: 37
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Hampitoerina mandrakizay tahaka ny volana izy, Tahaka ny vavolombelona marina any an-danitra*. [*Na: Ary ny vavolombelona any an-danitra dia marina]'
+  verse_text: 'Hampitoerina mandrakizay tahaka ny volana izy, Tahaka ny vavolombelona marina any an-danitra*. [*Na: Ary ny vavolombelona any an-danitra dia marina] [Sela.]'
 mg1865::mg_19::89::38:
   verse_version: mg1865
   verse_book: mg_19
@@ -11453,7 +11453,7 @@ mg1865::mg_19::89::45:
   verse_number: 45
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Efa nahafohy ny andron''ny fahatanorany Ianao Ary efa nanaron-kenatra azy.'
+  verse_text: 'Efa nahafohy ny andron''ny fahatanorany Ianao Ary efa nanaron-kenatra azy. [Sela.]'
 mg1865::mg_19::89::46:
   verse_version: mg1865
   verse_book: mg_19
@@ -11477,7 +11477,7 @@ mg1865::mg_19::89::48:
   verse_number: 48
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Iza no olona ho velona tsy hahita fahafatesana, Fa hamonjy ny fanahiny tsy ho azon''ny tanan''ny fiainan-tsy hita*? [*Hebreo: Sheola]'
+  verse_text: 'Iza no olona ho velona tsy hahita fahafatesana, Fa hamonjy ny fanahiny tsy ho azon''ny tanan''ny fiainan-tsy hita*? [*Hebreo: Sheola] [Sela.]'
 mg1865::mg_19::89::49:
   verse_version: mg1865
   verse_book: mg_19
@@ -13829,7 +13829,7 @@ mg1865::mg_19::106::17:
   verse_number: 17
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Nisokatra ny tany, dia nitelina an''i Datana Ka nanarona ny antokon*''i Abàrama. [*Hebreo: ny fiangonany]'
+  verse_text: 'Nisokatra ny tany, dia nitelina an''i Datana Ka nanarona ny antokon*''i Abìrama. [*Hebreo: ny fiangonany]'
 mg1865::mg_19::106::18:
   verse_version: mg1865
   verse_book: mg_19
@@ -18613,7 +18613,7 @@ mg1865::mg_19::140::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Mandranitra ny lelany tahaka ny bibilava izy, Ny poizin''ny menarana no ao ambanin''ny molony.'
+  verse_text: 'Mandranitra ny lelany tahaka ny bibilava izy, Ny poizin''ny menarana no ao ambanin''ny molony. [Sela.]'
 mg1865::mg_19::140::4:
   verse_version: mg1865
   verse_book: mg_19
@@ -18653,7 +18653,7 @@ mg1865::mg_19::140::8:
   verse_number: 8
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah ô, aza manome ny irin''ny ratsy fanahy; Ary aza avela ho tanteraka ny hevi-dratsiny, fandrao hisandratra izy.'
+  verse_text: 'Jehovah ô, aza manome ny irin''ny ratsy fanahy; Ary aza avela ho tanteraka ny hevi-dratsiny, fandrao hisandratra izy. [Sela.]'
 mg1865::mg_19::140::9:
   verse_version: mg1865
   verse_book: mg_19
@@ -18877,7 +18877,7 @@ mg1865::mg_19::143::6:
   verse_number: 6
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Mananty tanana aminao aho; Ny fanahiko dia tahaka ny tany mangetana eo anatrehanao.'
+  verse_text: 'Mananty tanana aminao aho; Ny fanahiko dia tahaka ny tany mangetana eo anatrehanao. [Sela.]'
 mg1865::mg_19::143::7:
   verse_version: mg1865
   verse_book: mg_19
@@ -19069,7 +19069,7 @@ mg1865::mg_19::145::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Lehibe Jehovah ka tokony hoderaina indrindra; Ary tsy takatry ny saina ny fahalehibiazany .'
+  verse_text: 'Lehibe Jehovah ka tokony hoderaina indrindra; Ary tsy takatry ny saina ny fahalehibiazany.'
 mg1865::mg_19::145::4:
   verse_version: mg1865
   verse_book: mg_19

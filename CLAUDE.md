@@ -62,3 +62,27 @@ Two delivery paths:
   Files land in docs/patches/ and are served via GitHub Pages. The
   PatchManager on the app fetches and applies them on launch.
 - Full workflow: @docs/patches/README.md
+
+## Bible text corrections
+The Bible is the 1865 Malagasy version (MG1865). Corrections fix slips: scan
+errors, typos, dropped words. They do not retranslate it.
+- Second copy: the CrossWire SWORD module `Mg1865`
+  (https://www.crosswire.org/ftpmirror/pub/sword/packages/rawzip/Mg1865.zip,
+  public domain, readable with `pysword`). It shares some slips with ours and
+  has scan errors of its own ("Any" for "Ary", doubled words), so the two
+  agreeing is not proof on its own.
+- Meaning: when a reading is in doubt, check what the verse means in NIV and
+  in the original Hebrew, Greek or Aramaic. This is for understanding only:
+  change a word only when the Malagasy word means something else (Salamo 10:15
+  "adinoy" = forget vs "adino" = examine; Malakia 3:22 "làlana" = road vs
+  "lalàna" = law). Never copy NIV wording into the data: it is copyrighted,
+  and the text must stay MG1865.
+- Malagasy grammar and spelling stay as the maintainer decides: verb forms
+  and word joining are not meaning fixes (Isaia 30:14 "hovakivakiana" and
+  Lioka 9:25 "maty antoka" are correct as written). Bring doubtful cases to
+  the maintainer instead of choosing.
+- Versification differs between copies (Psalm titles, Hebrew chapter breaks),
+  so match verses by content, not by number. English numbering also differs
+  (Malakia 3:22 = Malachi 4:4).
+- Edit `scripts/source-data/bible/Yaml_Zo_Source/*.yaml` (single-quoted
+  strings, apostrophes doubled), then follow the build and patch flow above.

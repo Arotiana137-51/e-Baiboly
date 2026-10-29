@@ -3605,14 +3605,14 @@ mg1865::mg_42::9::43:
   verse_number: 43
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Dia talanjona izy rehetra noho ny fiandrianan''Andriamanitra. #Ny nilazan''i Jesoa fanindroany ny hahafatesany sy ny hitsanganany indray.# Fa raha talanjona izy rehetra tamin''izay rehetra nataon''i Jesoa, dia hoy Izy tamin''ny mpianany:'
+  verse_text: 'Dia talanjona izy rehetra noho ny fiandrianan''Andriamanitra. Fa raha talanjona izy rehetra tamin''izay rehetra nataon''i Jesoa, dia hoy Izy tamin''ny mpianany:'
 mg1865::mg_42::9::44:
   verse_version: mg1865
   verse_book: mg_42
   verse_chapter: 9
   verse_number: 44
   verse_date_revised: null
-  verse_title: null
+  verse_title: 'Ny nilazan''i Jesoa fanindroany ny hahafatesany sy ny hitsanganany indray'
   verse_text: 'Ampidironareo ao amin''ny sofinareo izany teny izany; fa ny Zanak''olona efa hatolotra eo an-tanan''ny olona.'
 mg1865::mg_42::9::45:
   verse_version: mg1865
@@ -4989,7 +4989,7 @@ mg1865::mg_42::12::58:
   verse_number: 58
   verse_date_revised: '2022-07-17T08:21:42+0000'
   verse_title: null
-  verse_text: 'Fa raha miara-mandeha amin''ny manana ady aminao ianao hanatrika ny mpanapaka, raha mbola any an-dàlana dia mazotoa manao izay ahafahanao aminy, fandrao hitondra anao any amin''ny mpitsara izy, ary ny mpitsara hanolotra anao amin''ny mpamatotra, ary ny mpamatotra hanao anao ao an-tranomaizina.'
+  verse_text: 'Fa raha miara-mandeha amin''ny manana ady aminao ianao hanatrika ny mpanapaka, raha mbola any an-dàlana dia mazotoa manao izay hahafahanao aminy, fandrao hitondra anao any amin''ny mpitsara izy, ary ny mpitsara hanolotra anao amin''ny mpamatotra, ary ny mpamatotra hanao anao ao an-tranomaizina.'
 mg1865::mg_42::12::59:
   verse_version: mg1865
   verse_book: mg_42
@@ -6013,7 +6013,7 @@ mg1865::mg_42::16::25:
   verse_number: 25
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa hoy Abrahama: Anaka, tsarovy fa ianao efa nahazo ny zava-tsoanao tamin''ny andro niainanao, ary Lazarosy kosa ny zava-dratsy; fa ankehitriny izy no ampifalinay . ary ianao kosa no fadiranovana.'
+  verse_text: 'Fa hoy Abrahama: Anaka, tsarovy fa ianao efa nahazo ny zava-tsoanao tamin''ny andro niainanao, ary Lazarosy kosa ny zava-dratsy; fa ankehitriny izy no ampifalinay aty, ary ianao kosa no fadiranovana.'
 mg1865::mg_42::16::26:
   verse_version: mg1865
   verse_book: mg_42
@@ -6917,7 +6917,7 @@ mg1865::mg_42::19::27:
   verse_number: 27
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa ireo fahavaloko tsy nanaiky hanjakako ireo, dia ento aty , ka vonoy eto anatrehako.'
+  verse_text: 'Fa ireo fahavaloko tsy nanaiky hanjakako ireo, dia ento aty, ka vonoy eto anatrehako.'
 mg1865::mg_42::19::28:
   verse_version: mg1865
   verse_book: mg_42
@@ -6941,7 +6941,7 @@ mg1865::mg_42::19::30:
   verse_number: 30
   verse_date_revised: null
   verse_title: null
-  verse_text: 'ka nanao hoe: Mankanesa amin''iroa vohitra tandrifinareo iroa; ary raha vao miditra ao ianareo, dia hisy zana-boriky mifatotra ho hitanareo, izay tsy mbola nitaingenan''olona; vahao izy, ka ento ety .'
+  verse_text: 'ka nanao hoe: Mankanesa amin''iroa vohitra tandrifinareo iroa; ary raha vao miditra ao ianareo, dia hisy zana-boriky mifatotra ho hitanareo, izay tsy mbola nitaingenan''olona; vahao izy, ka ento ety.'
 mg1865::mg_42::19::31:
   verse_version: mg1865
   verse_book: mg_42
