@@ -285,6 +285,9 @@ struct DailyVerseView: View {
   @Environment(\.widgetFamily) private var family
   @Environment(\.colorScheme) private var colorScheme
   let entry: VerseEntry
+  // Set when the system drew the widget without its card (CarPlay, Apple
+  // HomeView, StandBy): the margins those screens want. See BackgroundAware.
+  var bareMargins: EdgeInsets? = nil
 
   // The lock screen families only exist from iOS 16, hence the checks.
   private var isLockScreen: Bool {
@@ -305,6 +308,7 @@ struct DailyVerseView: View {
   private var look: Look { colorScheme == .dark ? (entry.night ?? entry.look) : entry.look }
 
   private var isSmall: Bool { family == .systemSmall }
+  private var cardPadding: CGFloat { isSmall ? 12 : 14 }
   // Largest size, which a short verse keeps; a long verse shrinks to fit
   // (minimumScaleFactor below) instead of being cut. Kept close to reading
   // size: a larger start made a short verse on the large widget oversized.
@@ -334,7 +338,10 @@ struct DailyVerseView: View {
     return entry.font == "italic" ? font.italic() : font
   }
 
-  private var ink: Color { look.text }
+  // The card's ink is picked against the card's colour (dark on light ones), so
+  // without the card it falls back to the system's text colour.
+  private var ink: Color { bareMargins == nil ? look.text : .primary }
+  private var accent: Color { bareMargins == nil ? look.accent : .primary }
 
   var body: some View {
     if isLockScreen {
@@ -400,7 +407,7 @@ struct DailyVerseView: View {
         HStack(spacing: 4) {
           Text(ref)
             .font(.system(size: isSmall ? 11 : 12, weight: .semibold))
-            .foregroundColor(look.accent)
+            .foregroundColor(accent)
             .lineLimit(1)
           if !entry.translation.isEmpty && !isSmall {
             Text(entry.translation.uppercased())
@@ -439,7 +446,7 @@ struct DailyVerseView: View {
         .padding(.top, 4)
       }
     }
-    .padding(isSmall ? 12 : 14)
+    .padding(bareMargins ?? EdgeInsets(top: cardPadding, leading: cardPadding, bottom: cardPadding, trailing: cardPadding))
     .widgetBackground(CardBackground(look: look))
     .widgetURL(entry.url)
   }
@@ -472,6 +479,30 @@ struct LockScreenVerse: View {
   }
 }
 
+// CarPlay, Apple HomeView and StandBy can drop the card and draw the verse on
+// their own, usually dark, surface with their own margins. iOS 17 tells the
+// widget when that happens; earlier versions always show the card.
+struct BackgroundAware<Content: View>: View {
+  let content: (EdgeInsets?) -> Content
+
+  var body: some View {
+    if #available(iOSApplicationExtension 17.0, *) {
+      ContainerBackgroundReader(content: content)
+    } else {
+      content(nil)
+    }
+  }
+}
+
+@available(iOSApplicationExtension 17.0, *)
+struct ContainerBackgroundReader<Content: View>: View {
+  @Environment(\.showsWidgetContainerBackground) private var showsBackground
+  @Environment(\.widgetContentMargins) private var margins
+  let content: (EdgeInsets?) -> Content
+
+  var body: some View { content(showsBackground ? nil : margins) }
+}
+
 // Flat colour, or the photo centre-cropped under its veil.
 struct CardBackground: View {
   let look: Look
@@ -494,7 +525,7 @@ struct CardBackground: View {
 struct DailyVerseWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "DailyVerseWidget", provider: DailyVerseProvider()) { entry in
-      DailyVerseView(entry: entry)
+      BackgroundAware { bare in DailyVerseView(entry: entry, bareMargins: bare) }
     }
     // Placeholder MG copy — user-owned.
     .configurationDisplayName("Sakafom-panahy")
