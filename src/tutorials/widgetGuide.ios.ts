@@ -3,7 +3,8 @@ import type {WidgetGuide} from './widgetGuide';
 // Apple's steps (support.apple.com/118610), photographed on an iPhone set to
 // English (iOS 26: the Edit and Done buttons are a brush and a check), with
 // the French labels in brackets. The widget is "Sakafom-panahy" under
-// e-Baiboly; the lock screen sizes need iOS 16 and have no photos yet.
+// e-Baiboly; the lock screen sizes need iOS 16. Lock screen photos cropped to
+// the buttons only: the owner's wallpaper and other apps stay out.
 export const WIDGET_PICTURE = {
   image: require('../../assets/illustrations/widget-guide/result.jpg'),
   aspect: 720 / 402,
@@ -70,10 +71,37 @@ export const WIDGET_GUIDE: WidgetGuide = {
       steps: [
         {
           text: 'Tsindrio ela ny écran verrouillé mandra-pisehon\'ny "Customize" (na "Personnaliser"), dia tsindrio izany.',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_customize.jpg'),
+          aspect: 720 / 139,
+          highlight: {x: 0.268, y: 0.144, w: 0.464, h: 0.705},
         },
-        {text: 'Fidio ny écran verrouillé, dia tsindrio "Add Widgets" (na "Ajouter des widgets").'},
-        {text: 'Tsindrio "e-Baiboly", dia fidio ilay widget.'},
-        {text: 'Tsindrio "Done" (na "OK"). (iOS 16 no ho miakatra)'},
+        {
+          text: 'Fidio ny écran verrouillé, dia tsindrio "Add Widgets" (na "Ajouter des widgets").',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_add_widgets.jpg'),
+          aspect: 720 / 195,
+          highlight: {x: 0.049, y: 0.077, w: 0.904, h: 0.846},
+          // PLACEHOLDER MG copy — user-owned.
+          tip: 'Raha feno ilay toerana, tsindrio ny − eo amin\'ny widget iray mba hanesorana azy aloha.',
+        },
+        {
+          text: 'Tsindrio "e-Baiboly", dia fidio ilay widget.',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_widget_panel.jpg'),
+          aspect: 720 / 557,
+          highlight: {x: 0.303, y: 0.727, w: 0.393, h: 0.228},
+        },
+        {
+          text: 'Tsindrio "Done" (na "OK"). (iOS 16 no ho miakatra)',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_done.jpg'),
+          aspect: 720 / 92,
+          highlight: {x: 0.75, y: 0.207, w: 0.172, h: 0.565},
+          // PLACEHOLDER MG copy — user-owned.
+          tip: 'Raha mbola misokatra ny lisitry ny widget, tsindrio aloha ny ✕.',
+        },
+        {
+          text: "Vita! Hiseho eo amin'ny écran isan'andro ny andinin-teny.",
+          image: require('../../assets/illustrations/widget-guide/ios/lock_result.jpg'),
+          aspect: 720 / 194,
+        },
       ],
     },
   ],
