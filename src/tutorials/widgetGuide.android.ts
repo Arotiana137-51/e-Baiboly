@@ -3,6 +3,11 @@ import type {WidgetGuide} from './widgetGuide';
 // Google's steps (support.google.com/android/answer/9450271), photographed on
 // a Galaxy A53 (One UI 8, phone in French): other launchers look a little
 // different but follow the same path. The widget is listed as e-Baiboly.
+export const WIDGET_PICTURE = {
+  image: require('../../assets/illustrations/widget-guide/result.jpg'),
+  aspect: 720 / 402,
+};
+
 export const WIDGET_GUIDE: WidgetGuide = {
   intro: "Sakafom-panahy isan'andro: andinin-teny iray isan'andro eo amin'ny écran.",
   sections: [
@@ -42,8 +47,7 @@ export const WIDGET_GUIDE: WidgetGuide = {
         },
         {
           text: "Vita! Hiseho eo amin'ny écran isan'andro ny andinin-teny.",
-          image: require('../../assets/illustrations/widget-guide/result.jpg'),
-          aspect: 1.7917,
+          ...WIDGET_PICTURE,
         },
       ],
     },

@@ -38,6 +38,18 @@ class DailyVerseWidgetModule(reactContext: ReactApplicationContext) :
     }
 
     /**
+     * Whether the widget is on a home screen, at any size. Android only knows
+     * the ids bound to the widget, and an id a launcher left behind (another
+     * launcher, a crash mid-add) still counts: the app never relies on this
+     * alone to offer the add, the widget guide always has its button.
+     */
+    @ReactMethod
+    fun isPlaced(promise: Promise) {
+        val provider = ComponentName(reactApplicationContext, DailyVerseWidgetProvider::class.java)
+        promise.resolve(AppWidgetManager.getInstance(reactApplicationContext).getAppWidgetIds(provider).isNotEmpty())
+    }
+
+    /**
      * Asks the launcher to put the widget on the home screen. It shows its own
      * "add to home screen?" card, so there is no gesture to learn.
      */
