@@ -255,6 +255,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
   const [selectedVerseForAction, setSelectedVerseForAction] = useState<BibleVerse | null>(null);
+  // Kept between openings: the sheet's height rarely changes.
+  const [verseSheetHeight, setVerseSheetHeight] = useState(0);
 
   // Share card modal — non-null while open
   const [shareCard, setShareCard] = useState<ShareCardData | null>(null);
@@ -1529,7 +1531,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               renderNoteBubble={renderNoteBubble}
               onChapterMarksChange={handleChapterMarksEdit}
               onHighlightBubbleOpen={() => tutorial.notifyProgress('highlightMenuOpened')}
-              selectedVerseNumber={selectedVerseNumber}
+              // The action sheet doesn't repeat its verse: the reader shows it.
+              selectedVerseNumber={
+                verseActionVisible && selectedVerseForAction
+                  ? selectedVerseForAction.verse_number
+                  : selectedVerseNumber
+              }
               selectedVerseRange={selectedVerseRange}
               onInlineRefPress={handleInlineBibleRefPress}
               handleRef={readerRef}
@@ -1537,6 +1544,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               chapterMarks={chapterMarks}
               onClearRange={() => setSelectedVerseRange(null)}
               favoriteVerses={favoriteVerseNumbers}
+              sheetHeight={verseActionVisible ? verseSheetHeight : 0}
             />
           ) : (
             <HymnReaderView
@@ -1763,6 +1771,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         verseBookName={currentBook?.name}
         hasNote={selectedVerseHasNote}
         onClose={closeVerseAction}
+        onSheetLayout={setVerseSheetHeight}
         onNote={openBibleNote}
         onViewCorrespondence={handleViewCorrespondence}
         onAddToFavorites={handleAddToFavorites}

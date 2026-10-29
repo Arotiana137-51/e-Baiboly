@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   useWindowDimensions,
   type LayoutChangeEvent,
+  type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ImageStyle,
   type StyleProp,
@@ -96,6 +97,8 @@ const PASSAGE_MAX_VERSES = 50;
 const PASSAGE_MAX_VERSES_LOW_END = 25;
 // Where a verse the reader jumps to lands: 20 % from the top.
 const JUMP_VIEW_POSITION = 0.2;
+// Between a verse brought into view and the sheet under it.
+const REVEAL_MARGIN = 12;
 // The verse number sits a little above the line, more so in bigger text.
 const VERSE_NUMBER_LIFT = -3;
 // Behind the words of the verse a search or a link landed on.
@@ -596,6 +599,10 @@ interface BibleReaderViewProps {
   onClearRange?: () => void;
   // Verse numbers of this chapter in the favourites, drawn framed.
   favoriteVerses?: ReadonlySet<number>;
+  // A sheet over the reader's bottom (the verse menu): that much room under
+  // the text, so even the last verse can rise above it, and the selected
+  // verse brought into view over it.
+  sheetHeight?: number;
 }
 
 const BibleReaderView: React.FC<BibleReaderViewProps> = ({
@@ -618,6 +625,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   chapterMarks,
   onClearRange,
   favoriteVerses,
+  sheetHeight = 0,
 }) => {
   const { theme } = useTheme();
   const noteMarkerRef = useTutorialTarget('noteMarker');
@@ -726,7 +734,15 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   // --- Jumps: to a verse (search, links, the picker...) or to the top. ---
   const scrollRef = useRef<ScrollView>(null);
   const viewportHeight = useRef(0);
+  // Where the reader is scrolled to and how tall its content is, for the
+  // verse sheet: noted at the end of each scroll and by the scrolls asked
+  // here, not on every frame.
+  const scrollY = useRef(0);
+  const contentHeight = useRef(0);
   const pendingVerse = useRef<number | null>(null);
+  // The verse the sheet acts on, to bring above it: apart from the jump, so
+  // neither drops the other.
+  const pendingReveal = useRef<{verse: number; coveredHeight: number} | null>(null);
   const passagesRef = useRef(passages);
   passagesRef.current = passages;
 
@@ -741,28 +757,66 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     }
   }, [passages]);
 
-  // Scrolls to the pending verse once its passage is laid out; until then it
-  // stays pending and each layout tries again.
-  const scrollToPendingVerse = useCallback(() => {
-    const verseNumber = pendingVerse.current;
-    if (verseNumber == null) return;
+  // Every scroll asked from here notes where it lands (the native side stops
+  // at the end of the content).
+  const scrollTo = useCallback((y: number) => {
+    selectionOrigin.current = null;
+    scrollY.current = Math.min(y, Math.max(0, contentHeight.current - viewportHeight.current));
+    scrollRef.current?.scrollTo({y, animated: true});
+  }, []);
+
+  // A verse's top and bottom in the scroll content: null until its passage
+  // is laid out, 'missing' when the chapter has no such verse.
+  const verseSpan = useCallback((verseNumber: number): {top: number; bottom: number} | 'missing' | null => {
     const passage = passagesRef.current.find(p => p.verses.some(v => v.verse.verse_number === verseNumber));
-    if (!passage) {
-      pendingVerse.current = null;
-      return;
-    }
+    if (!passage) return 'missing';
     const y = passageY.current[passage.key];
     const lines = linesRef.current[passage.key];
     const pv = passage.verses.find(v => v.verse.verse_number === verseNumber);
     const extent = lines && pv ? verseExtent(lines, pv) : null;
-    if (y == null || !extent) return;
-    pendingVerse.current = null;
-    selectionOrigin.current = null;
-    scrollRef.current?.scrollTo({
-      y: Math.max(0, y + extent.top - viewportHeight.current * JUMP_VIEW_POSITION),
-      animated: true,
-    });
+    return y == null || !extent ? null : {top: y + extent.top, bottom: y + extent.bottom};
   }, []);
+
+  // Scrolls to the pending verse, then brings the sheet's verse above it,
+  // once their passages are laid out; until then they stay pending and each
+  // layout tries again.
+  const scrollToPendingVerse = useCallback(() => {
+    const jump = pendingVerse.current;
+    const jumpSpan = jump == null ? null : verseSpan(jump);
+    if (jumpSpan === 'missing') {
+      pendingVerse.current = null;
+    } else if (jumpSpan) {
+      pendingVerse.current = null;
+      scrollTo(Math.max(0, jumpSpan.top - viewportHeight.current * JUMP_VIEW_POSITION));
+    }
+
+    const reveal = pendingReveal.current;
+    const span = reveal ? verseSpan(reveal.verse) : null;
+    if (!reveal || !span) return;
+    if (span === 'missing') {
+      pendingReveal.current = null;
+      return;
+    }
+    const {top, bottom} = span;
+    const visibleHeight = viewportHeight.current - reveal.coveredHeight;
+    if (top >= scrollY.current && bottom <= scrollY.current + visibleHeight) {
+      pendingReveal.current = null;
+      return;
+    }
+    // Just far enough: the verse right above the sheet, or at the top when
+    // it was above the view or is too long to fit.
+    const target = Math.max(
+      0,
+      top < scrollY.current
+        ? top - REVEAL_MARGIN
+        : Math.min(top - REVEAL_MARGIN, bottom + REVEAL_MARGIN - visibleHeight),
+    );
+    // The room under the last verses isn't laid out yet: its size change
+    // tries again.
+    if (target > contentHeight.current - viewportHeight.current) return;
+    pendingReveal.current = null;
+    scrollTo(target);
+  }, [scrollTo, verseSpan]);
 
   useImperativeHandle(
     handleRef,
@@ -771,13 +825,42 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
         pendingVerse.current = verseNumber;
         scrollToPendingVerse();
       },
-      scrollToTop: () => {
-        selectionOrigin.current = null;
-        scrollRef.current?.scrollTo({y: 0, animated: true});
-      },
+      scrollToTop: () => scrollTo(0),
     }),
-    [scrollToPendingVerse],
+    [scrollToPendingVerse, scrollTo],
   );
+
+  // Room under the text for the sheet, so even the last verse can rise above
+  // it. When the sheet closes, the part the reader is scrolled into stays
+  // (taking it away would make the text jump); the end of each later scroll
+  // gives back what is out of view.
+  const [sheetRoom, setSheetRoom] = useState(0);
+  const sheetOpen = useRef(false);
+  const roomInView = useCallback(
+    (room: number) =>
+      Math.min(room, Math.max(0, Math.ceil(scrollY.current + viewportHeight.current - (contentHeight.current - room)))),
+    [],
+  );
+  const noteScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollY.current = e.nativeEvent.contentOffset.y;
+      if (!sheetOpen.current) setSheetRoom(roomInView);
+    },
+    [roomInView],
+  );
+
+  // Layout effects: the room and the reveal must be set before the room's
+  // size change comes back from the native side.
+  useLayoutEffect(() => {
+    sheetOpen.current = sheetHeight > 0;
+    setSheetRoom(room => sheetHeight || roomInView(room));
+  }, [sheetHeight, roomInView]);
+
+  useLayoutEffect(() => {
+    pendingReveal.current =
+      sheetHeight > 0 && selectedVerseNumber != null ? {verse: selectedVerseNumber, coveredHeight: sheetHeight} : null;
+    scrollToPendingVerse();
+  }, [sheetHeight, selectedVerseNumber, scrollToPendingVerse]);
 
   const onLines = useCallback(
     (key: string, lines: TextLine[]) => {
@@ -817,8 +900,8 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     }
     const y = noteBubbleY.current;
     selectionOrigin.current = null;
-    setTimeout(() => scrollRef.current?.scrollTo({y, animated: true}), 120);
-  }, []);
+    setTimeout(() => scrollTo(y), 120);
+  }, [scrollTo]);
 
   useEffect(() => {
     if (bubbleVerse == null) {
@@ -1068,14 +1151,29 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     // The bubble stays where it was drawn, so scrolling ends the selection.
     if (NATIVE_SELECTION) clearSelection();
   }, []);
-  const onMomentumScrollEnd = useCallback(() => {
-    isScrollingRef.current = false;
-  }, []);
-  const onScrollEndDrag = useCallback(() => {
-    setTimeout(() => {
+  const onMomentumScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       isScrollingRef.current = false;
-    }, 80);
-  }, []);
+      noteScrollEnd(e);
+    },
+    [noteScrollEnd],
+  );
+  const onContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      contentHeight.current = height;
+      scrollToPendingVerse();
+    },
+    [scrollToPendingVerse],
+  );
+  const onScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      noteScrollEnd(e);
+      setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 80);
+    },
+    [noteScrollEnd],
+  );
 
   if (isLoading) {
     return (
@@ -1106,9 +1204,11 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
             paddingBottom:
               BIBLE_BASE_BOTTOM_PADDING +
               bottomScrollSpacerAdjusted +
-              (bubbleVerse != null ? keyboardHeight : 0),
+              (bubbleVerse != null ? keyboardHeight : 0) +
+              sheetRoom,
           },
         ]}
+        onContentSizeChange={onContentSizeChange}
         onScrollBeginDrag={onScrollBeginDrag}
         onScrollEndDrag={onScrollEndDrag}
         onMomentumScrollEnd={onMomentumScrollEnd}
