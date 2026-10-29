@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pressable, Text, View, StyleSheet, Modal } from 'react-native';
 import { Hymn } from '../hooks/useHymnsData';
-import { useTheme } from '../contexts/ThemeContext';
+import ActionSheet, { type ActionSheetItem } from './ActionSheet';
+import { HYMN_CHORUS_LABEL } from '../utils/chapterMarks';
 import {t} from '../i18n/strings';
 
 interface HymnActionPopoverProps {
@@ -13,6 +13,8 @@ interface HymnActionPopoverProps {
   stanzaHasNote?: boolean;
   hymnHasNote?: boolean;
   onClose: () => void;
+  // The sheet's height once laid out, so the reader can keep the stanza above it.
+  onSheetLayout?: (height: number) => void;
   // stanza null = a note on the whole hymn.
   onNote: (stanza: number | null) => void;
   onAddToFavorites: (hymn: Hymn) => void;
@@ -20,6 +22,8 @@ interface HymnActionPopoverProps {
   onReportIssue: (payload: { stanzaNumber: number; stanzaText: string }) => void;
 }
 
+// The double-tapped stanza's actions, in the same sheet as a verse's. The
+// stanza stays highlighted in the reader above, so the sheet only names it.
 const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
   visible,
   hymn,
@@ -28,168 +32,84 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
   stanzaHasNote,
   hymnHasNote,
   onClose,
+  onSheetLayout,
   onNote,
   onAddToFavorites,
   onShare,
   onReportIssue,
 }) => {
-  const { theme } = useTheme();
-
   if (!hymn) return null;
 
-  const hasStanza = typeof stanzaNumber === 'number' && !!stanzaText;
+  const stanza = typeof stanzaNumber === 'number' && stanzaText ? stanzaNumber : null;
+  const hymnReference = `${hymn.category ? `${hymn.category.toUpperCase()} ` : ''}${t('favorites.hymnLabel', {number: hymn.number})}`;
+  const reference =
+    stanza === null ? hymnReference : `${hymnReference} · ${stanza === 0 ? HYMN_CHORUS_LABEL : stanza}`;
 
-  const handleNote = (stanza: number | null) => {
-    onClose();
-    onNote(stanza);
-  };
-
-  const handleAddToFavorites = () => {
-    onAddToFavorites(hymn);
-    onClose();
-  };
-
-  const handleShare = () => {
-    if (typeof stanzaNumber === 'number') {
-      onShare(stanzaNumber);
-    }
-    onClose();
-  };
-
-  const handleReportIssue = () => {
-    if (typeof stanzaNumber !== 'number' || !stanzaText) {
-      onClose();
-      return;
-    }
-
-    onReportIssue({ stanzaNumber, stanzaText });
-    onClose();
-  };
+  // The stanza's own rows only when there is one (a double-tap on a stanza).
+  const actions: ActionSheetItem[] = [];
+  if (stanza !== null) {
+    actions.push({
+      key: 'stanzaNote',
+      label: stanzaHasNote ? t('actions.noteOpen') : t('actions.noteAdd'),
+      icon: 'notes',
+      onPress: () => {
+        onClose();
+        onNote(stanza);
+      },
+    });
+  }
+  actions.push(
+    {
+      key: 'hymnNote',
+      label: hymnHasNote ? t('actions.hymnNoteOpen') : t('actions.hymnNoteAdd'),
+      icon: 'note',
+      onPress: () => {
+        onClose();
+        onNote(null);
+      },
+    },
+    {
+      key: 'favorite',
+      label: t('actions.addToFavorites'),
+      icon: 'heart',
+      onPress: () => {
+        onAddToFavorites(hymn);
+        onClose();
+      },
+    },
+  );
+  if (stanza !== null) {
+    actions.push({
+      key: 'share',
+      label: t('actions.share'),
+      icon: 'share',
+      onPress: () => {
+        onShare(stanza);
+        onClose();
+      },
+    });
+  }
 
   return (
-    <Modal
+    <ActionSheet
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable
-          style={[styles.popoverContainer, { backgroundColor: theme.colors.backgroundSecondary }]}
-          onPress={() => {}}
-        >
-          <View style={styles.popoverHeader}>
-            <Text style={[styles.hymnTitle, { color: theme.colors.textPrimary }]}>
-              {hymn.title}
-            </Text>
-            <Text style={[styles.hymnReference, { color: theme.colors.textSecondary }]}>
-              {hymn.category ? `${hymn.category.toUpperCase()} ` : ''}{t('favorites.hymnLabel', {number: hymn.number})}
-            </Text>
-          </View>
-          
-          <View style={styles.menuItems}>
-            {hasStanza ? (
-              <Pressable
-                style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
-                onPress={() => handleNote(stanzaNumber ?? null)}
-              >
-                <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                  {stanzaHasNote ? t('actions.noteOpen') : t('actions.noteAdd')}
-                </Text>
-              </Pressable>
-            ) : null}
-
-            <Pressable
-              style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
-              onPress={() => handleNote(null)}
-            >
-              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                {hymnHasNote ? t('actions.hymnNoteOpen') : t('actions.hymnNoteAdd')}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
-              onPress={handleAddToFavorites}
-            >
-              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                {t('actions.addToFavorites')}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
-              onPress={handleShare}
-              disabled={!hasStanza}
-            >
-              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                {t('actions.share')}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.menuItem, { borderBottomWidth: 0 }]}
-              onPress={handleReportIssue}
-              disabled={!hasStanza}
-            >
-              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>{t('actions.report')}</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      reference={reference}
+      actions={actions}
+      report={
+        stanza !== null && stanzaText
+          ? {
+              label: t('actions.reportQuestion'),
+              onPress: () => {
+                onReportIssue({ stanzaNumber: stanza, stanzaText });
+                onClose();
+              },
+            }
+          : undefined
+      }
+      onClose={onClose}
+      onSheetLayout={onSheetLayout}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  popoverContainer: {
-    borderRadius: 12,
-    padding: 16,
-    minWidth: 280,
-    maxWidth: '90%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  popoverHeader: {
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-  },
-  hymnTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  hymnReference: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  menuItems: {
-    marginTop: 4,
-  },
-  menuItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-  },
-  menuItemText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-});
 
 export default HymnActionPopover;

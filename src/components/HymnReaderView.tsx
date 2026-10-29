@@ -1,17 +1,46 @@
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  Platform,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type TextStyle,
+} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {UITextView} from '@bsky.app/react-native-uitextview';
 import { HymnVerse } from '../hooks/useHymnsData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
 import {
+  applyMarkToRange,
   buildHymnDisplay,
   buildLineSegments,
   buildVerseLineOffsets,
+  eraseMarksInRange,
   HYMN_CHORUS_LABEL,
   intersectMarksWithSpan,
+  rangeStyles,
   type ChapterMark,
+  type MarkRange,
+  type VerseLineSegment,
+  type VerseSpan,
 } from '../utils/chapterMarks';
-import {dimHighlightForDarkMode, dimHighlightForLightMode, hexToRgba} from '../utils/colorUtils';
+import {dimHighlightForDarkMode, dimHighlightForLightMode, hexToRgba, translucentHighlight} from '../utils/colorUtils';
+import {
+  NATIVE_SELECTION,
+  attachSelectionMenu,
+  clearSelection,
+  onSelectionChange,
+  onTextDoubleTap,
+  reportSelection,
+  type NativeSelection,
+} from '../services/selectionMenu';
+import {BUBBLE_ARROW, BUBBLE_HEIGHT, BUBBLE_WIDTH, HighlightBubble} from './HighlightBubble';
 import {useKeyboardHeight} from '../hooks/useKeyboardHeight';
 import {noteSnippet, noteSnippetBudget, type Note} from '../types/notes';
 
@@ -23,6 +52,27 @@ import {NoteGlyph} from './NoteGlyph';
 
 const DOUBLE_TAP_DELAY_MS = 300;
 const EMPTY_MARKS: ChapterMark[] = [];
+
+// iOS with native selection: the selectable text and its spans are the
+// library's UITextViews, as in the Bible reader (a <Text> there can only copy
+// its whole text). The lib hands `ref` on, but its props type leaves it out.
+const IOS_NATIVE_SELECTION = NATIVE_SELECTION && Platform.OS === 'ios';
+const SelectableText = UITextView as React.ComponentType<
+  React.ComponentProps<typeof UITextView> & {ref?: React.Ref<unknown>}
+>;
+// Behind the stanza the action sheet is for, as behind a Bible verse.
+const SELECTED_STANZA_BACKGROUND = 'rgba(10, 132, 255, 0.16)';
+// Between that stanza and the sheet under it.
+const REVEAL_MARGIN = 12;
+// Room under a selection for Android's handles, when the bubble goes below.
+const HANDLE_ROOM = 30;
+const BUBBLE_MARGIN = 8;
+
+// The selected words (hymn offsets) and where the highlight bubble sits.
+type BubbleState = {range: MarkRange; left: number; top: number; arrowX: number; below: boolean};
+type Measurable = {
+  measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void;
+};
 
 // Hymn-specific spacing configuration
 const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
@@ -59,6 +109,12 @@ interface HymnReaderViewProps {
   // whole-hymn note in the header. `onFocus` is for its text field.
   noteBubbleStanza?: number | 'whole' | null;
   renderNoteBubble?: (onFocus: () => void) => React.ReactNode;
+  // The stanza the action sheet is for (0 = chorus), kept above the sheet.
+  selectedStanza?: number | null;
+  sheetHeight?: number;
+  // The hymn's marks after a colour or style from the highlight bubble. Given,
+  // the words are selectable (long-press) where the phone allows it.
+  onMarksChange?: (next: ChapterMark[]) => void;
 }
 
 interface HymnStanza {
@@ -90,7 +146,66 @@ interface HymnStanzaItemProps {
   // The open note bubble, drawn above the stanza card or above the chorus.
   stanzaBubble?: React.ReactNode;
   chorusBubble?: React.ReactNode;
+  // The phone's own word selection instead of the app's long-press editor.
+  nativeSelection: boolean;
+  onSelectableRef: (blockKey: string, stanza: number, text: string, instance: unknown) => void;
+  // The card's view, to bring it above the action sheet.
+  onBlockRef: (stanza: number, instance: View | null) => void;
+  isSelected: boolean;
+  chorusSelected: boolean;
 }
+
+const segmentStyle = (seg: VerseLineSegment, isDark: boolean, translucent: boolean): TextStyle[] => {
+  const style: TextStyle[] = [];
+  if (seg.marks.includes('bold')) style.push(styles.markBold);
+  if (seg.marks.includes('italic')) style.push(styles.markItalic);
+  if (seg.marks.includes('underline')) style.push(styles.markUnderline);
+  if (seg.marks.includes('highlight') && seg.highlightColor) {
+    style.push({
+      // iOS draws its selection under the text: see-through there, so a
+      // selection on highlighted words stays visible.
+      backgroundColor: translucent
+        ? translucentHighlight(seg.highlightColor, isDark)
+        : isDark
+          ? dimHighlightForDarkMode(seg.highlightColor)
+          : dimHighlightForLightMode(seg.highlightColor),
+    });
+  }
+  return style;
+};
+
+// A stanza's lines as one selectable text, so the phone's selection runs
+// across them; its marks drawn as spans inside it.
+const SelectableLines = ({
+  text,
+  marks,
+  isDark,
+  style,
+  selectableRef,
+}: {
+  text: string;
+  marks: ChapterMark[];
+  isDark: boolean;
+  style: any;
+  selectableRef: (instance: unknown) => void;
+}) => {
+  const lines = useMemo(() => text.split('\n'), [text]);
+  const offsets = useMemo(() => buildVerseLineOffsets(lines), [lines]);
+  return (
+    <SelectableText ref={selectableRef} selectable uiTextView maxFontSizeMultiplier={1.3} style={style}>
+      {lines.map((line, idx) => (
+        <UITextView key={idx}>
+          {idx > 0 ? '\n' : null}
+          {buildLineSegments(line, offsets[idx], marks).map((seg, segIdx) => (
+            <UITextView key={segIdx} style={segmentStyle(seg, isDark, IOS_NATIVE_SELECTION)}>
+              {seg.text}
+            </UITextView>
+          ))}
+        </UITextView>
+      ))}
+    </SelectableText>
+  );
+};
 
 // A stanza's lines with its marks applied — the hymn counterpart of the
 // segment rendering in BibleReaderView (hymns have no italic markers).
@@ -121,28 +236,11 @@ const MarkedLines = ({
         }
         return (
           <Text key={`${keyPrefix}-${idx}`} maxFontSizeMultiplier={1.3} style={style}>
-            {buildLineSegments(line, offsets[idx], marks).map((seg, segIdx) => {
-              const hasHighlight = seg.marks.includes('highlight');
-              return (
-                <Text
-                  key={`seg-${segIdx}`}
-                  style={[
-                    seg.marks.includes('bold') ? styles.markBold : null,
-                    seg.marks.includes('italic') ? styles.markItalic : null,
-                    seg.marks.includes('underline') ? styles.markUnderline : null,
-                    hasHighlight && seg.highlightColor
-                      ? {
-                          backgroundColor: isDark
-                            ? dimHighlightForDarkMode(seg.highlightColor)
-                            : dimHighlightForLightMode(seg.highlightColor),
-                        }
-                      : null,
-                  ]}
-                >
-                  {seg.text}
-                </Text>
-              );
-            })}
+            {buildLineSegments(line, offsets[idx], marks).map((seg, segIdx) => (
+              <Text key={`seg-${segIdx}`} style={segmentStyle(seg, isDark, false)}>
+                {seg.text}
+              </Text>
+            ))}
           </Text>
         );
       })}
@@ -171,6 +269,11 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   onNoteMarkPress,
   stanzaBubble,
   chorusBubble,
+  nativeSelection,
+  onSelectableRef,
+  onBlockRef,
+  isSelected,
+  chorusSelected,
 }) => {
   const stanzaText = useMemo(
     () => item.lines.map(line => line.text).join('\n').trim(),
@@ -186,6 +289,30 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   const lineFontSize = styles.hymnText.fontSize * fontScale;
   const lineStyle = [styles.hymnText, {fontSize: lineFontSize, lineHeight, color: readerText}];
   const labelStyle = [styles.label, {fontSize: styles.label.fontSize * fontScale, color: labelColor}];
+
+  // With native selection the long-press selects words (the highlight
+  // bubble); the app's double-tap stays. Each copy of the chorus is its own
+  // text, all of them stanza 0.
+  const stanzaSelectable = useCallback(
+    (instance: unknown) => onSelectableRef(`s-${item.verseNumber}`, item.verseNumber, stanzaText, instance),
+    [onSelectableRef, item.verseNumber, stanzaText],
+  );
+  const chorusSelectable = useCallback(
+    (instance: unknown) => onSelectableRef(`c-${item.verseNumber}`, 0, chorusText, instance),
+    [onSelectableRef, item.verseNumber, chorusText],
+  );
+  const stanzaBlockRef = useCallback(
+    (instance: View | null) => onBlockRef(item.verseNumber, instance),
+    [onBlockRef, item.verseNumber],
+  );
+  // The chorus is brought into view by its first copy.
+  const chorusBlockRef = useCallback(
+    (instance: View | null) => {
+      if (showChorusPreview) onBlockRef(0, instance);
+    },
+    [onBlockRef, showChorusPreview],
+  );
+  const longPress = nativeSelection ? undefined : onHymnLongPress;
 
   // Same double-tap detection as the Bible reader's verses. The chorus has its
   // own, as stanza 0, so it can carry a note too.
@@ -241,11 +368,18 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
     <View style={styles.stanzaBlock}>
       {stanzaBubble}
       <Pressable
-        style={[styles.hymnStanza, {backgroundColor: stanzaCardBackground}]}
-        onPress={() => doubleTap(lastTapRef, item.verseNumber, stanzaText)}
-        onLongPress={() => onHymnLongPress?.(item.verseNumber, stanzaText)}
+        ref={stanzaBlockRef}
+        collapsable={false}
+        style={[
+          styles.hymnStanza,
+          {backgroundColor: isSelected ? SELECTED_STANZA_BACKGROUND : stanzaCardBackground},
+        ]}
+        // With native selection the double-tap comes from the native module,
+        // as in the Bible reader: the text takes the taps.
+        onPress={nativeSelection ? undefined : () => doubleTap(lastTapRef, item.verseNumber, stanzaText)}
+        onLongPress={longPress ? () => longPress(item.verseNumber, stanzaText) : undefined}
         delayLongPress={400}
-        disabled={!onHymnLongPress && !onHymnDoubleTap}
+        disabled={nativeSelection || (!longPress && !onHymnDoubleTap)}
       >
         {noteBracket(stanzaNote)}
         <View style={styles.numberColumn}>
@@ -289,13 +423,23 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
               {item.heading}
             </Text>
           ) : null}
-          <MarkedLines
-            text={stanzaText}
-            marks={stanzaMarks}
-            isDark={isDark}
-            style={lineStyle}
-            keyPrefix={`stanza-${item.verseNumber}`}
-          />
+          {nativeSelection ? (
+            <SelectableLines
+              text={stanzaText}
+              marks={stanzaMarks}
+              isDark={isDark}
+              style={lineStyle}
+              selectableRef={stanzaSelectable}
+            />
+          ) : (
+            <MarkedLines
+              text={stanzaText}
+              marks={stanzaMarks}
+              isDark={isDark}
+              style={lineStyle}
+              keyPrefix={`stanza-${item.verseNumber}`}
+            />
+          )}
           {notePreview(stanzaNote)}
         </View>
       </Pressable>
@@ -303,11 +447,16 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
       {chorusLines.length > 0 ? chorusBubble : null}
       {chorusLines.length > 0 ? (
         <Pressable
-          style={[styles.chorusBlock, {backgroundColor: chorusBackground}]}
-          onPress={() => doubleTap(lastChorusTapRef, 0, chorusText)}
-          onLongPress={() => onHymnLongPress?.(0, chorusText)}
+          ref={chorusBlockRef}
+          collapsable={false}
+          style={[
+            styles.chorusBlock,
+            {backgroundColor: chorusSelected ? SELECTED_STANZA_BACKGROUND : chorusBackground},
+          ]}
+          onPress={nativeSelection ? undefined : () => doubleTap(lastChorusTapRef, 0, chorusText)}
+          onLongPress={longPress ? () => longPress(0, chorusText) : undefined}
           delayLongPress={400}
-          disabled={!onHymnLongPress && !onHymnDoubleTap}
+          disabled={nativeSelection || (!longPress && !onHymnDoubleTap)}
         >
           {noteBracket(chorusNote)}
           <View style={styles.chorusLabelRow}>
@@ -346,13 +495,23 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
             )}
           </View>
           <View style={styles.chorusTextContainer}>
-            <MarkedLines
-              text={chorusText}
-              marks={chorusMarks}
-              isDark={isDark}
-              style={[...lineStyle, styles.chorusLine]}
-              keyPrefix={`chorus-${item.verseNumber}`}
-            />
+            {nativeSelection ? (
+              <SelectableLines
+                text={chorusText}
+                marks={chorusMarks}
+                isDark={isDark}
+                style={[...lineStyle, styles.chorusLine]}
+                selectableRef={chorusSelectable}
+              />
+            ) : (
+              <MarkedLines
+                text={chorusText}
+                marks={chorusMarks}
+                isDark={isDark}
+                style={[...lineStyle, styles.chorusLine]}
+                keyPrefix={`chorus-${item.verseNumber}`}
+              />
+            )}
             {/* The chorus repeats after every stanza; its preview shows once. */}
             {showChorusPreview ? notePreview(chorusNote) : null}
           </View>
@@ -380,7 +539,12 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
   prev.noteColor === next.noteColor &&
   prev.onNoteMarkPress === next.onNoteMarkPress &&
   prev.stanzaBubble === next.stanzaBubble &&
-  prev.chorusBubble === next.chorusBubble
+  prev.chorusBubble === next.chorusBubble &&
+  prev.nativeSelection === next.nativeSelection &&
+  prev.onSelectableRef === next.onSelectableRef &&
+  prev.onBlockRef === next.onBlockRef &&
+  prev.isSelected === next.isSelected &&
+  prev.chorusSelected === next.chorusSelected
 );
 
 const HymnReaderView: React.FC<HymnReaderViewProps> = ({
@@ -397,12 +561,16 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   onNoteMarkPress,
   noteBubbleStanza,
   renderNoteBubble,
+  selectedStanza = null,
+  sheetHeight = 0,
+  onMarksChange,
 }) => {
   const { theme } = useTheme();
   const { isLowEndMode } = useLowEndMode();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<HymnStanza>>(null);
   const keyboardHeight = useKeyboardHeight();
+  const nativeSelection = NATIVE_SELECTION && !!onMarksChange;
 
   // stanza -> its note (0 = chorus), plus the whole-hymn note. Stable objects,
   // so untouched stanzas skip re-rendering. The preview's length follows the
@@ -474,17 +642,250 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     ? hexToRgba('#FFFFFF', 0.02)
     : hexToRgba('#000000', 0.015);
 
+  // Each stanza's place in the whole hymn text (verse_number 0 = chorus).
+  const verseSpans = useMemo(
+    () => (hymnVerses.length ? buildHymnDisplay(hymnVerses, HYMN_CHORUS_LABEL).verseSpans : []),
+    [hymnVerses],
+  );
+
   // Marks are stored as offsets into the whole hymn text; slice them per stanza
-  // (verse_number 0 = chorus) so each item only gets its own.
+  // so each item only gets its own.
   const marksByVerseNumber = useMemo(() => {
     const map: Record<number, ChapterMark[]> = {};
-    if (!marks?.length || hymnVerses.length === 0) return map;
-    for (const span of buildHymnDisplay(hymnVerses, HYMN_CHORUS_LABEL).verseSpans) {
+    if (!marks?.length) return map;
+    for (const span of verseSpans) {
       const local = intersectMarksWithSpan(marks, span);
       if (local.length > 0) map[span.verseNumber] = local;
     }
     return map;
-  }, [marks, hymnVerses]);
+  }, [marks, verseSpans]);
+
+  // --- The highlight bubble over a native selection, as in BibleReaderView:
+  // each stanza's text by its React tag, so an event leads back to the stanza
+  // and the bubble can be placed by it. ---
+  const rootRef = useRef<View>(null);
+  const isScrollingRef = useRef(false);
+  const [bubble, setBubble] = useState<BubbleState | null>(null);
+  // Bumped by every selection event, so a measurement that comes back after a
+  // newer event, or after the selection ended, is dropped.
+  const selectionSeq = useRef(0);
+  // The text whose selection the bubble is for: only its own end hides it.
+  const bubbleTag = useRef<number | null>(null);
+  // Where that text and the reader sit on screen, measured once per selection
+  // and forgotten whenever the text could have moved.
+  const selectionOrigin = useRef<{tag: number; x: number; y: number; width: number; height: number} | null>(null);
+  const selectableTexts = useRef(
+    new Map<number, {blockKey: string; stanza: number; text: string; instance: unknown}>(),
+  );
+  const onSelectableRef = useCallback(
+    (blockKey: string, stanza: number, text: string, instance: unknown) => {
+      const texts = selectableTexts.current;
+      for (const [tag, entry] of texts) {
+        if (entry.blockKey !== blockKey) continue;
+        texts.delete(tag);
+        reportSelection(tag, false);
+        // Its selection went with it: so does the bubble.
+        if (bubbleTag.current === tag) {
+          bubbleTag.current = null;
+          selectionOrigin.current = null;
+          setBubble(null);
+        }
+      }
+      if (!instance) return;
+      const tag = attachSelectionMenu(instance);
+      if (tag != null) texts.set(tag, {blockKey, stanza, text, instance});
+    },
+    [],
+  );
+
+  // Read at event time, so the subscriptions below stay put.
+  const eventContext = useRef({verseSpans, onHymnDoubleTap});
+  eventContext.current = {verseSpans, onHymnDoubleTap};
+
+  useEffect(() => {
+    if (!nativeSelection) return;
+    const showBubble = (range: MarkRange, selection: NativeSelection) => {
+      const origin = selectionOrigin.current;
+      if (!origin) return;
+      // The text's top-left in the reader.
+      const x = origin.x + selection.x;
+      // Above the words when it fits, else under them, clear of the handles.
+      const above = origin.y + selection.top - BUBBLE_ARROW / 2 - 4 - BUBBLE_HEIGHT;
+      const below = above < BUBBLE_MARGIN;
+      const top = below ? origin.y + selection.bottom + HANDLE_ROOM : above;
+      const left = Math.min(
+        Math.max(x - BUBBLE_WIDTH / 2, BUBBLE_MARGIN),
+        origin.width - BUBBLE_WIDTH - BUBBLE_MARGIN,
+      );
+      setBubble({
+        range,
+        left,
+        top: Math.max(BUBBLE_MARGIN, Math.min(top, origin.height - BUBBLE_HEIGHT - BUBBLE_MARGIN)),
+        arrowX: Math.min(Math.max(x - left, 18), BUBBLE_WIDTH - 18),
+        below,
+      });
+    };
+
+    // A stanza's selection as offsets into the whole hymn text.
+    const hymnRange = (stanza: number, selection: NativeSelection): MarkRange | null => {
+      const span: VerseSpan | undefined = eventContext.current.verseSpans.find(s => s.verseNumber === stanza);
+      if (!span) return null;
+      const start = span.start + Math.max(0, selection.start);
+      const end = Math.min(span.end, span.start + selection.end);
+      return end > start ? {start, end} : null;
+    };
+
+    const placeBubble = (tag: number, selection: NativeSelection | null) => {
+      // A late end from another text leaves this selection's bubble alone.
+      if (!selection && tag !== bubbleTag.current) return;
+      const seq = ++selectionSeq.current;
+      bubbleTag.current = selection ? tag : null;
+      const entry = selection ? selectableTexts.current.get(tag) : undefined;
+      const range = selection && entry ? hymnRange(entry.stanza, selection) : null;
+      if (!selection || !entry || !range) {
+        if (!selection) selectionOrigin.current = null;
+        setBubble(null);
+        return;
+      }
+      if (selectionOrigin.current?.tag === tag) {
+        showBubble(range, selection);
+        return;
+      }
+      (entry.instance as Measurable).measureInWindow((textX, textY) => {
+        rootRef.current?.measureInWindow((rootX, rootY, rootWidth, rootHeight) => {
+          if (bubbleTag.current !== tag) return;
+          selectionOrigin.current = {tag, x: textX - rootX, y: textY - rootY, width: rootWidth, height: rootHeight};
+          if (seq === selectionSeq.current) showBubble(range, selection);
+        });
+      });
+    };
+
+    const stopSelection = onSelectionChange(placeBubble);
+    // A double-tap opens the stanza's sheet, as a verse's in the Bible.
+    const doubleTaps = onTextDoubleTap(({tag}) => {
+      if (isScrollingRef.current) return;
+      const entry = selectableTexts.current.get(tag);
+      if (!entry) return;
+      clearSelection();
+      eventContext.current.onHymnDoubleTap?.(entry.stanza, entry.text);
+    });
+    return () => {
+      stopSelection();
+      doubleTaps?.remove();
+    };
+  }, [nativeSelection]);
+
+  const bubbleStyles = useMemo(
+    () => (bubble ? rangeStyles(marks ?? [], bubble.range) : null),
+    [bubble, marks],
+  );
+
+  // A colour or style lands on the words at once; the selection then ends.
+  const editBubbleRange = (edit: (current: ChapterMark[], range: MarkRange) => ChapterMark[]) => {
+    if (!bubble) return;
+    onMarksChange?.(edit(marks ?? [], bubble.range));
+    clearSelection();
+    setBubble(null);
+  };
+
+  // --- The stanza the action sheet is for: kept above the sheet. ---
+  const {height: windowHeight} = useWindowDimensions();
+  const blockRefs = useRef(new Map<number, View>());
+  const onBlockRef = useCallback((stanza: number, instance: View | null) => {
+    if (instance) blockRefs.current.set(stanza, instance);
+    else blockRefs.current.delete(stanza);
+  }, []);
+  const scrollY = useRef(0);
+  const viewportHeight = useRef(0);
+  const contentHeight = useRef(0);
+  const pendingReveal = useRef(false);
+  const revealContext = useRef({sheetHeight, selectedStanza, windowHeight});
+  revealContext.current = {sheetHeight, selectedStanza, windowHeight};
+
+  // Just far enough: the stanza right above the sheet, or at the top when it
+  // was above the view or is too long to fit. Until the room under the last
+  // stanza is laid out it stays pending, and the size change tries again.
+  const revealStanza = useCallback(() => {
+    const {sheetHeight: covered, selectedStanza: stanza, windowHeight: screen} = revealContext.current;
+    const block = stanza != null ? blockRefs.current.get(stanza) : undefined;
+    const root = rootRef.current;
+    if (!pendingReveal.current || !covered || !block || !root) return;
+    block.measureInWindow((_bx, blockTop, _bw, blockHeight) => {
+      root.measureInWindow((_rx, rootTop, _rw, rootHeight) => {
+        const visibleBottom = Math.min(rootTop + rootHeight, screen - covered);
+        let delta = 0;
+        if (blockTop < rootTop + REVEAL_MARGIN) {
+          delta = blockTop - rootTop - REVEAL_MARGIN;
+        } else if (blockTop + blockHeight > visibleBottom - REVEAL_MARGIN) {
+          delta = Math.min(blockTop + blockHeight + REVEAL_MARGIN - visibleBottom, blockTop - rootTop - REVEAL_MARGIN);
+        }
+        const target = Math.max(0, scrollY.current + delta);
+        if (Math.abs(delta) >= 1 && target > contentHeight.current - viewportHeight.current + 1) return;
+        pendingReveal.current = false;
+        if (Math.abs(delta) < 1) return;
+        scrollY.current = target;
+        listRef.current?.scrollToOffset({offset: target, animated: true});
+      });
+    });
+  }, []);
+
+  // Room under the hymn for the sheet, so even the last stanza can rise above
+  // it. When the sheet closes, the part the reader is scrolled into stays
+  // (taking it away would make the text jump); later scrolls give back what
+  // is out of view.
+  const [sheetRoom, setSheetRoom] = useState(0);
+  const sheetOpen = useRef(false);
+  const roomInView = useCallback(
+    (room: number) =>
+      Math.min(room, Math.max(0, Math.ceil(scrollY.current + viewportHeight.current - (contentHeight.current - room)))),
+    [],
+  );
+  useLayoutEffect(() => {
+    sheetOpen.current = sheetHeight > 0;
+    setSheetRoom(room => sheetHeight || roomInView(room));
+    pendingReveal.current = sheetHeight > 0 && selectedStanza != null;
+    const frame = requestAnimationFrame(revealStanza);
+    return () => cancelAnimationFrame(frame);
+  }, [sheetHeight, selectedStanza, roomInView, revealStanza]);
+
+  const noteScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollY.current = e.nativeEvent.contentOffset.y;
+      if (!sheetOpen.current) setSheetRoom(roomInView);
+    },
+    [roomInView],
+  );
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.current = e.nativeEvent.contentOffset.y;
+  }, []);
+  const onScrollBeginDrag = useCallback(() => {
+    isScrollingRef.current = true;
+    // The bubble stays where it was drawn, so scrolling ends the selection.
+    if (NATIVE_SELECTION) clearSelection();
+  }, []);
+  const onScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      noteScrollEnd(e);
+      setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 80);
+    },
+    [noteScrollEnd],
+  );
+  const onMomentumScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      isScrollingRef.current = false;
+      noteScrollEnd(e);
+    },
+    [noteScrollEnd],
+  );
+  const onContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      contentHeight.current = height;
+      revealStanza();
+    },
+    [revealStanza],
+  );
 
   // Only to a stanza the list still holds: the hymn can change between
   // scheduling a scroll and running it, and scrollToIndex past the end is a
@@ -553,9 +954,19 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
             ? noteBubbleElement
             : undefined
         }
+        nativeSelection={nativeSelection}
+        onSelectableRef={onSelectableRef}
+        onBlockRef={onBlockRef}
+        isSelected={selectedStanza === item.verseNumber}
+        // The chorus is marked once, on its first copy, like its note.
+        chorusSelected={selectedStanza === 0 && item.verseNumber === firstStanzaNumber}
       />
     ),
     [
+      nativeSelection,
+      onSelectableRef,
+      onBlockRef,
+      selectedStanza,
       noteBubbleStanza,
       noteBubbleElement,
       firstStanzaNumber,
@@ -605,96 +1016,131 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       };
 
   return (
-    <FlatList
-      ref={listRef}
-      data={hymnStanzas}
-      keyExtractor={keyExtractor}
-      contentContainerStyle={{
-        paddingBottom:
-          HYMN_BASE_BOTTOM_PADDING +
-          bottomScrollSpacerAdjusted +
-          (noteBubbleStanza != null ? keyboardHeight : 0),
+    <View
+      ref={rootRef}
+      collapsable={false}
+      style={styles.root}
+      onLayout={() => {
+        // Sizes changed (rotation, keyboard): measure again for the bubble.
+        selectionOrigin.current = null;
       }}
-      onScrollToIndexFailed={info => setTimeout(() => scrollToStanza(info.index), 220)}
-      ListHeaderComponent={
-        <View>
-          {hasHeader ? (
-            <View style={styles.headerContainer}>
-              {hasTitle ? (
-                <Text
-                  maxFontSizeMultiplier={1.3}
-                  style={[
-                    styles.headerTitle,
-                    {
-                      color: theme.colors.readerText,
-                      fontSize: styles.headerTitle.fontSize * fontScale,
-                    },
-                  ]}
-                >
-                  {hymnTitle!.trim()}
-                </Text>
-              ) : null}
-              {headerNote ? (
-                <Text
-                  maxFontSizeMultiplier={1.3}
-                  style={[
-                    styles.label,
-                    styles.headerLabel,
-                    {fontSize: styles.label.fontSize * fontScale, color: theme.colors.textSecondary},
-                  ]}
-                >
-                  {headerNote}
-                </Text>
-              ) : null}
-              {headerAuthors ? (
-                <Text
-                  maxFontSizeMultiplier={1.3}
-                  style={[
-                    styles.label,
-                    styles.headerLabel,
-                    {fontSize: styles.label.fontSize * fontScale, color: theme.colors.textSecondary},
-                  ]}
-                >
-                  {headerAuthors}
-                </Text>
-              ) : null}
-              {noteBubbleStanza === 'whole' ? (
-                <View style={styles.headerBubble}>{noteBubbleElement}</View>
-              ) : null}
-              {/* The whole-hymn note, first line under the title. */}
-              {wholeHymnNote && noteBubbleStanza !== 'whole' ? (
-                <Pressable
-                  onPress={() => onNoteMarkPress?.(wholeHymnNote.id)}
-                  style={[styles.notePreview, styles.headerNotePreview]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('notes.open')}
-                >
-                  <NoteGlyph color={theme.colors.accentBlue} size={14} />
+    >
+      <FlatList
+        ref={listRef}
+        data={hymnStanzas}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={{
+          paddingBottom:
+            HYMN_BASE_BOTTOM_PADDING +
+            bottomScrollSpacerAdjusted +
+            (noteBubbleStanza != null ? keyboardHeight : 0) +
+            sheetRoom,
+        }}
+        onLayout={e => {
+          viewportHeight.current = e.nativeEvent.layout.height;
+        }}
+        onScroll={onScroll}
+        scrollEventThrottle={32}
+        onScrollBeginDrag={onScrollBeginDrag}
+        onScrollEndDrag={onScrollEndDrag}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        onContentSizeChange={onContentSizeChange}
+        onScrollToIndexFailed={info => setTimeout(() => scrollToStanza(info.index), 220)}
+        ListHeaderComponent={
+          <View>
+            {hasHeader ? (
+              <View style={styles.headerContainer}>
+                {hasTitle ? (
                   <Text
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
                     maxFontSizeMultiplier={1.3}
                     style={[
-                      styles.notePreviewText,
-                      {color: theme.colors.accentBlue, fontSize: 15 * fontScale},
+                      styles.headerTitle,
+                      {
+                        color: theme.colors.readerText,
+                        fontSize: styles.headerTitle.fontSize * fontScale,
+                      },
                     ]}
                   >
-                    {wholeHymnNote.snippet}
+                    {hymnTitle!.trim()}
                   </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      }
-      renderItem={renderItem}
-      {...listProps}
-      style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
-    />
+                ) : null}
+                {headerNote ? (
+                  <Text
+                    maxFontSizeMultiplier={1.3}
+                    style={[
+                      styles.label,
+                      styles.headerLabel,
+                      {fontSize: styles.label.fontSize * fontScale, color: theme.colors.textSecondary},
+                    ]}
+                  >
+                    {headerNote}
+                  </Text>
+                ) : null}
+                {headerAuthors ? (
+                  <Text
+                    maxFontSizeMultiplier={1.3}
+                    style={[
+                      styles.label,
+                      styles.headerLabel,
+                      {fontSize: styles.label.fontSize * fontScale, color: theme.colors.textSecondary},
+                    ]}
+                  >
+                    {headerAuthors}
+                  </Text>
+                ) : null}
+                {noteBubbleStanza === 'whole' ? (
+                  <View style={styles.headerBubble}>{noteBubbleElement}</View>
+                ) : null}
+                {/* The whole-hymn note, first line under the title. */}
+                {wholeHymnNote && noteBubbleStanza !== 'whole' ? (
+                  <Pressable
+                    onPress={() => onNoteMarkPress?.(wholeHymnNote.id)}
+                    style={[styles.notePreview, styles.headerNotePreview]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('notes.open')}
+                  >
+                    <NoteGlyph color={theme.colors.accentBlue} size={14} />
+                    <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      maxFontSizeMultiplier={1.3}
+                      style={[
+                        styles.notePreviewText,
+                        {color: theme.colors.accentBlue, fontSize: 15 * fontScale},
+                      ]}
+                    >
+                      {wholeHymnNote.snippet}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        }
+        renderItem={renderItem}
+        {...listProps}
+        style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
+      />
+      {bubble && bubbleStyles ? (
+        <HighlightBubble
+          left={bubble.left}
+          top={bubble.top}
+          arrowX={bubble.arrowX}
+          below={bubble.below}
+          current={bubbleStyles}
+          onColor={color =>
+            editBubbleRange((current, range) => applyMarkToRange(current, range, 'highlight', color))
+          }
+          onStyle={style => editBubbleRange((current, range) => applyMarkToRange(current, range, style))}
+          onErase={() => editBubbleRange(eraseMarksInRange)}
+        />
+      ) : null}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  root: {flex: 1},
   container: {
     flex: 1,
     paddingHorizontal: 16,
