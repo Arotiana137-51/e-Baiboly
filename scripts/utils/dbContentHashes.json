@@ -1,10 +1,10 @@
 {
   "bible": {
-    "hash": "51db4ac5611c124057e9872df4d0abe22328e869bdc50dbd2b3f3252881ac7d4",
-    "version": 20261029
+    "hash": "d81baaac8ccef5b5d4e9ddf4189ef737ae60b2297071cc5af9a1d35ed8266fcf",
+    "version": 20261030
   },
   "hymns": {
-    "hash": "8c01754a6d2159cbe636f153f98e95a0c5bb5270afb784f991e6c7ff9be7fe57",
-    "version": 20261030
+    "hash": "624281bd3e901b437268e255ddc995ff508d90045a175625bf909176bb5e9882",
+    "version": 20261031
   }
 }

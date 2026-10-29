@@ -245,7 +245,7 @@ mg1865::mg_27::2::10:
   verse_number: 10
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ny Kaldeana namaly teo anatrehan''ny mpanjaka hoe: Tsy misy olona ety ambonin''ny tany mahay milaza izany nofin*''ny mpanjaka izany; fa tsy mbola nisy mpanjaka, na dia izay lehibe sy mahery aza, nila zavatra toy izany tamin''ny ombiasy sy ny mpisikidy ary ny Kaldeana. [* [*Aramiana: tenin'']'
+  verse_text: 'Ny Kaldeana namaly teo anatrehan''ny mpanjaka hoe: Tsy misy olona ety ambonin''ny tany mahay milaza izany nofin*''ny mpanjaka izany; fa tsy mbola nisy mpanjaka, na dia izay lehibe sy mahery aza, nila zavatra toy izany tamin''ny ombiasy sy ny mpisikidy ary ny Kaldeana. [*Aramiana: tenin'']'
 mg1865::mg_27::2::11:
   verse_version: mg1865
   verse_book: mg_27
@@ -333,7 +333,7 @@ mg1865::mg_27::2::21:
   verse_number: 21
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ary Izy no mandahatra* ny andro sy ny fotoana; Izy no manaisotra mpanjaka sy manangana mpanjaka; Izy no manome fahendrena ho an''ny hendry sy fahalalana ho an''izay mazava saina. [* [*Aramiana: manova]'
+  verse_text: 'Ary Izy no mandahatra* ny andro sy ny fotoana; Izy no manaisotra mpanjaka sy manangana mpanjaka; Izy no manome fahendrena ho an''ny hendry sy fahalalana ho an''izay mazava saina. [*Aramiana: manova]'
 mg1865::mg_27::2::22:
   verse_version: mg1865
   verse_book: mg_27
@@ -621,7 +621,7 @@ mg1865::mg_27::3::8:
   verse_number: 8
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ary tamin''izay dia nisy Kaldeana sasany nanatona ka niampanga* ny Jiosy. [* [*Aramiana: nihinana ny nofon'']'
+  verse_text: 'Ary tamin''izay dia nisy Kaldeana sasany nanatona ka niampanga* ny Jiosy. [*Aramiana: nihinana ny nofon'']'
 mg1865::mg_27::3::9:
   verse_version: mg1865
   verse_book: mg_27
@@ -733,7 +733,7 @@ mg1865::mg_27::3::22:
   verse_number: 22
   verse_date_revised: null
   verse_title: null
-  verse_text: 'ary satria mafy ny tenin''ny mpanjaka, ka natao mahamay indrindra ny lafaoro, dia matin''ny lelafo ireny lehilahy izay nanipy* an''i Sadraka sy Mesaka sy Abednego. [* [*Aramiana: nampiakatra]'
+  verse_text: 'ary satria mafy ny tenin''ny mpanjaka, ka natao mahamay indrindra ny lafaoro, dia matin''ny lelafo ireny lehilahy izay nanipy* an''i Sadraka sy Mesaka sy Abednego. [*Aramiana: nampiakatra]'
 mg1865::mg_27::3::23:
   verse_version: mg1865
   verse_book: mg_27
@@ -829,7 +829,7 @@ mg1865::mg_27::4::1:
   verse_number: 1
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Izaho Nebokadnezara niadana tao an-tranoko ary faly finaritra* tao an-dapako. [* [*Aramiana: maitso]'
+  verse_text: 'Izaho Nebokadnezara niadana tao an-tranoko ary faly finaritra* tao an-dapako. [*Aramiana: maitso]'
 mg1865::mg_27::4::2:
   verse_version: mg1865
   verse_book: mg_27
@@ -1013,7 +1013,7 @@ mg1865::mg_27::4::24:
   verse_number: 24
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Koa aoka hankasitrahanao ny anatro, ry mpanjaka, ka dia ny fahamarinana no ento mampitsahatra* ny fahotanao, ary ny fiantrana ny mahantra no ento mampitsahatra* ny helokao, fandrao mba hampaharetina ahay ny fiadananao. [* [*Aramiana: anapaho]'
+  verse_text: 'Koa aoka hankasitrahanao ny anatro, ry mpanjaka, ka dia ny fahamarinana no ento mampitsahatra* ny fahotanao, ary ny fiantrana ny mahantra no ento mampitsahatra* ny helokao, fandrao mba hampaharetina ahay ny fiadananao. [*Aramiana: anapaho]'
 mg1865::mg_27::4::25:
   verse_version: mg1865
   verse_book: mg_27
@@ -1533,7 +1533,7 @@ mg1865::mg_27::6::25:
   verse_number: 25
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ary ny mpanjaka nandidy, ka nentina ireo lehilahy niampanga* an''i Daniela ireo, dia natsipy tao an-davaky ny liona izy mbamin''ny vadiny aman-janany, ary ny liona nanan-kery taminy ka nanapatapaka ny taolany, raha tsy mbola nipaka tamin''ny vodin''ny lavaka akory aza izy. [* [*Aramiana: nihinana ny nofony]'
+  verse_text: 'Ary ny mpanjaka nandidy, ka nentina ireo lehilahy niampanga* an''i Daniela ireo, dia natsipy tao an-davaky ny liona izy mbamin''ny vadiny aman-janany, ary ny liona nanan-kery taminy ka nanapatapaka ny taolany, raha tsy mbola nipaka tamin''ny vodin''ny lavaka akory aza izy. [*Aramiana: nihinana ny nofony]'
 mg1865::mg_27::6::26:
   verse_version: mg1865
   verse_book: mg_27
@@ -1573,7 +1573,7 @@ mg1865::mg_27::7::1:
   verse_number: 1
   verse_date_revised: null
   verse_title: 'Fahitana niseho tamin''i Daniela ny amin''ny fanjakana efatra lehibe, sy ny hitsaran''Andriamanitra ireo.'
-  verse_text: 'Tamin''ny taona voalohany nanjakan''i Belsazara, mpanjakan''i Babylona, dia nanonofy Daniela sady nahita fahitana* tao am-pandriany, ary nosoratany ny nofy, ka nambarany ny fotopototry ny teny. [* [*Aramiana: fahitan''ny lohany]'
+  verse_text: 'Tamin''ny taona voalohany nanjakan''i Belsazara, mpanjakan''i Babylona, dia nanonofy Daniela sady nahita fahitana* tao am-pandriany, ary nosoratany ny nofy, ka nambarany ny fotopototry ny teny. [*Aramiana: fahitan''ny lohany]'
 mg1865::mg_27::7::2:
   verse_version: mg1865
   verse_book: mg_27

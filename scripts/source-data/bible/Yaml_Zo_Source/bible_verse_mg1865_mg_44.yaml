@@ -1541,7 +1541,7 @@ mg1865::mg_44::6::15:
   verse_number: 15
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ary izay rehetra nipetraka teo amin''ny Synedriona, raha nandinika an''i Stefana, dia nahita ny tarehiny tahaka ny tarehin''anjely. ]'
+  verse_text: 'Ary izay rehetra nipetraka teo amin''ny Synedriona, raha nandinika an''i Stefana, dia nahita ny tarehiny tahaka ny tarehin''anjely.'
 mg1865::mg_44::7::1:
   verse_version: mg1865
   verse_book: mg_44
@@ -2493,14 +2493,14 @@ mg1865::mg_44::9::19:
   verse_number: 19
   verse_date_revised: null
   verse_title: null
-  verse_text: 'ary nihinan-kanina izy ka dia natanjaka. #Ny nitorian''i Saoly tany Damaskosy sy Jerosalema# Ary Saoly nitoetra andro vitsivitsy teo amin''ny mpianatra tany Damaskosy.'
+  verse_text: 'ary nihinan-kanina izy ka dia natanjaka. Ary Saoly nitoetra andro vitsivitsy teo amin''ny mpianatra tany Damaskosy.'
 mg1865::mg_44::9::20:
   verse_version: mg1865
   verse_book: mg_44
   verse_chapter: 9
   verse_number: 20
   verse_date_revised: null
-  verse_title: null
+  verse_title: 'Ny nitorian''i Saoly tany Damaskosy sy Jerosalema'
   verse_text: 'Ary niaraka tamin''izay dia nitory teo amin''ny synagoga izy ka nilaza an''i Jesoa fa Zanak''Andriamanitra.'
 mg1865::mg_44::9::21:
   verse_version: mg1865
@@ -6069,7 +6069,7 @@ mg1865::mg_44::21::18:
   verse_number: 18
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ary nony ampitso dia niara-niditra tany amin''i Jakoba izahay sy Paoly; ary vory teo ny loholona* rehetra. ]*Grika: presbytera]'
+  verse_text: 'Ary nony ampitso dia niara-niditra tany amin''i Jakoba izahay sy Paoly; ary vory teo ny loholona* rehetra. [*Grika: presbytera]'
 mg1865::mg_44::21::19:
   verse_version: mg1865
   verse_book: mg_44
