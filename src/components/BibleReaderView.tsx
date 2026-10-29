@@ -25,15 +25,11 @@ import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import {renderBibleLineForReader} from '../utils/bibleTextUtils';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
-  applyMarkToRange,
   buildChapterDisplay,
   buildLineSegments,
   buildVerseLineOffsets,
-  eraseMarksInRange,
   intersectMarksWithSpan,
-  rangeStyles,
   type ChapterMark,
-  type MarkRange,
   type VerseSpan,
 } from '../utils/chapterMarks';
 import {
@@ -59,24 +55,16 @@ import {
   type VerseNoteMarks,
 } from '../types/notes';
 import {t} from '../i18n/strings';
-import {
-  BUBBLE_ARROW,
-  BUBBLE_HEIGHT,
-  BUBBLE_WIDTH,
-  HighlightBubble,
-} from './HighlightBubble';
+import {SelectionHighlightBubble} from './HighlightBubble';
 import {UITextView} from '@bsky.app/react-native-uitextview';
 import {
   NATIVE_SELECTION,
-  attachSelectionMenu,
   clearSelection,
-  onSelectionChange,
-  onTextDoubleTap,
   onTextLines,
-  reportSelection,
   textLinesFor,
-  type NativeSelection,
 } from '../services/selectionMenu';
+import {useSelectionBubble} from '../hooks/useSelectionBubble';
+import {useSheetRoom} from '../hooks/useSheetRoom';
 import {SPAN_LONG_PRESS} from '../utils/verseSelection';
 
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
@@ -133,23 +121,6 @@ export type SelectedVerseRange = {start: number; end: number} | null;
 export type BibleReaderHandle = {
   scrollToVerse: (verseNumber: number) => void;
   scrollToTop: () => void;
-};
-
-// Room under a selection for Android's handles, when the bubble goes below.
-const HANDLE_ROOM = 30;
-const BUBBLE_MARGIN = 8;
-
-// The selected words (chapter offsets) and where the highlight bubble sits.
-type BubbleState = {
-  range: MarkRange;
-  left: number;
-  top: number;
-  arrowX: number;
-  below: boolean;
-};
-
-type Measurable = {
-  measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void;
 };
 
 // Sizes every verse of the reader shares.
@@ -237,9 +208,10 @@ const buildVerseStyles = (theme: Theme, metrics: VerseMetrics, withRefs: boolean
   };
 };
 
-// One background style per highlight colour and theme, shared by every span.
+// One background style per highlight colour and theme, shared by every span
+// (the hymn reader's too).
 const highlightStyles = new Map<string, TextStyle>();
-const highlightStyle = (color: string, isDark: boolean): TextStyle => {
+export const highlightStyle = (color: string, isDark: boolean): TextStyle => {
   const key = `${color}-${isDark}`;
   let style = highlightStyles.get(key);
   if (!style) {
@@ -638,25 +610,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   const {transformText} = useJesusName();
   const insets = useSafeAreaInsets();
   const isScrollingRef = useRef(false);
-
-  // --- The highlight bubble over a native selection. ---
   const rootRef = useRef<View>(null);
-  const [bubble, setBubble] = useState<BubbleState | null>(null);
-  // Bumped by every selection event, so a measurement that comes back after a
-  // newer event, or after the selection ended, is dropped.
-  const selectionSeq = useRef(0);
-  // The text whose selection the bubble is for: only its own end hides it.
-  const bubbleTag = useRef<number | null>(null);
-  // Where that text and the reader sit on screen, measured once per selection
-  // (iOS reports every step of a handle drag); forgotten whenever the text
-  // could have moved: a scroll, a new size.
-  const selectionOrigin = useRef<{
-    tag: number;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
 
   const visibleVerses = useMemo(() => {
     if (!selectedVerseRange) return verses;
@@ -750,6 +704,28 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   const passagesRef = useRef(passages);
   passagesRef.current = passages;
 
+  // --- Native selection: each passage's <Text> by its React tag, so an event
+  // can be traced back to its passage and the bubble placed by it. ---
+  const {bubble, texts: selectableTexts, register, forgetPlace, dismiss} = useSelectionBubble<undefined>({
+    enabled: NATIVE_SELECTION,
+    rootRef,
+    toRange: ({key}, selection) => {
+      const passage = passagesRef.current.find(p => p.key === key);
+      return passage ? passageRangeToChapterRange(passage, selection.start, selection.end, verseSpans) : null;
+    },
+    // A double-tap opens the tapped verse's menu, as it always has; not one
+    // on a reference or a note's number (that tap already did its own thing),
+    // nor one while the reader scrolls.
+    onDoubleTap: ({key}, offset) => {
+      if (isScrollingRef.current || Date.now() - spanPressedAt.current < 600) return;
+      const passage = passagesRef.current.find(p => p.key === key);
+      const verse = passage && verseAtOffset(passage, offset);
+      if (!verse) return;
+      clearSelection();
+      contextRef.current.onVerseDoubleTap?.(verse);
+    },
+  });
+
   // Forget the layout of passages no longer shown.
   useEffect(() => {
     const keys = new Set(passages.map(p => p.key));
@@ -764,10 +740,10 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   // Every scroll asked from here notes where it lands (the native side stops
   // at the end of the content).
   const scrollTo = useCallback((y: number) => {
-    selectionOrigin.current = null;
+    forgetPlace();
     scrollY.current = Math.min(y, Math.max(0, contentHeight.current - viewportHeight.current));
     scrollRef.current?.scrollTo({y, animated: true});
-  }, []);
+  }, [forgetPlace]);
 
   // A verse's top and bottom in the scroll content: null until its passage
   // is laid out, 'missing' when the chapter has no such verse.
@@ -834,32 +810,10 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     [scrollToPendingVerse, scrollTo],
   );
 
-  // Room under the text for the sheet, so even the last verse can rise above
-  // it. When the sheet closes, the part the reader is scrolled into stays
-  // (taking it away would make the text jump); the end of each later scroll
-  // gives back what is out of view.
-  const [sheetRoom, setSheetRoom] = useState(0);
-  const sheetOpen = useRef(false);
-  const roomInView = useCallback(
-    (room: number) =>
-      Math.min(room, Math.max(0, Math.ceil(scrollY.current + viewportHeight.current - (contentHeight.current - room)))),
-    [],
-  );
-  const noteScrollEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      scrollY.current = e.nativeEvent.contentOffset.y;
-      if (!sheetOpen.current) setSheetRoom(roomInView);
-    },
-    [roomInView],
-  );
+  const {sheetRoom, onScrollEnd: noteScrollEnd} = useSheetRoom(sheetHeight, scrollY, viewportHeight, contentHeight);
 
-  // Layout effects: the room and the reveal must be set before the room's
-  // size change comes back from the native side.
-  useLayoutEffect(() => {
-    sheetOpen.current = sheetHeight > 0;
-    setSheetRoom(room => sheetHeight || roomInView(room));
-  }, [sheetHeight, roomInView]);
-
+  // A layout effect, after the room's: the reveal must be set before the
+  // room's size change comes back from the native side.
   useLayoutEffect(() => {
     pendingReveal.current =
       sheetHeight > 0 && selectedVerseNumber != null ? {verse: selectedVerseNumber, coveredHeight: sheetHeight} : null;
@@ -876,12 +830,12 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       if (!same) {
         linesRef.current[key] = lines;
         // The text moved: the bubble's measured place no longer holds.
-        selectionOrigin.current = null;
+        forgetPlace();
         setLinesByPassage(prev => ({...prev, [key]: lines}));
       }
       scrollToPendingVerse();
     },
-    [scrollToPendingVerse],
+    [scrollToPendingVerse, forgetPlace],
   );
 
   const onLayoutY = useCallback(
@@ -903,7 +857,6 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       return;
     }
     const y = noteBubbleY.current;
-    selectionOrigin.current = null;
     setTimeout(() => scrollTo(y), 120);
   }, [scrollTo]);
 
@@ -982,36 +935,14 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     contextRef.current.onNoteMarkPress?.(noteId);
   }, []);
 
-  // --- Native selection: each passage's <Text> by its React tag, so an event
-  // can be traced back to its passage and the bubble placed by it. ---
-  const selectableTexts = useRef(new Map<number, {passageKey: string; instance: unknown}>());
   const onSelectableRef = useCallback(
     (passageKey: string, instance: unknown) => {
-      const texts = selectableTexts.current;
-      if (!instance) {
-        for (const [tag, text] of texts) {
-          if (text.passageKey === passageKey) {
-            texts.delete(tag);
-            reportSelection(tag, false);
-            // Its selection went with it: so does the bubble, whose range
-            // would no longer match what's on screen.
-            if (bubbleTag.current === tag) {
-              bubbleTag.current = null;
-              selectionOrigin.current = null;
-              setBubble(null);
-            }
-          }
-        }
-        return;
-      }
-      const tag = attachSelectionMenu(instance);
-      if (tag == null) return;
-      texts.set(tag, {passageKey, instance});
+      const tag = register(passageKey, instance, undefined);
       // iOS: lines laid out before this text was registered.
-      const lines = textLinesFor(tag);
+      const lines = tag == null ? undefined : textLinesFor(tag);
       if (lines) onLines(passageKey, lines);
     },
-    [onLines],
+    [register, onLines],
   );
 
   // iOS: each passage's lines, from the native module. Lines that came between
@@ -1020,127 +951,19 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     if (!IOS_NATIVE_SELECTION) return;
     for (const [tag, text] of selectableTexts.current) {
       const lines = textLinesFor(tag);
-      if (lines) onLines(text.passageKey, lines);
+      if (lines) onLines(text.key, lines);
     }
     return onTextLines((tag, lines) => {
       const text = selectableTexts.current.get(tag);
-      if (text) onLines(text.passageKey, lines);
+      if (text) onLines(text.key, lines);
     });
-  }, [onLines]);
+  }, [onLines, selectableTexts]);
 
   // The highlight tutorial moves on once the bubble is there.
   const bubbleShown = bubble != null;
   useEffect(() => {
     if (bubbleShown) contextRef.current.onHighlightBubbleOpen?.();
   }, [bubbleShown]);
-  // Read at event time, so the subscriptions below stay put.
-  const selectionContext = useRef({verseSpans});
-  selectionContext.current = {verseSpans};
-
-  useEffect(() => {
-    if (!NATIVE_SELECTION) return;
-    const findPassage = (tag: number) => {
-      const text = selectableTexts.current.get(tag);
-      const passage = text && passagesRef.current.find(p => p.key === text.passageKey);
-      return text && passage ? {passage, instance: text.instance as Measurable} : null;
-    };
-
-    const hideBubble = () => setBubble(null);
-
-    const showBubble = (range: MarkRange, selection: NativeSelection) => {
-      const origin = selectionOrigin.current;
-      if (!origin) return;
-      // The text's top-left in the reader.
-      const x = origin.x + selection.x;
-      // Above the words when it fits, else under them, clear of the handles.
-      const above = origin.y + selection.top - BUBBLE_ARROW / 2 - 4 - BUBBLE_HEIGHT;
-      const below = above < BUBBLE_MARGIN;
-      const top = below ? origin.y + selection.bottom + HANDLE_ROOM : above;
-      const left = Math.min(
-        Math.max(x - BUBBLE_WIDTH / 2, BUBBLE_MARGIN),
-        origin.width - BUBBLE_WIDTH - BUBBLE_MARGIN,
-      );
-      setBubble({
-        range,
-        left,
-        top: Math.max(BUBBLE_MARGIN, Math.min(top, origin.height - BUBBLE_HEIGHT - BUBBLE_MARGIN)),
-        arrowX: Math.min(Math.max(x - left, 18), BUBBLE_WIDTH - 18),
-        below,
-      });
-    };
-
-    const placeBubble = (tag: number, selection: NativeSelection | null) => {
-      // A late end from another text (say the one selected before) leaves
-      // this selection's bubble alone.
-      if (!selection && tag !== bubbleTag.current) return;
-      const seq = ++selectionSeq.current;
-      bubbleTag.current = selection ? tag : null;
-      const found = selection && findPassage(tag);
-      const range =
-        selection && found
-          ? passageRangeToChapterRange(
-              found.passage,
-              selection.start,
-              selection.end,
-              selectionContext.current.verseSpans,
-            )
-          : null;
-      if (!selection || !found || !range) {
-        if (!selection) selectionOrigin.current = null;
-        hideBubble();
-        return;
-      }
-      if (selectionOrigin.current?.tag === tag) {
-        showBubble(range, selection);
-        return;
-      }
-      found.instance.measureInWindow((textX, textY) => {
-        rootRef.current?.measureInWindow((rootX, rootY, rootWidth, rootHeight) => {
-          // Kept while the selection lasts, even when a newer step of the
-          // drag arrived meanwhile; only the bubble for an old step is dropped.
-          if (bubbleTag.current !== tag) return;
-          selectionOrigin.current = {
-            tag,
-            x: textX - rootX,
-            y: textY - rootY,
-            width: rootWidth,
-            height: rootHeight,
-          };
-          if (seq === selectionSeq.current) showBubble(range, selection);
-        });
-      });
-    };
-
-    const stopSelection = onSelectionChange(placeBubble);
-    // A double-tap opens the tapped verse's menu, as it always has; not one
-    // on a reference or a note's number (that tap already did its own thing),
-    // nor one while the reader scrolls.
-    const doubleTaps = onTextDoubleTap(({tag, offset}) => {
-      if (isScrollingRef.current || Date.now() - spanPressedAt.current < 600) return;
-      const found = findPassage(tag);
-      const verse = found && verseAtOffset(found.passage, offset);
-      if (!verse) return;
-      clearSelection();
-      contextRef.current.onVerseDoubleTap?.(verse);
-    });
-    return () => {
-      stopSelection();
-      doubleTaps?.remove();
-    };
-  }, []);
-
-  const bubbleStyles = useMemo(
-    () => (bubble ? rangeStyles(chapterMarks ?? [], bubble.range) : null),
-    [bubble, chapterMarks],
-  );
-
-  // A colour or style lands on the words at once; the selection then ends.
-  const editBubbleRange = (edit: (marks: ChapterMark[], range: MarkRange) => ChapterMark[]) => {
-    if (!bubble) return;
-    onChapterMarksChange?.(edit(chapterMarks ?? [], bubble.range));
-    clearSelection();
-    setBubble(null);
-  };
 
   const bottomScrollSpacer =
     Math.max(insets.bottom, 0) +
@@ -1222,10 +1045,8 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       ref={rootRef}
       collapsable={false}
       style={styles.root}
-      onLayout={() => {
-        // Sizes changed (rotation, keyboard): measure again for the bubble.
-        selectionOrigin.current = null;
-      }}
+      // Sizes changed (rotation, keyboard): measure again for the bubble.
+      onLayout={forgetPlace}
     >
       <ScrollView
         ref={scrollRef}
@@ -1320,18 +1141,12 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
           </React.Fragment>
         ))}
       </ScrollView>
-      {bubble && bubbleStyles ? (
-        <HighlightBubble
-          left={bubble.left}
-          top={bubble.top}
-          arrowX={bubble.arrowX}
-          below={bubble.below}
-          current={bubbleStyles}
-          onColor={color =>
-            editBubbleRange((marks, range) => applyMarkToRange(marks, range, 'highlight', color))
-          }
-          onStyle={style => editBubbleRange((marks, range) => applyMarkToRange(marks, range, style))}
-          onErase={() => editBubbleRange(eraseMarksInRange)}
+      {bubble && onChapterMarksChange ? (
+        <SelectionHighlightBubble
+          placement={bubble}
+          marks={chapterMarks ?? EMPTY_MARKS}
+          onMarksChange={onChapterMarksChange}
+          onDone={dismiss}
         />
       ) : null}
     </View>

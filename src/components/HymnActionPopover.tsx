@@ -1,6 +1,6 @@
 import React from 'react';
 import { Hymn } from '../hooks/useHymnsData';
-import ActionSheet, { type ActionSheetItem } from './ActionSheet';
+import { ActionSheet, type ActionSheetItem } from './ActionSheet';
 import { HYMN_CHORUS_LABEL } from '../utils/chapterMarks';
 import {t} from '../i18n/strings';
 
