@@ -255,7 +255,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
   const [selectedVerseForAction, setSelectedVerseForAction] = useState<BibleVerse | null>(null);
-  // Kept between openings: the sheet's height rarely changes.
+  // The open sheet's height, from its layout; 0 again on close, so the next
+  // opening never acts on a height its rows may no longer have.
   const [verseSheetHeight, setVerseSheetHeight] = useState(0);
 
   // Share card modal — non-null while open
@@ -277,6 +278,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   // Hymn action popover state
   const [hymnActionVisible, setHymnActionVisible] = useState(false);
+  // Rows come and go with the stanza: as for the verse sheet, 0 when closed.
+  const [hymnSheetHeight, setHymnSheetHeight] = useState(0);
 
   const [selectedHymnStanzaNumber, setSelectedHymnStanzaNumber] = useState<number | null>(null);
   const [selectedHymnStanzaText, setSelectedHymnStanzaText] = useState<string | null>(null);
@@ -817,6 +820,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   const closeHymnAction = () => {
     setHymnActionVisible(false);
+    setHymnSheetHeight(0);
   };
 
   const closeReportModal = () => {
@@ -1155,6 +1159,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const closeVerseAction = () => {
     setVerseActionVisible(false);
     setSelectedVerseForAction(null);
+    setVerseSheetHeight(0);
   };
 
   const openCrossReferences = async (verse: BibleVerse) => {
@@ -1564,7 +1569,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               onMarksChange={setAllHymnMarks}
               // The sheet doesn't repeat its stanza: the reader shows it.
               selectedStanza={hymnActionVisible ? selectedHymnStanzaNumber : null}
-              sheetHeight={hymnActionVisible ? verseSheetHeight : 0}
+              sheetHeight={hymnActionVisible ? hymnSheetHeight : 0}
             />
           )
         )}
@@ -1807,8 +1812,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         stanzaHasNote={stanzaHasNote}
         hymnHasNote={hymnHasNote}
         onClose={closeHymnAction}
-        // One sheet open at a time: the same height as the verse sheet's.
-        onSheetLayout={setVerseSheetHeight}
+        onSheetLayout={setHymnSheetHeight}
         onNote={openHymnNote}
         onAddToFavorites={handleAddHymnToFavorites}
         onShare={openHymnShare}

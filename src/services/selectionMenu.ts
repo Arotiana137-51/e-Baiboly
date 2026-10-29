@@ -100,6 +100,13 @@ export const onTextLines = (listener: (tag: number, lines: TextLine[]) => void):
 
 export const textLinesFor = (tag: number): TextLine[] | undefined => linesByTag.get(tag);
 
+// iOS: stops (or restarts) the line reports for a text whose lines nobody
+// reads, such as a hymn stanza; they would also push the Bible's out of the
+// cache above. A build without the method keeps sending them.
+export const skipLines = (tag: number, skip: boolean): void => {
+  if (Platform.OS === 'ios') SelectionMenu?.skipLines?.(tag, skip);
+};
+
 const selectedTags = new Set<number>();
 const selectionListeners = new Set<(active: boolean) => void>();
 

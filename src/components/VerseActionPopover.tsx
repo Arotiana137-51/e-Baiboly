@@ -2,7 +2,7 @@ import React from 'react';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTutorialTarget } from '../contexts/TutorialContext';
 import TutorialOverlay from './TutorialOverlay';
-import ActionSheet, { type ActionSheetItem } from './ActionSheet';
+import { ActionSheet, type ActionSheetItem } from './ActionSheet';
 import {t} from '../i18n/strings';
 
 interface VerseActionPopoverProps {

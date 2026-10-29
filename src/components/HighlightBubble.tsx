@@ -1,8 +1,15 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useTheme} from '../contexts/ThemeContext';
 import {useTutorialTarget} from '../contexts/TutorialContext';
 import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
+import {
+  applyMarkToRange,
+  eraseMarksInRange,
+  rangeStyles,
+  type ChapterMark,
+  type MarkRange,
+} from '../utils/chapterMarks';
 import {t} from '../i18n/strings';
 
 // The pen colours: six of the old editor's twelve, the most distinct ones.
@@ -126,6 +133,38 @@ export const HighlightBubble = ({left, top, arrowX, below, current, onColor, onS
         ]}
       />
     </View>
+  );
+};
+
+type SelectionBubbleProps = {
+  // Where the bubble sits and the words it is for (useSelectionBubble).
+  placement: {range: MarkRange; left: number; top: number; arrowX: number; below: boolean};
+  marks: ChapterMark[];
+  onMarksChange: (next: ChapterMark[]) => void;
+  // Called once a colour or style has landed: the selection then ends.
+  onDone: () => void;
+};
+
+// The bubble over a reader's selection, editing the reader's marks: what the
+// words already have shows as chosen, and a colour or style lands at once.
+export const SelectionHighlightBubble = ({placement, marks, onMarksChange, onDone}: SelectionBubbleProps) => {
+  const {range} = placement;
+  const current = useMemo(() => rangeStyles(marks, range), [marks, range]);
+  const edit = (change: (from: ChapterMark[], at: MarkRange) => ChapterMark[]) => {
+    onMarksChange(change(marks, range));
+    onDone();
+  };
+  return (
+    <HighlightBubble
+      left={placement.left}
+      top={placement.top}
+      arrowX={placement.arrowX}
+      below={placement.below}
+      current={current}
+      onColor={color => edit((from, at) => applyMarkToRange(from, at, 'highlight', color))}
+      onStyle={style => edit((from, at) => applyMarkToRange(from, at, style))}
+      onErase={() => edit(eraseMarksInRange)}
+    />
   );
 };
 

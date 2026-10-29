@@ -82,7 +82,6 @@ type TranslationKey =
   | 'errors.fatalMessage'
   | 'errors.fatalRetry'
   | 'actions.addToFavorites'
-  | 'actions.report'
   | 'actions.reportQuestion'
   | 'actions.share'
   | 'actions.viewConcordance'
@@ -234,7 +233,6 @@ const translations: Translations = {
     'errors.fatalMessage': "Nisy zavatra tsy nety. Andramo averina.",
     'errors.fatalRetry': 'Avereno',
     'actions.addToFavorites': "Ampidiro ao amin'ny ankafizina",
-    'actions.report': 'Tatero',
     // The verse sheet's quiet footer link, asked rather than ordered.
     'actions.reportQuestion': 'Misy diso?',
     // PLACEHOLDER MG copy — needs the app's own wording, not mine.

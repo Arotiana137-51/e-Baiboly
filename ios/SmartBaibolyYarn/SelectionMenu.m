@@ -135,12 +135,27 @@ static void EBReportSelection(UIView *owner, UITextView *textView)
 
 static const void *kEBLinesKey = &kEBLinesKey;
 
+// Texts whose lines nobody reads (the hymn reader's stanzas), by tag: their
+// lines aren't sent. Touched on the main queue only.
+static NSMutableSet<NSNumber *> *EBQuietTags(void)
+{
+  static NSMutableSet<NSNumber *> *tags;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    tags = [NSMutableSet new];
+  });
+  return tags;
+}
+
 // Every line of the passage: how many characters it holds, its top and its
 // height, in the passage's coordinates, so JS can find a verse's lines (note
 // brackets, jumps). Run when the text has been laid out again, and sent only
 // when the lines changed.
 static void EBReportLines(UIView *owner)
 {
+  if ([EBQuietTags() containsObject:@(owner.tag)]) {
+    return;
+  }
   UITextView *textView = EBFindTextView(owner);
   NSLayoutManager *layoutManager = textView.layoutManager;
   if (layoutManager == nil || textView.text.length == 0) {
@@ -394,7 +409,8 @@ static void EBHookEditMenu(Class cls)
 
 // UIKit may cache which delegate methods exist when a text view gets its
 // delegate, so the hooks go in at launch, before any passage is created.
-// They apply to every RNUITextView: the reader's passages are the only ones.
+// They apply to every RNUITextView: the Bible's passages and the hymns'
+// stanzas, the only ones (the hymns turn their line reports off, skipLines).
 // Scope them by tag (attach) if the library is ever used elsewhere.
 // A constructor rather than +load, which RCT_EXPORT_MODULE already defines.
 __attribute__((constructor)) static void EBInstallHooks(void)
@@ -473,6 +489,19 @@ RCT_EXPORT_METHOD(clearSelection)
 // Android hooks each text by its tag; here every RNUITextView already is.
 RCT_EXPORT_METHOD(attach : (double)tag)
 {
+}
+
+// Stops (skip) or restarts the line reports for one text.
+RCT_EXPORT_METHOD(skipLines : (double)tag skip : (BOOL)skip)
+{
+  NSNumber *key = @((NSInteger)tag);
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (skip) {
+      [EBQuietTags() addObject:key];
+    } else {
+      [EBQuietTags() removeObject:key];
+    }
+  });
 }
 
 @end

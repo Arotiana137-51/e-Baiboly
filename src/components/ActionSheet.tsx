@@ -43,7 +43,7 @@ const DISMISS_DISTANCE = 80;
 const DISMISS_VELOCITY = 0.8;
 
 // A double-tapped verse's or stanza's actions, in a sheet along the bottom.
-const ActionSheet: React.FC<ActionSheetProps> = ({
+export const ActionSheet: React.FC<ActionSheetProps> = ({
   visible,
   reference,
   actions,
@@ -282,5 +282,3 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 });
-
-export default ActionSheet;
