@@ -1588,6 +1588,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               onNoteMarkPress={openNoteById}
               noteBubbleStanza={noteBubbleStanza}
               renderNoteBubble={renderNoteBubble}
+              onMarksChange={setAllHymnMarks}
+              // The sheet doesn't repeat its stanza: the reader shows it.
+              selectedStanza={hymnActionVisible ? selectedHymnStanzaNumber : null}
+              sheetHeight={hymnActionVisible ? verseSheetHeight : 0}
             />
           )
         )}
@@ -1830,6 +1834,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         stanzaHasNote={stanzaHasNote}
         hymnHasNote={hymnHasNote}
         onClose={closeHymnAction}
+        // One sheet open at a time: the same height as the verse sheet's.
+        onSheetLayout={setVerseSheetHeight}
         onNote={openHymnNote}
         onAddToFavorites={handleAddHymnToFavorites}
         onShare={openHymnShare}
