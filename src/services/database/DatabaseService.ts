@@ -10,6 +10,7 @@ import {
 } from '../../utils/paths';
 import * as FileSystem from 'react-native-fs';
 import { BIBLE_DB_VERSION, HYMNS_DB_VERSION } from './dbVersions';
+import { normalizeForFtsContent } from '../../utils/searchNormalize';
 
 type QueryResult<T = any> = {
   rows?: { _array: T[]; length: number };
@@ -278,10 +279,17 @@ class DatabaseService {
   }
 
   /**
-   * Apply a single OTA patch atomically: UPDATE the content rows, rebuild
-   * the affected FTS rowids, and bump PRAGMA user_version to the patch's
-   * version — all inside one BEGIN/COMMIT. If anything throws, the whole
-   * patch is rolled back and user_version stays where it was.
+   * Apply a single OTA patch atomically: update or add the content rows,
+   * reindex them, and bump PRAGMA user_version to the patch's version — all
+   * inside one BEGIN/COMMIT. If anything throws, the whole patch is rolled
+   * back and user_version stays where it was.
+   *
+   * The verse indexes are contentless FTS5 tables: SQLite refuses a DELETE
+   * on them, so a row's old entry goes through the 'delete' command with
+   * the text it was indexed with (the stored text, normalized as the build
+   * did). The new entry is computed the same way here, never taken from the
+   * patch's text_plain, so the next 'delete' always matches it. Parent rows are upserted, never INSERT OR REPLACE: REPLACE deletes
+   * the row first and ON DELETE CASCADE takes its verses with it.
    *
    * The patch is trusted only after `parsePatchFile` has validated it
    * upstream — this method does NOT re-validate, it just executes.
@@ -307,33 +315,36 @@ class DatabaseService {
     await this.executeTransaction(async tx => {
       for (const b of patch.books) {
         tx.execute(
-          `INSERT OR REPLACE INTO Books (id, name, testament, chapters, filename)
-           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO Books (id, name, testament, chapters, filename)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET name=excluded.name, testament=excluded.testament,
+             chapters=excluded.chapters, filename=excluded.filename`,
           [b.id, b.name, b.testament, b.chapters, b.filename]
         );
       }
       for (const v of patch.verses) {
-        // Find the existing rowid via the UNIQUE (book_id, chapter, verse_number)
-        // tuple so we can rebuild the contentless FTS index correctly.
-        const idLookup = tx.execute(
-          `SELECT id FROM Verses WHERE book_id=? AND chapter=? AND verse_number=?`,
+        const lookup = tx.execute(
+          `SELECT id, text FROM Verses WHERE book_id=? AND chapter=? AND verse_number=?`,
           [v.book_id, v.chapter, v.verse_number]
-        ) as QueryResult<{id: number}>;
-        const existingId = idLookup.rows?._array?.[0]?.id;
+        ) as QueryResult<{id: number; text: string}>;
+        const old = lookup.rows?._array?.[0];
 
-        tx.execute(
-          `UPDATE Verses SET text=?, title=?
-           WHERE book_id=? AND chapter=? AND verse_number=?`,
-          [v.text, v.title, v.book_id, v.chapter, v.verse_number]
-        );
-
-        if (existingId != null) {
-          tx.execute(`DELETE FROM VersesFts WHERE rowid=?`, [existingId]);
+        let id: number | undefined;
+        if (old) {
+          id = old.id;
           tx.execute(
-            `INSERT INTO VersesFts(rowid, text_plain) VALUES (?, ?)`,
-            [existingId, v.text_plain]
+            `INSERT INTO VersesFts(VersesFts, rowid, text_plain) VALUES ('delete', ?, ?)`,
+            [id, normalizeForFtsContent(old.text)]
           );
+          tx.execute(`UPDATE Verses SET text=?, title=? WHERE id=?`, [v.text, v.title, id]);
+        } else {
+          id = (tx.execute(
+            `INSERT INTO Verses (book_id, chapter, verse_number, text, title) VALUES (?, ?, ?, ?, ?)`,
+            [v.book_id, v.chapter, v.verse_number, v.text, v.title]
+          ) as QueryResult).insertId;
         }
+        if (id == null) throw new Error(`No row id for verse ${v.book_id} ${v.chapter}:${v.verse_number}`);
+        tx.execute(`INSERT INTO VersesFts(rowid, text_plain) VALUES (?, ?)`, [id, normalizeForFtsContent(v.text)]);
       }
       // PRAGMA user_version doesn't accept bound params — interpolate the
       // already-validated integer literally.
@@ -369,8 +380,10 @@ class DatabaseService {
     await this.executeTransaction(async tx => {
       for (const h of patch.hymns) {
         tx.execute(
-          `INSERT OR REPLACE INTO Hymns (id, number, category, title, authors, note)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO Hymns (id, number, category, title, authors, note)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET number=excluded.number, category=excluded.category,
+             title=excluded.title, authors=excluded.authors, note=excluded.note`,
           [h.id, h.number, h.category, h.title, h.authors, h.note ?? null]
         );
 
@@ -392,25 +405,31 @@ class DatabaseService {
       }
 
       for (const v of patch.hymnVerses) {
-        const idLookup = tx.execute(
-          `SELECT id FROM HymnVerses WHERE hymn_id=? AND verse_number=?`,
+        const lookup = tx.execute(
+          `SELECT id, text FROM HymnVerses WHERE hymn_id=? AND verse_number=?`,
           [v.hymn_id, v.verse_number]
-        ) as QueryResult<{id: number}>;
-        const existingId = idLookup.rows?._array?.[0]?.id;
+        ) as QueryResult<{id: number; text: string}>;
+        const old = lookup.rows?._array?.[0];
 
-        tx.execute(
-          `UPDATE HymnVerses SET text=?, is_chorus=?, heading=?
-           WHERE hymn_id=? AND verse_number=?`,
-          [v.text, v.is_chorus, v.heading ?? null, v.hymn_id, v.verse_number]
-        );
-
-        if (existingId != null) {
-          tx.execute(`DELETE FROM HymnVersesFts WHERE rowid=?`, [existingId]);
+        let id: number | undefined;
+        if (old) {
+          id = old.id;
           tx.execute(
-            `INSERT INTO HymnVersesFts(rowid, text_plain) VALUES (?, ?)`,
-            [existingId, v.text_plain]
+            `INSERT INTO HymnVersesFts(HymnVersesFts, rowid, text_plain) VALUES ('delete', ?, ?)`,
+            [id, normalizeForFtsContent(old.text)]
           );
+          tx.execute(
+            `UPDATE HymnVerses SET text=?, is_chorus=?, heading=? WHERE id=?`,
+            [v.text, v.is_chorus, v.heading ?? null, id]
+          );
+        } else {
+          id = (tx.execute(
+            `INSERT INTO HymnVerses (hymn_id, verse_number, heading, text, is_chorus) VALUES (?, ?, ?, ?, ?)`,
+            [v.hymn_id, v.verse_number, v.heading ?? null, v.text, v.is_chorus]
+          ) as QueryResult).insertId;
         }
+        if (id == null) throw new Error(`No row id for ${v.hymn_id} verse ${v.verse_number}`);
+        tx.execute(`INSERT INTO HymnVersesFts(rowid, text_plain) VALUES (?, ?)`, [id, normalizeForFtsContent(v.text)]);
       }
 
       tx.execute(`PRAGMA user_version = ${patch.version}`);

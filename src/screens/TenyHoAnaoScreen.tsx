@@ -1,9 +1,11 @@
-import React, {useLayoutEffect, useState} from 'react';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import {Image, Pressable, ScrollView, StyleSheet, Switch, Text, View, type ImageSourcePropType} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
+import {MenuIcon} from '../components/MenuIcons';
+import {Pill, StepFooter} from '../components/EarthSteps';
 import {useEarthTheme, type EarthTheme} from '../hooks/useEarthTheme';
 import {useTenyHoAnao} from '../hooks/useTenyHoAnao';
 import {
@@ -21,6 +23,9 @@ import {dailyVerseFor} from '../constants/dailyVerses';
 import type {DailyVerse} from '../services/reminders/readingReminder';
 import {planPosition, situationById, type ActiveSituation} from '../utils/lifeSituations';
 import {mixHex} from '../utils/colorUtils';
+import {pinWidget} from '../services/widget/dailyVerseWidget';
+import {useWidgetPlacement} from '../hooks/useWidgetPlacement';
+import {WIDGET_PICTURE} from '../tutorials/widgetGuide';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 // All copy on this screen is placeholder MG — user-owned.
@@ -56,49 +61,12 @@ const INVITATION = {
 // stay phone-width and centred instead of stretching edge to edge.
 const COLUMN = {width: '100%', maxWidth: 560, alignSelf: 'center'} as const;
 
-type Step = 'intro' | 'feeling' | 'choose' | 'order';
+type Step = 'intro' | 'feeling' | 'choose' | 'order' | 'place';
 
 const lengthLabel = (situation: LifeSituation): string =>
   situation.days
     ? `${situation.days} andro`
     : `Tsy misy farany · fanontaniana isaky ny ${situation.checkEvery} andro`;
-
-// A wide pill: the step's action filled, the others outlined ('quiet' for
-// the one that changes nothing).
-const Pill = ({
-  label,
-  onPress,
-  earth,
-  kind = 'filled',
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  earth: EarthTheme;
-  kind?: 'filled' | 'outline' | 'quiet';
-  disabled?: boolean;
-}) => {
-  const filled = kind === 'filled';
-  const color = filled ? earth.onAccent : kind === 'outline' ? earth.accentText : earth.ink;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityState={{disabled: !!disabled}}
-      style={({pressed}) => [
-        styles.pill,
-        filled
-          ? {backgroundColor: earth.accent}
-          : [styles.pillOutline, {borderColor: kind === 'outline' ? earth.accentText : earth.edge}],
-        pressed && styles.pressed,
-        disabled && styles.disabled,
-      ]}
-    >
-      <Text style={[styles.pillText, {color}]}>{label}</Text>
-    </Pressable>
-  );
-};
 
 // Top half of a circle: an outline, or filled.
 const HalfCircle = ({r, color, filled}: {r: number; color: string; filled?: boolean}) => (
@@ -125,45 +93,6 @@ const Sunrise = ({earth}: {earth: EarthTheme}) => {
     </View>
   );
 };
-
-const StepDots = ({count, current, earth}: {count: number; current: number; earth: EarthTheme}) => (
-  <View style={styles.dots} accessibilityLabel={`${current + 1} / ${count}`}>
-    {Array.from({length: count}, (_, i) => (
-      <View
-        key={i}
-        style={[styles.dot, i === current && styles.dotOn, {backgroundColor: i === current ? earth.accentText : earth.edge}]}
-      />
-    ))}
-  </View>
-);
-
-// A step's buttons: the next step as a wide pill, the quiet way back as text
-// under it. Both centred, so either thumb reaches them.
-const StepFooter = ({
-  earth,
-  dots,
-  nextLabel,
-  onNext,
-  nextDisabled,
-  backLabel,
-  onBack,
-}: {
-  earth: EarthTheme;
-  dots: {count: number; current: number};
-  nextLabel: string;
-  onNext: () => void;
-  nextDisabled?: boolean;
-  backLabel: string;
-  onBack: () => void;
-}) => (
-  <View style={[styles.footer, {backgroundColor: earth.ground}]}>
-    <StepDots count={dots.count} current={dots.current} earth={earth} />
-    <Pill label={nextLabel} onPress={onNext} earth={earth} disabled={nextDisabled} />
-    <Pressable style={styles.backButton} onPress={onBack} accessibilityRole="button">
-      <Text style={[styles.backText, {color: earth.muted}]}>{backLabel}</Text>
-    </Pressable>
-  </View>
-);
 
 // A verse in the phone's serif, its reference after a short accent rule.
 const VerseQuote = ({
@@ -362,8 +291,16 @@ const TenyHoAnaoScreen = () => {
     moveDraft,
     commitDraft,
   } = useTenyHoAnao();
-  const [step, setStep] = useState<Exclude<Step, 'intro'>>('feeling');
+  const [step, setStep] = useState<Exclude<Step, 'intro' | 'place'>>('feeling');
+  // The widget step, once the choice is saved: where to go after it.
+  const [placing, setPlacing] = useState<'summary' | 'leave' | null>(null);
+  // Whether these steps started with nothing chosen, kept from the start:
+  // saving the choice fills the list, and the dots and the widget step must
+  // not move with it.
+  const [startedEmpty, setStartedEmpty] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  // Turning the widget switch off: how to take it off, since the app can't.
+  const [removeHint, setRemoveHint] = useState(false);
   // 'unsure': "Misafidy ny tsy hilaza", which keeps the Fampaherezana tsotra.
   const [feeling, setFeeling] = useState<FeelingId | 'unsure' | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -375,6 +312,8 @@ const TenyHoAnaoScreen = () => {
   );
   // Only the summary shows it.
   const todayVerse = useVerse(loaded && !draft && state.situations.length > 0 ? todaysWidgetRef(state) : null);
+  // Android only: iOS can't add a widget for the person.
+  const {canPin, placed} = useWidgetPlacement();
 
   // A calm header on the sand ground, for this screen only.
   useLayoutEffect(() => {
@@ -388,30 +327,99 @@ const TenyHoAnaoScreen = () => {
   }, [navigation, earth]);
 
   const ground = [styles.container, {backgroundColor: earth.ground}];
+  // The widget's own bits (its card, the "what is it?" link, its step).
+  const tinted = useMemo(
+    () =>
+      StyleSheet.create({
+        card: {backgroundColor: earth.card},
+        ink: {color: earth.ink},
+        muted: {color: earth.muted},
+        accent: {color: earth.accentText},
+        title: {color: earth.ink, fontFamily: earth.serif},
+        badge: {backgroundColor: earth.accentTint},
+        line: {borderTopColor: earth.line},
+      }),
+    [earth],
+  );
+
+  const leave = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.reset({index: 0, routes: [{name: 'Home'}]});
+  }, [navigation]);
+
+  // Added by hand meanwhile (from the guide): nothing left to ask.
+  useEffect(() => {
+    if (!placing || !placed) return;
+    setPlacing(null);
+    if (placing === 'leave') leave();
+  }, [placing, placed, leave]);
 
   if (!loaded) {
     return <SafeAreaView edges={['bottom']} style={ground} />;
   }
 
-  const leave = () => {
-    if (navigation.canGoBack()) navigation.goBack();
-    else navigation.reset({index: 0, routes: [{name: 'Home'}]});
-  };
   const edit = (from: 'feeling' | 'choose') => {
+    setStartedEmpty(state.situations.length === 0);
     startEditing();
     setStep(from);
   };
   const view: Step | 'summary' = draft ? step : state.situations.length > 0 ? 'summary' : 'intro';
 
-  // The dots count only the steps this person will actually see.
-  const count = draft?.situations.length ?? 0;
+  const firstSetup = draft || placing ? startedEmpty : state.situations.length === 0;
+  // First setup only: one yes/no question, the last step, to put the widget
+  // on the home screen (the launcher shows its own "add?" card). No just
+  // moves on; later the summary's switch shows it missing.
+  const placeNext = canPin && !placed && firstSetup;
+  // The dots count only the steps this person will actually see. Once saved,
+  // the choice is in `state`.
+  const count = (draft ?? state).situations.length;
   const steps: Step[] = [
-    ...(state.situations.length === 0 ? (['intro'] as const) : []),
+    ...(firstSetup ? (['intro'] as const) : []),
     'feeling',
-    'choose',
+    // "Misafidy ny tsy hilaza" ends after the feeling.
+    ...(feeling === 'unsure' ? [] : (['choose'] as const)),
     ...(count > 1 ? (['order'] as const) : []),
+    ...(placeNext || placing ? (['place'] as const) : []),
   ];
   const dots = (s: Step) => ({count: steps.length, current: steps.indexOf(s)});
+  const finish = (then: 'summary' | 'leave') => {
+    if (placeNext) setPlacing(then);
+    else if (then === 'leave') leave();
+  };
+
+  // Many people don't know the word: the guide shows a widget, then how to add it.
+  const whatIsWidget = (
+    <Pressable style={styles.whatLink} onPress={() => navigation.navigate('WidgetGuide')} accessibilityRole="link">
+      <Text style={[styles.whatLinkText, tinted.accent]}>Inona ilay widget? ›</Text>
+    </Pressable>
+  );
+
+  if (placing) {
+    const done = () => {
+      setPlacing(null);
+      if (placing === 'leave') leave();
+    };
+    return (
+      <SafeAreaView edges={['bottom']} style={ground}>
+        <ScrollView contentContainerStyle={styles.introScroll}>
+          <Image source={WIDGET_PICTURE.image} style={styles.placeArt} accessibilityIgnoresInvertColors />
+          <Text style={[styles.placeTitle, tinted.title]}>Apetraho eo amin'ny écran d'accueil ny widget?</Text>
+          {whatIsWidget}
+        </ScrollView>
+        <StepFooter
+          earth={earth}
+          dots={dots('place')}
+          nextLabel="Eny"
+          onNext={() => {
+            pinWidget();
+            done();
+          }}
+          backLabel="Tsia"
+          onBack={done}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (view === 'intro') {
     return (
@@ -423,6 +431,7 @@ const TenyHoAnaoScreen = () => {
             Eto no misafidy ny teny hiseho ao amin'ny widget. Teny ampaherezana anao
             mifanaraka amin'izay toe-javatra hiainanao.
           </Text>
+          {whatIsWidget}
         </ScrollView>
         <StepFooter
           earth={earth}
@@ -479,14 +488,14 @@ const TenyHoAnaoScreen = () => {
           earth={earth}
           dots={dots('feeling')}
           // Choosing not to say ends here, keeping the Fampaherezana tsotra.
-          nextLabel={feeling === 'unsure' ? 'Vita' : 'Manaraka'}
+          nextLabel={feeling === 'unsure' && !placeNext ? 'Vita' : 'Manaraka'}
           onNext={() => {
             if (feeling !== 'unsure') {
               setStep('choose');
               return;
             }
             cancelEditing();
-            leave();
+            finish('leave');
           }}
           backLabel="Hiverina"
           onBack={cancelEditing}
@@ -541,7 +550,7 @@ const TenyHoAnaoScreen = () => {
                 accessibilityRole="button"
               >
                 <Image source={FEELING_ART[picked.id]} style={styles.chipArt} />
-                <Text style={[styles.chipText, {color: earth.ink}]}>Mety aminao · {picked.label}</Text>
+                <Text style={[styles.chipText, {color: earth.ink}]}>Ny safidinao · {picked.label}</Text>
               </Pressable>
               {matches.map(s => renderChoice(s, true))}
               {!showAll ? (
@@ -587,7 +596,7 @@ const TenyHoAnaoScreen = () => {
           earth={earth}
           dots={dots('choose')}
           // With one situation there is nothing to order: finish here.
-          nextLabel={count > 1 ? 'Manaraka' : 'Vita'}
+          nextLabel={count > 1 || placeNext ? 'Manaraka' : 'Vita'}
           onNext={() => {
             if (count > 1) {
               setStep('order');
@@ -595,7 +604,7 @@ const TenyHoAnaoScreen = () => {
             }
             commitDraft();
             // Fampaherezana tsotra: no plan to sum up, back where the person came from.
-            if (count === 0) leave();
+            finish(count === 0 ? 'leave' : 'summary');
           }}
           backLabel="Hiverina"
           onBack={() => setStep('feeling')}
@@ -617,8 +626,11 @@ const TenyHoAnaoScreen = () => {
         <StepFooter
           earth={earth}
           dots={dots('order')}
-          nextLabel="Vita"
-          onNext={commitDraft}
+          nextLabel={placeNext ? 'Manaraka' : 'Vita'}
+          onNext={() => {
+            commitDraft();
+            finish('summary');
+          }}
           backLabel="Hiverina"
           onBack={() => setStep('choose')}
         />
@@ -637,6 +649,40 @@ const TenyHoAnaoScreen = () => {
   return (
     <SafeAreaView edges={['bottom']} style={ground}>
       <ScrollViewWithThumb style={styles.list} contentContainerStyle={styles.scroll}>
+        {/* Is the widget on the home screen? On adds it (the launcher's own
+            card). Android has no call to take it off, so off only says how: a
+            long press on the home screen. TEMP: Malagasy status lines and hint
+            to be written by the owner. */}
+        {canPin ? (
+          <View style={[styles.card, tinted.card]}>
+            <View style={styles.switchRow}>
+              <View style={[styles.widgetBadge, tinted.badge]}>
+                <MenuIcon name="bubble" color={earth.accentText} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[styles.itemTitle, tinted.ink]}>Widget</Text>
+                <Text style={[styles.hint, placed ? tinted.accent : tinted.muted]}>
+                  {placed ? "✓ Eo amin'ny écran d'accueil" : "Tsy eo amin'ny écran d'accueil"}
+                </Text>
+              </View>
+              <Switch
+                value={placed}
+                onValueChange={on => {
+                  setRemoveHint(!on);
+                  if (on) pinWidget();
+                }}
+                trackColor={switchTrack}
+                thumbColor={earth.card}
+              />
+            </View>
+            {placed && removeHint ? (
+              <Text style={[styles.hint, styles.widgetHint, styles.rowLine, tinted.muted, tinted.line]}>
+                Raha hanala azy: tsindrio ela ilay widget eo amin'ny écran d'accueil.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* A check-in takes the place of the verse: the widget opens here on
             those days. */}
         {due.map(active => {
@@ -674,7 +720,7 @@ const TenyHoAnaoScreen = () => {
         ) : null}
 
         <View style={styles.sectionHead}>
-          <Text style={[styles.sectionTitle, {color: earth.ink}]}>Ny teninao</Text>
+          <Text style={[styles.sectionTitle, {color: earth.ink}]}>Ny karazana teny ho anao</Text>
           <Pressable onPress={() => edit('choose')} style={styles.sectionLink} accessibilityRole="button">
             <Text style={[styles.sectionTitle, {color: earth.accentText}]}>Ovay</Text>
           </Pressable>
@@ -703,8 +749,8 @@ const TenyHoAnaoScreen = () => {
         {needsSafetyNote ? (
           // NOTE: confirm 117 (national emergency number) before release.
           <Text style={[styles.safety, {color: earth.ink, backgroundColor: earth.chip}]}>
-            Raha mavesatra loatra izany, mitenena amin'ny pasitera na olona itokisanao.
-            Raha misy loza: 117.
+            Raha mavesatra loatra ny alahelo na olana manjo anao, manantona mpitsabo na mpitondra
+            fivavahana, na antsoy ny 117.
           </Text>
         ) : null}
 
@@ -738,6 +784,14 @@ const TenyHoAnaoScreen = () => {
         >
           <Text style={[styles.itemTitle, styles.flex, {color: earth.ink}]}>Lokon'ny widget</Text>
           <Text style={[styles.arrowText, {color: earth.muted}]}>›</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.card, styles.linkRow, tinted.card]}
+          onPress={() => navigation.navigate('WidgetGuide')}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.itemTitle, styles.flex, tinted.ink]}>Inona ilay widget?</Text>
+          <Text style={[styles.arrowText, tinted.muted]}>›</Text>
         </Pressable>
 
         {confirmClear ? (
@@ -782,15 +836,7 @@ const styles = StyleSheet.create({
   lead: {fontSize: 16, lineHeight: 24, marginBottom: 8},
   hint: {fontSize: 14, lineHeight: 19},
   itemTitle: {fontSize: 17, lineHeight: 22, fontWeight: '700'},
-  pill: {minHeight: 54, borderRadius: 27, paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center', justifyContent: 'center'},
-  pillOutline: {borderWidth: 1.5},
-  pillText: {fontSize: 17, fontWeight: '700'},
-  pressed: {opacity: 0.85},
   disabled: {opacity: 0.35},
-  dots: {flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 12},
-  dot: {width: 6, height: 6, borderRadius: 3},
-  dotOn: {width: 20},
-  footer: {...COLUMN, paddingHorizontal: 24, paddingTop: 14, paddingBottom: 12},
   backButton: {alignItems: 'center', justifyContent: 'center', minHeight: 48},
   backText: {fontSize: 16, fontWeight: '600'},
   introScroll: {...COLUMN, flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, gap: 18},
@@ -880,6 +926,12 @@ const styles = StyleSheet.create({
   safety: {fontSize: 14, lineHeight: 21, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14},
   switchRow: {flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingVertical: 8},
   linkRow: {flexDirection: 'row', alignItems: 'center', minHeight: 56},
+  whatLink: {minHeight: 44, justifyContent: 'center', paddingHorizontal: 8},
+  whatLinkText: {fontSize: 16, fontWeight: '600'},
+  placeArt: {width: '100%', height: undefined, aspectRatio: WIDGET_PICTURE.aspect, borderRadius: 16},
+  placeTitle: {fontSize: 25, lineHeight: 31, fontWeight: '600', textAlign: 'center'},
+  widgetBadge: {width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center'},
+  widgetHint: {paddingVertical: 12},
 });
 
 const VERSE_SIZE = {medium: styles.verseText, large: styles.verseLarge};

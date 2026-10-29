@@ -4,6 +4,11 @@ import type {WidgetGuide} from './widgetGuide';
 // English (iOS 26: the Edit and Done buttons are a brush and a check), with
 // the French labels in brackets. The widget is "Sakafom-panahy" under
 // e-Baiboly; the lock screen sizes need iOS 16 and have no photos yet.
+export const WIDGET_PICTURE = {
+  image: require('../../assets/illustrations/widget-guide/result.jpg'),
+  aspect: 720 / 402,
+};
+
 export const WIDGET_GUIDE: WidgetGuide = {
   intro: "Sakafom-panahy isan'andro: andinin-teny iray isan'andro eo amin'ny écran.",
   sections: [
@@ -56,8 +61,7 @@ export const WIDGET_GUIDE: WidgetGuide = {
         },
         {
           text: "Vita! Hiseho eo amin'ny écran isan'andro ny andinin-teny.",
-          image: require('../../assets/illustrations/widget-guide/result.jpg'),
-          aspect: 1.7917,
+          ...WIDGET_PICTURE,
         },
       ],
     },

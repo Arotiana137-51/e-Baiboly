@@ -395,6 +395,11 @@ export const canPinWidget = async (): Promise<boolean> =>
 export const pinWidget = async (): Promise<boolean> =>
   !!(await NativeModules.DailyVerseWidget?.requestPin?.());
 
+// Whether the widget is on a home screen. False where it can't be asked
+// (iOS, or a build from before the method), so it can still be added.
+export const isWidgetPlaced = async (): Promise<boolean> =>
+  Platform.OS === 'android' && !!(await NativeModules.DailyVerseWidget?.isPlaced?.());
+
 /** Today's entry of the feed, as the widget shows it; null before the first sync. */
 export const getWidgetToday = async (): Promise<WidgetDay | null> => {
   try {

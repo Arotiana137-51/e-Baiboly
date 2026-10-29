@@ -23,6 +23,7 @@ import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
 import CustomBottomNav from '../components/CustomBottomNav';
+import {CultProgressBar} from '../components/CultProgressBar';
 import ReportIssueModal from '../components/ReportIssueModal';
 import SelectionTopBar from '../components/SelectionTopBar';
 import VerseActionPopover from '../components/VerseActionPopover';
@@ -254,6 +255,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Verse action popover state
   const [verseActionVisible, setVerseActionVisible] = useState(false);
   const [selectedVerseForAction, setSelectedVerseForAction] = useState<BibleVerse | null>(null);
+  // Kept between openings: the sheet's height rarely changes.
+  const [verseSheetHeight, setVerseSheetHeight] = useState(0);
 
   // Share card modal — non-null while open
   const [shareCard, setShareCard] = useState<ShareCardData | null>(null);
@@ -669,7 +672,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // (mode + book/chapter/range or hymn id/number/category) from it.
   // Whole-chapter Bible entries translate back to a null range so no banner
   // shows. isWholeChapterEntry also covers entries saved before
-  // isWholeChapter existed.
+  // isWholeChapter existed. revealTick re-runs it when a playlist tap picks the
+  // entry already playing, after the reader has moved away from it.
   useEffect(() => {
     if (!cultMode.isActive || !cultMode.currentEntry) return;
     const entry = cultMode.currentEntry;
@@ -696,7 +700,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       setCurrentHymnNumber(entry.hymnNumber);
       setCurrentHymnCategory(entry.category || null);
     }
-  }, [cultMode.isActive, cultMode.currentEntry]);
+  }, [cultMode.isActive, cultMode.currentEntry, cultMode.revealTick]);
 
   // Topnav chevrons always navigate chapters (Bible) or hymns within the
   // current category (hymnal) — even when cult mode is active. Playlist
@@ -1248,7 +1252,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         case 'showCultReaderNav':
           // Cult mode is genuinely active by this step, so the real ‹ ›
           // chevrons render on the reader — just return there to show them.
-          navigation.navigate('Home');
+          navigation.popTo('Home');
           return;
         case 'showBibleReader':
           // Highlight tutorial: just make sure we're on the Bible reader. The
@@ -1553,7 +1557,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               renderNoteBubble={renderNoteBubble}
               onChapterMarksChange={handleChapterMarksEdit}
               onHighlightBubbleOpen={() => tutorial.notifyProgress('highlightMenuOpened')}
-              selectedVerseNumber={selectedVerseNumber}
+              // The action sheet doesn't repeat its verse: the reader shows it.
+              selectedVerseNumber={
+                verseActionVisible && selectedVerseForAction
+                  ? selectedVerseForAction.verse_number
+                  : selectedVerseNumber
+              }
               selectedVerseRange={selectedVerseRange}
               onInlineRefPress={handleInlineBibleRefPress}
               handleRef={readerRef}
@@ -1562,6 +1571,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               onClearRange={() => setSelectedVerseRange(null)}
               onTopVerseChange={handleTopVerseChange}
               favoriteVerses={favoriteVerseNumbers}
+              sheetHeight={verseActionVisible ? verseSheetHeight : 0}
             />
           ) : (
             <HymnReaderView
@@ -1582,6 +1592,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           )
         )}
 
+        {cultMode.isActive && cultMode.entries.length > 0 ? (
+          <CultProgressBar current={cultMode.currentIndex} count={cultMode.entries.length} />
+        ) : null}
       </View>
       <CustomBottomNav
         activeMode={mode}
@@ -1785,6 +1798,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         verseBookName={currentBook?.name}
         hasNote={selectedVerseHasNote}
         onClose={closeVerseAction}
+        onSheetLayout={setVerseSheetHeight}
         onNote={openBibleNote}
         onViewCorrespondence={handleViewCorrespondence}
         onAddToFavorites={handleAddToFavorites}

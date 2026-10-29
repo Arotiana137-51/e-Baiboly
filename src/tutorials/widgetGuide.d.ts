@@ -29,3 +29,7 @@ export type WidgetGuide = {
 };
 
 export declare const WIDGET_GUIDE: WidgetGuide;
+
+// The e-Baiboly widget on a home screen, and its width / height: the guide's
+// last step, also shown before the steps and in Teny ho anao.
+export declare const WIDGET_PICTURE: {image: ImageSourcePropType; aspect: number};

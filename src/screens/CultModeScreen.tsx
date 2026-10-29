@@ -178,7 +178,9 @@ const CultModeScreen = () => {
   );
 
   // Play → jump to the reader; Pause → stay put. Stopping happens here or on
-  // the reader's ■, never through a stray reader tap.
+  // the reader's ■, never through a stray reader tap. popTo, not navigate:
+  // React Navigation 7's navigate pushes a second Home, whose last-read
+  // restore then lands over the entry.
   const handlePlayPause = () => {
     if (isActive) {
       toggleActive(false);
@@ -188,7 +190,7 @@ const CultModeScreen = () => {
     tutorial.notifyProgress('cultActivated');
     // Skip the jump during the tutorial: its next step drives Home
     // itself (showCultReaderNav).
-    if (!tutorial.activeTutorial) navigation.navigate('Home');
+    if (!tutorial.activeTutorial) navigation.popTo('Home');
   };
 
   // Like tapping a track in a music app: during a session, a row tap moves
@@ -196,7 +198,7 @@ const CultModeScreen = () => {
   const jumpTo = useCallback(
     (index: number) => {
       goTo(index);
-      navigation.navigate('Home');
+      navigation.popTo('Home');
     },
     [goTo, navigation],
   );

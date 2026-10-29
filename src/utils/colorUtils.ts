@@ -159,6 +159,36 @@ export const readableAccent = (accent: string, ground: string): string => {
   return color;
 };
 
+// A shade of a theme color that stands apart from it (1.5:1) and still reads
+// on `ground` (3:1), e.g. a bar right under the nav: dark colors go lighter,
+// light or bright ones go dimmer, so neither turns pale. When that direction
+// can't meet both (a mid color dimmed on a black ground), the other one does.
+export const accentShade = (accent: string, ground: string): string => {
+  const fits = (c: string) => contrastRatio(c, ground) >= 3 && contrastRatio(c, accent) >= 1.5;
+  const lighter = () => {
+    if (getRelativeLuminance(ground) <= 0.4) {
+      for (let step = 9; step <= 20; step += 1) {
+        if (fits(lightenHex(accent, step / 20))) return lightenHex(accent, step / 20);
+      }
+      return null;
+    }
+    // On a light ground the lightest tint that still reads, at most halfway to white.
+    let best: string | null = null;
+    for (let step = 1; step <= 10 && contrastRatio(lightenHex(accent, step / 20), ground) >= 3; step += 1) {
+      best = lightenHex(accent, step / 20);
+    }
+    return best && fits(best) ? best : null;
+  };
+  const dimmer = () => {
+    for (let step = 1; step <= 20; step += 1) {
+      if (fits(darkenHex(accent, step / 20))) return darkenHex(accent, step / 20);
+    }
+    return null;
+  };
+  const [first, second] = getRelativeLuminance(accent) > 0.14 ? [dimmer, lighter] : [lighter, dimmer];
+  return first() ?? second() ?? readableAccent(accent, ground);
+};
+
 // Hue in degrees (0–360), saturation and lightness (0–1) of a hex color.
 const toHsl = (hex: string): {h: number; s: number; l: number} => {
   const p = parseHex(hex) ?? {r: 0, g: 0, b: 0};

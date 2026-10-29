@@ -1,10 +1,11 @@
-// Icons for the hamburger menu (and the Fotoam-pivavahana rows), drawn from plain Views like
+// Icons for the hamburger menu (and the Fotoam-pivavahana rows, the verse menu), drawn from plain Views like
 // TutorialIcons and ShareIcon — no icon library, no native rebuild (the
 // heart and the praying hands are tinted images). Each is a single colour
 // with no cut-outs, so it reads on any cell background (except the colour
 // picker, which shows colours).
 import React from 'react';
 import {Image, StyleSheet, Text, View} from 'react-native';
+import {strokeBetween} from './ShareIcon';
 
 export type MenuIconName =
   | 'heart'
@@ -16,6 +17,7 @@ export type MenuIconName =
   | 'bell'
   | 'palette'
   | 'signpost'
+  | 'arrows'
   | 'note'
   | 'bible'
   | 'dictionary'
@@ -26,6 +28,8 @@ export type MenuIconName =
 // uses). Parameterise on size if a second caller ever needs another.
 const SIZE = 24;
 const STROKE = 2;
+// The arrows' strokes, round-ended (see ShareIcon's strokeBetween).
+const ROUND = {stroke: STROKE, roundCaps: true};
 
 type IconProps = {color: string};
 
@@ -111,6 +115,19 @@ const Signpost: React.FC<IconProps> = ({color}) => (
   </View>
 );
 
+// Two arrows passing each other, right on top and left below: from this
+// verse to the others and back (the verse menu's concordance).
+const Arrows: React.FC<IconProps> = ({color}) => (
+  <View style={styles.box}>
+    <View style={[styles.arrowRight, {backgroundColor: color}]} />
+    <View style={[styles.arrowRightHeadUp, {backgroundColor: color}]} />
+    <View style={[styles.arrowRightHeadDown, {backgroundColor: color}]} />
+    <View style={[styles.arrowLeft, {backgroundColor: color}]} />
+    <View style={[styles.arrowLeftHeadUp, {backgroundColor: color}]} />
+    <View style={[styles.arrowLeftHeadDown, {backgroundColor: color}]} />
+  </View>
+);
+
 // An eighth note: tilted filled head, stem, and a flag sloping off the top.
 const Note: React.FC<IconProps> = ({color}) => (
   <View style={styles.box}>
@@ -185,6 +202,7 @@ const ICONS: Record<MenuIconName, React.FC<IconProps>> = {
   bell: Bell,
   palette: Palette,
   signpost: Signpost,
+  arrows: Arrows,
   note: Note,
   bible: Bible,
   dictionary: Dictionary,
@@ -293,6 +311,13 @@ const styles = StyleSheet.create({
   sign: {position: 'absolute', width: 10, height: 7, borderWidth: STROKE, borderRadius: 2},
   signRight: {left: SIZE / 2 + 1, top: 3},
   signLeft: {left: SIZE / 2 - 11, top: 11},
+
+  arrowRight: strokeBetween(4, 8, 19, 8, ROUND),
+  arrowRightHeadUp: strokeBetween(15, 4, 19, 8, ROUND),
+  arrowRightHeadDown: strokeBetween(19, 8, 15, 12, ROUND),
+  arrowLeft: strokeBetween(20, 16, 5, 16, ROUND),
+  arrowLeftHeadUp: strokeBetween(9, 12, 5, 16, ROUND),
+  arrowLeftHeadDown: strokeBetween(5, 16, 9, 20, ROUND),
 
   noteHead: {position: 'absolute', left: 4, top: 15, width: 10, height: 7, borderRadius: 5, transform: [{rotate: '-20deg'}]},
   noteStem: {position: 'absolute', left: 12, top: 3, width: STROKE, height: 16},

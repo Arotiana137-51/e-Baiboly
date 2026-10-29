@@ -1,4 +1,4 @@
-import {accentFill, byHue, contrastRatio, desaturateHex, HIGHLIGHT_ALPHA, readableAccent, translucentHighlight} from '../src/utils/colorUtils';
+import {accentFill, accentShade, byHue, contrastRatio, desaturateHex, HIGHLIGHT_ALPHA, readableAccent, translucentHighlight} from '../src/utils/colorUtils';
 import {PRIMARY_COLOR_OPTIONS} from '../src/theme/personalizationPalette';
 
 // Teny ho anao takes its accent from the reader's theme color, so every color
@@ -47,5 +47,27 @@ describe('translucentHighlight (iOS, where the text selection is drawn under the
 
   test('anything that is not hex is left alone', () => {
     expect(translucentHighlight('rgba(0, 0, 0, 0.2)', false)).toBe('rgba(0, 0, 0, 0.2)');
+  });
+});
+
+// The worship progress bar sits right under the nav: its shade must stand
+// apart from the theme color and still read on the reader, light and dark.
+describe('accentShade', () => {
+  const READERS = ['#F6EBD9', '#0B0B0C'];
+  const colors = [['Default (none chosen)', '#004E64'], ...PRIMARY_COLOR_OPTIONS.map(o => [o.name, o.hex])];
+
+  it.each(colors)('%s stands apart from the nav and reads on both readers', (_name, hex) => {
+    for (const ground of READERS) {
+      const shade = accentShade(hex, ground);
+      expect(contrastRatio(shade, ground)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(shade, hex)).toBeGreaterThanOrEqual(1.5);
+    }
+  });
+
+  it('lightens dark colors and dims light or bright ones', () => {
+    expect(accentShade('#004E64', '#F6EBD9')).toBe('#598c9a');
+    expect(accentShade('#D4AF37', '#F6EBD9')).toBe('#9f8329');
+    expect(accentShade('#0EA5E9', '#F6EBD9')).toBe('#0b84ba');
+    expect(accentShade('#004E64', '#0B0B0C')).toBe('#739eaa');
   });
 });
