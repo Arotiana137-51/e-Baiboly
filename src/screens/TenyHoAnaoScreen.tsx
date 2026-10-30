@@ -21,7 +21,7 @@ import {
 import {todaysWidgetRef, useVerse} from '../hooks/useSituationVerse';
 import {dailyVerseFor} from '../constants/dailyVerses';
 import type {DailyVerse} from '../services/reminders/readingReminder';
-import {planPosition, situationById, type ActiveSituation} from '../utils/lifeSituations';
+import {planPositions, situationById, type ActiveSituation} from '../utils/lifeSituations';
 import {mixHex} from '../utils/colorUtils';
 import {pinWidget} from '../services/widget/dailyVerseWidget';
 import {useWidgetPlacement} from '../hooks/useWidgetPlacement';
@@ -63,10 +63,84 @@ const COLUMN = {width: '100%', maxWidth: 560, alignSelf: 'center'} as const;
 
 type Step = 'intro' | 'feeling' | 'choose' | 'order' | 'place';
 
-const lengthLabel = (situation: LifeSituation): string =>
-  situation.days
-    ? `${situation.days} andro`
-    : `Tsy misy farany · fanontaniana isaky ny ${situation.checkEvery} andro`;
+const LENGTH_TITLE = 'Fe-potoana isehoany';
+const lengthText = (situation: LifeSituation) => (situation.days ? `${situation.days} andro` : 'Tsy voafetra');
+// A check-in before the plan's end (season and long plans) is said up front.
+const cadenceText = (situation: LifeSituation) =>
+  situation.checkEvery < (situation.days ?? Infinity) ? `Fanontaniana isaky ny ${situation.checkEvery} andro` : null;
+
+// What a screen reader says for a plan, set on the row holding PlanFacts (a
+// nested accessible view would be a second stop): its subject first, as the
+// eye reads it.
+const planA11y = (situation: LifeSituation, shown?: number) =>
+  [
+    situation.label,
+    `${LENGTH_TITLE}: ${lengthText(situation)}`,
+    shown != null && situation.days ? `${shown} / ${situation.days}` : null,
+    cadenceText(situation),
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+// The plan components' theme colours, one StyleSheet per theme.
+const usePlanTint = (earth: EarthTheme) =>
+  useMemo(
+    () =>
+      StyleSheet.create({
+        ink: {color: earth.ink},
+        muted: {color: earth.muted},
+        chip: {backgroundColor: earth.chip},
+        track: {backgroundColor: earth.line},
+        bar: {backgroundColor: earth.accentText},
+      }),
+    [earth],
+  );
+
+// A plan's length as one named tag, so the value is never read alone. Big
+// text wraps it between the label and the value.
+const LengthTag = ({situation, earth, centered}: {situation: LifeSituation; earth: EarthTheme; centered?: boolean}) => {
+  const tint = usePlanTint(earth);
+  return (
+    <View style={[styles.lengthTag, centered && styles.lengthTagCentered, tint.chip]}>
+      <Text style={[styles.factLabel, tint.muted]}>{LENGTH_TITLE}:</Text>
+      <Text style={[styles.factValue, tint.ink]}>{lengthText(situation)}</Text>
+    </View>
+  );
+};
+
+// How many of a plan's days are behind it: a bar and the count.
+const PlanProgress = ({shown, days, earth}: {shown: number; days: number; earth: EarthTheme}) => {
+  const tint = usePlanTint(earth);
+  return (
+    <View style={styles.progressRow}>
+      <View style={[styles.track, styles.flex, tint.track]}>
+        <View style={[styles.bar, tint.bar, {width: `${(100 * shown) / days}%`}]} />
+      </View>
+      <Text style={[styles.hint, styles.progressCount, tint.muted]}>
+        {shown} / {days}
+      </Text>
+    </View>
+  );
+};
+
+// A plan: its subject under a small label, then its length tag, and when it
+// will be asked about if that comes before its end. `shown` adds the day
+// reached.
+const PlanFacts = ({situation, shown, earth}: {situation: LifeSituation; shown?: number; earth: EarthTheme}) => {
+  const tint = usePlanTint(earth);
+  const cadence = cadenceText(situation);
+  return (
+    <View style={styles.facts}>
+      <View style={styles.subject}>
+        <Text style={[styles.factLabel, tint.muted]}>Loahevitra</Text>
+        <Text style={[styles.itemTitle, tint.ink]}>{situation.label}</Text>
+      </View>
+      <LengthTag situation={situation} earth={earth} />
+      {cadence ? <Text style={[styles.hint, tint.muted]}>{cadence}</Text> : null}
+      {shown != null && situation.days ? <PlanProgress shown={shown} days={situation.days} earth={earth} /> : null}
+    </View>
+  );
+};
 
 // Top half of a circle: an outline, or filled.
 const HalfCircle = ({r, color, filled}: {r: number; color: string; filled?: boolean}) => (
@@ -155,70 +229,75 @@ const FeelingTile = ({
 // One situation to choose, as its own card or as a row in a theme. The top
 // ticks it; "Ohatra" is its own button (so it doesn't tick) and opens the
 // plan's first verse underneath, outside the tick area.
-const SituationChoice = ({
-  label,
-  hint,
-  chosen,
-  sample,
-  onToggle,
-  onSample,
-  earth,
-  framed,
-}: {
-  label: string;
-  hint: string;
-  chosen: boolean;
-  // undefined: closed; null: open, the verse still loading.
-  sample: DailyVerse | null | undefined;
-  onToggle: () => void;
-  onSample: () => void;
-  earth: EarthTheme;
-  framed?: boolean;
-}) => (
-  <View
-    style={
-      framed
-        ? [styles.choiceCard, {backgroundColor: earth.card, borderColor: chosen ? earth.accentText : earth.line}]
-        : [styles.choiceRow, {borderTopColor: earth.line}]
-    }
-  >
-    <Pressable
-      onPress={onToggle}
-      style={styles.choiceMain}
-      accessibilityRole="checkbox"
-      accessibilityState={{checked: chosen}}
+const SituationChoice = (
+  props: (
+    | {plan: LifeSituation}
+    // The general calendar, which is no plan.
+    | {label: string; hint: string}
+  ) & {
+    chosen: boolean;
+    // undefined: closed; null: open, the verse still loading.
+    sample: DailyVerse | null | undefined;
+    onToggle: () => void;
+    onSample: () => void;
+    earth: EarthTheme;
+    framed?: boolean;
+  },
+) => {
+  const {chosen, sample, onToggle, onSample, earth, framed} = props;
+  return (
+    <View
+      style={
+        framed
+          ? [styles.choiceCard, {backgroundColor: earth.card, borderColor: chosen ? earth.accentText : earth.line}]
+          : [styles.choiceRow, {borderTopColor: earth.line}]
+      }
     >
-      <View style={styles.flex}>
-        <Text style={[styles.itemTitle, {color: earth.ink}]}>{label}</Text>
-        <Text style={[styles.hint, {color: earth.muted}]}>{hint}</Text>
-      </View>
-      <View
-        style={[
-          styles.check,
-          chosen ? {backgroundColor: earth.accent, borderColor: earth.accent} : {borderColor: earth.accentText},
-        ]}
+      <Pressable
+        onPress={onToggle}
+        style={styles.choiceMain}
+        accessibilityRole="checkbox"
+        accessibilityState={{checked: chosen}}
+        accessibilityLabel={'plan' in props ? planA11y(props.plan) : undefined}
       >
-        {chosen ? <Text style={[styles.checkMark, {color: earth.onAccent}]}>✓</Text> : null}
-      </View>
-    </Pressable>
-    <Pressable
-      onPress={onSample}
-      hitSlop={8}
-      style={styles.sampleLink}
-      accessibilityRole="button"
-      accessibilityState={{expanded: sample !== undefined}}
-    >
-      <Text style={[styles.sampleText, {color: earth.accentText}]}>
-        {sample === undefined ? 'Ohatra ▸' : 'Ohatra ▾'}
-      </Text>
-    </Pressable>
-    {sample ? (
-      <View style={[styles.quoteBox, {backgroundColor: earth.quote}]}>
-        <VerseQuote verse={sample} earth={earth} />
-      </View>
-    ) : null}
-  </View>
-);
+        <View style={styles.flex}>
+          {'plan' in props ? (
+            <PlanFacts situation={props.plan} earth={earth} />
+          ) : (
+            <>
+              <Text style={[styles.itemTitle, {color: earth.ink}]}>{props.label}</Text>
+              <Text style={[styles.hint, {color: earth.muted}]}>{props.hint}</Text>
+            </>
+          )}
+        </View>
+        <View
+          style={[
+            styles.check,
+            chosen ? {backgroundColor: earth.accent, borderColor: earth.accent} : {borderColor: earth.accentText},
+          ]}
+        >
+          {chosen ? <Text style={[styles.checkMark, {color: earth.onAccent}]}>✓</Text> : null}
+        </View>
+      </Pressable>
+      <Pressable
+        onPress={onSample}
+        hitSlop={8}
+        style={styles.sampleLink}
+        accessibilityRole="button"
+        accessibilityState={{expanded: sample !== undefined}}
+      >
+        <Text style={[styles.sampleText, {color: earth.accentText}]}>
+          {sample === undefined ? 'Ohatra ▸' : 'Ohatra ▾'}
+        </Text>
+      </Pressable>
+      {sample ? (
+        <View style={[styles.quoteBox, {backgroundColor: earth.quote}]}>
+          <VerseQuote verse={sample} earth={earth} />
+        </View>
+      ) : null}
+    </View>
+  );
+};
 
 // The person's situations in their order, with ▲ ▼ as 44pt targets.
 const RankedList = ({
@@ -239,9 +318,8 @@ const RankedList = ({
       return (
         <View key={active.id} style={[styles.rankRow, index > 0 && [styles.rowLine, {borderTopColor: earth.line}]]}>
           <Text style={[styles.rank, {color: earth.accentText}]}>{index + 1}</Text>
-          <View style={styles.flex}>
-            <Text style={[styles.itemTitle, {color: earth.ink}]}>{situation.label}</Text>
-            <Text style={[styles.hint, {color: earth.muted}]}>{lengthLabel(situation)}</Text>
+          <View style={styles.flex} accessible accessibilityLabel={planA11y(situation)}>
+            <PlanFacts situation={situation} earth={earth} />
           </View>
           <Pressable
             disabled={first}
@@ -511,8 +589,7 @@ const TenyHoAnaoScreen = () => {
     const renderChoice = (situation: LifeSituation, framed: boolean) => (
       <SituationChoice
         key={situation.id}
-        label={situation.label}
-        hint={lengthLabel(situation)}
+        plan={situation}
         chosen={chosen.has(situation.id)}
         sample={sampleId === situation.id ? sample : undefined}
         onToggle={() => toggleDraft(situation.id)}
@@ -639,11 +716,9 @@ const TenyHoAnaoScreen = () => {
   }
 
   const today = new Date();
+  // Every plan's day reached, from one replay of the plans.
+  const positions = planPositions(state.situations, today, state.since);
   const needsSafetyNote = state.situations.some(s => situationById(s.id)?.safetyNote);
-  const progress = (id: SituationId) => {
-    const {shown, days} = planPosition(id, state.situations, today, state.since);
-    return {days, shown, label: days ? `${shown} / ${days} andro` : 'Tsy misy farany'};
-  };
   const switchTrack = {false: earth.edge, true: earth.accentText};
 
   return (
@@ -677,7 +752,7 @@ const TenyHoAnaoScreen = () => {
             </View>
             {placed && removeHint ? (
               <Text style={[styles.hint, styles.widgetHint, styles.rowLine, tinted.muted, tinted.line]}>
-                Raha hanala azy: tsindrio ela ilay widget eo amin'ny écran d'accueil.
+                Raha esorina ny widget: tsindrio ela ilay widget eo amin'ny écran d'accueil.
               </Text>
             ) : null}
           </View>
@@ -693,7 +768,10 @@ const TenyHoAnaoScreen = () => {
               <Text style={[styles.question, {color: earth.ink, fontFamily: earth.serif}]}>
                 Mbola ao amin'ny « {situation.label} » ve ianao?
               </Text>
-              <Text style={[styles.questionMeta, {color: earth.muted}]}>{progress(active.id).label}</Text>
+              <LengthTag situation={situation} earth={earth} centered />
+              {situation.days ? (
+                <PlanProgress shown={positions.get(active.id) ?? 0} days={situation.days} earth={earth} />
+              ) : null}
               <View style={styles.stack}>
                 <Pill label="Mbola eo" onPress={() => stillIn(active.id)} earth={earth} />
                 <Pill label="Efa nihatsara" onPress={() => remove(active.id)} earth={earth} kind="outline" />
@@ -729,18 +807,15 @@ const TenyHoAnaoScreen = () => {
           {state.situations.map((active, index) => {
             const situation = situationById(active.id);
             if (!situation) return null;
-            const {days, shown, label} = progress(active.id);
+            const shown = positions.get(active.id) ?? 0;
             return (
-              <View key={active.id} style={[styles.planRow, index > 0 && [styles.rowLine, {borderTopColor: earth.line}]]}>
-                <View style={styles.planHead}>
-                  <Text style={[styles.itemTitle, styles.flex, {color: earth.ink}]}>{situation.label}</Text>
-                  <Text style={[styles.hint, {color: earth.muted}]}>{label}</Text>
-                </View>
-                {days ? (
-                  <View style={[styles.track, {backgroundColor: earth.line}]}>
-                    <View style={[styles.bar, {backgroundColor: earth.accentText, width: `${(100 * shown) / days}%`}]} />
-                  </View>
-                ) : null}
+              <View
+                key={active.id}
+                style={[styles.planRow, index > 0 && [styles.rowLine, {borderTopColor: earth.line}]]}
+                accessible
+                accessibilityLabel={planA11y(situation, shown)}
+              >
+                <PlanFacts situation={situation} shown={shown} earth={earth} />
               </View>
             );
           })}
@@ -836,6 +911,25 @@ const styles = StyleSheet.create({
   lead: {fontSize: 16, lineHeight: 24, marginBottom: 8},
   hint: {fontSize: 14, lineHeight: 19},
   itemTitle: {fontSize: 17, lineHeight: 22, fontWeight: '700'},
+  // A plan's facts: a small quiet label over the subject, then the length tag.
+  facts: {gap: 6},
+  subject: {gap: 2},
+  factLabel: {fontSize: 13, lineHeight: 17, fontWeight: '600'},
+  factValue: {fontSize: 15, lineHeight: 19, fontWeight: '700'},
+  lengthTag: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    columnGap: 6,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  lengthTagCentered: {alignSelf: 'center', justifyContent: 'center'},
+  progressRow: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4},
+  progressCount: {fontVariant: ['tabular-nums']},
   disabled: {opacity: 0.35},
   backButton: {alignItems: 'center', justifyContent: 'center', minHeight: 48},
   backText: {fontSize: 16, fontWeight: '600'},
@@ -913,14 +1007,12 @@ const styles = StyleSheet.create({
   hero: {borderRadius: 24, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 22, gap: 16},
   eyebrow: {fontSize: 13, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase'},
   question: {fontSize: 24, lineHeight: 32, fontWeight: '600', textAlign: 'center'},
-  questionMeta: {fontSize: 15, lineHeight: 22, textAlign: 'center'},
   stack: {gap: 12},
   sectionHead: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 4},
   sectionTitle: {fontSize: 15, fontWeight: '700', letterSpacing: 0.4},
   sectionGap: {marginTop: 8, paddingHorizontal: 4},
   sectionLink: {minHeight: 44, justifyContent: 'center', paddingHorizontal: 4},
-  planRow: {paddingVertical: 14, gap: 10},
-  planHead: {flexDirection: 'row', alignItems: 'baseline', gap: 12},
+  planRow: {paddingVertical: 14},
   track: {height: 6, borderRadius: 3, overflow: 'hidden'},
   bar: {height: 6, borderRadius: 3},
   safety: {fontSize: 14, lineHeight: 21, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14},

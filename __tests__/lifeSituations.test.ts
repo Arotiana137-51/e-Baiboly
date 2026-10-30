@@ -7,12 +7,14 @@ import {
   type SituationId,
 } from '../src/constants/lifeSituations';
 import type {VerseRef} from '../src/constants/dailyVerses';
+import {isoDay} from '../src/utils/isoDay';
 import {
   CHECK_IN_GRACE_DAYS,
   checkInsDue,
   isCheckInDay,
   isLive,
   planPosition,
+  planPositions,
   situationSchedule,
   versesForDate,
   type ActiveSituation,
@@ -192,6 +194,16 @@ describe('lifeSituations schedule', () => {
     expect(planPosition('grief', [grief, work], day('2026-10-04')).shown).toBe(2);
     expect(planPosition('work', [grief, work], day('2026-10-04'))).toEqual({shown: 2, days: undefined});
     expect(planPosition('grief', [grief], day('2026-09-30')).shown).toBe(0);
+  });
+
+  it('gives every plan its position from one replay, capped at the plan length', () => {
+    const positions = planPositions([grief, work], day('2026-10-04'));
+    expect(positions.get('grief')).toBe(2);
+    expect(positions.get('work')).toBe(2);
+    // Long past its end, a plan stays at its length.
+    const days = byId('grief').days!;
+    const ended = {...grief, checkedOn: isoDay(plusDays('2026-10-01', 2 * days))};
+    expect(planPositions([ended], plusDays('2026-10-01', 3 * days)).get('grief')).toBe(days);
   });
 
   it('"Mbola eo" moves the next check-in forward', () => {

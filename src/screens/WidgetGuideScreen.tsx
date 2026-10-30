@@ -25,36 +25,38 @@ const WHAT_IT_DOES = [
 // iPhone: home screen / lock screen. Android has one section, no tabs.
 const SECTION_OPTIONS = WIDGET_GUIDE.sections.map((s, index) => ({key: String(index), label: s.title}));
 
-// A pulsing ring over the place to tap, so the picture says where before the
-// words do. Still on low-end phones.
-const TapRing = ({box, still}: {box: NonNullable<WidgetGuideStep['highlight']>; still: boolean}) => {
+// A finger on the place to tap, over the whole screenshot, so the picture says
+// where before the words do: it taps, or for a long press stays down while
+// the circle grows. Points up from below, or down from above near the bottom
+// so it stays in the picture. Still on low-end phones.
+const TapFinger = ({tap, still}: {tap: NonNullable<WidgetGuideStep['tap']>; still: boolean}) => {
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (still) return;
+    const duration = tap.hold ? 1200 : 600;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, {toValue: 1, duration: 700, useNativeDriver: true}),
-        Animated.timing(pulse, {toValue: 0, duration: 700, useNativeDriver: true}),
+        Animated.timing(pulse, {toValue: 1, duration, useNativeDriver: true}),
+        Animated.timing(pulse, {toValue: 0, duration: 400, useNativeDriver: true}),
       ]),
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse, still]);
-  const scale = pulse.interpolate({inputRange: [0, 1], outputRange: [1, 1.08]});
+  }, [pulse, still, tap.hold]);
+  const fromAbove = tap.y > 0.7;
+  const scale = pulse.interpolate({inputRange: [0, 1], outputRange: tap.hold ? [0.6, 1.5] : [1, 1.3]});
+  const press = pulse.interpolate({inputRange: [0, 1], outputRange: [0, fromAbove ? 6 : -6]});
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        styles.ring,
-        {
-          left: `${box.x * 100}%`,
-          top: `${box.y * 100}%`,
-          width: `${box.w * 100}%`,
-          height: `${box.h * 100}%`,
-          transform: [{scale}],
-        },
-      ]}
-    />
+    <View pointerEvents="none" style={[styles.tapPoint, {left: `${tap.x * 100}%`, top: `${tap.y * 100}%`}]}>
+      <Animated.View style={[styles.tapCircle, {transform: [{scale}]}]} />
+      <Animated.Text
+        style={[styles.finger, fromAbove ? styles.fingerAbove : styles.fingerBelow, {transform: [{translateY: press}]}]}>
+        {fromAbove ? '👇' : '👆'}
+      </Animated.Text>
+      {tap.hold ? (
+        <Text style={[styles.holdChip, fromAbove ? styles.chipAbove : styles.chipBelow]}>Tsindrio ela</Text>
+      ) : null}
+    </View>
   );
 };
 
@@ -151,8 +153,8 @@ const WidgetGuideScreen = () => {
             {frameWidth > 0 ? (
               <View style={[styles.imageFrame, themed.imageFrame]}>
                 <Image source={picture} style={styles.image} resizeMode="contain" accessibilityIgnoresInvertColors />
-                {step?.highlight ? (
-                  <TapRing key={`${sectionIndex}-${page}`} box={step.highlight} still={isLowEndMode} />
+                {step?.tap ? (
+                  <TapFinger key={`${sectionIndex}-${page}`} tap={step.tap} still={isLowEndMode} />
                 ) : null}
               </View>
             ) : null}
@@ -213,7 +215,38 @@ const styles = StyleSheet.create({
   sections: {marginHorizontal: -24, marginBottom: 8},
   imageFrame: {borderRadius: 16, overflow: 'hidden'},
   image: {width: '100%', height: '100%'},
-  ring: {position: 'absolute', borderWidth: 4, borderColor: RING, borderRadius: 16},
+  // A zero-size anchor on the point; everything is laid out around it.
+  tapPoint: {position: 'absolute', width: 0, height: 0},
+  tapCircle: {
+    position: 'absolute',
+    left: -22,
+    top: -22,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: RING,
+    backgroundColor: 'rgba(255, 59, 48, 0.25)',
+  },
+  // The fingertip is the top (or bottom) middle of the glyph.
+  finger: {position: 'absolute', left: -22, width: 44, fontSize: 38, lineHeight: 46, textAlign: 'center'},
+  fingerBelow: {top: 2},
+  fingerAbove: {top: -48},
+  holdChip: {
+    position: 'absolute',
+    left: -50,
+    width: 100,
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    backgroundColor: RING,
+    borderRadius: 10,
+    paddingVertical: 3,
+    overflow: 'hidden',
+  },
+  chipBelow: {top: 52},
+  chipAbove: {top: -78},
   stepText: {fontSize: 20, lineHeight: 29, fontWeight: '600', marginBottom: 14},
   tip: {fontSize: 15, lineHeight: 22, padding: 14, borderRadius: 16, marginBottom: 14},
 });
