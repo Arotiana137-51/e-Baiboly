@@ -153,8 +153,21 @@ export const planPosition = (
   actives: ReadonlyArray<ActiveSituation>,
   today: Date,
   since?: string,
-): {shown: number; days?: number} => {
-  const days = situationById(id)?.days;
-  const shown = walk(actives, since, dayNumber(today) + 1).get(id) ?? 0;
-  return {shown: days ? Math.min(shown, days) : shown, days};
+): {shown: number; days?: number} => ({
+  shown: planPositions(actives, today, since).get(id) ?? 0,
+  days: situationById(id)?.days,
+});
+
+/** Every plan's position by the end of `today`, from one replay. */
+export const planPositions = (
+  actives: ReadonlyArray<ActiveSituation>,
+  today: Date,
+  since?: string,
+): Map<SituationId, number> => {
+  const shown = walk(actives, since, dayNumber(today) + 1);
+  for (const [id, count] of shown) {
+    const days = situationById(id)?.days;
+    if (days) shown.set(id, Math.min(count, days));
+  }
+  return shown;
 };

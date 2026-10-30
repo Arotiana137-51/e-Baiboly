@@ -8,7 +8,7 @@ import {getStoredJesusNameVariant} from '../../utils/jesusName';
 import {findPrimaryColorOption, PRIMARY_COLOR_OPTIONS} from '../../theme/personalizationPalette';
 import {lookForColor, nightLook, widgetInk, type ShareCardLook, type WidgetInk} from '../../utils/shareCard';
 import {isoDay} from '../../utils/isoDay';
-import {isCheckInDay, planPosition, situationById, situationSchedule, type ActiveSituation} from '../../utils/lifeSituations';
+import {isCheckInDay, planPositions, situationById, situationSchedule, type ActiveSituation} from '../../utils/lifeSituations';
 import {dailyVerseFor, type VerseRef} from '../../constants/dailyVerses';
 import type {BibleVerse} from '../../hooks/useBibleData';
 import {FAVORITES_KEY} from '../../constants/favorites';
@@ -325,9 +325,7 @@ const writeFeed = async (): Promise<void> => {
   // replay of the plans instead of one per day.
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  const shown = new Map(
-    situations.map(s => [s.id, planPosition(s.id, situations, yesterday, tenyHoAnao.since).shown]),
-  );
+  const shown = planPositions(situations, yesterday, tenyHoAnao.since);
   for (let i = 0; i < WIDGET_WINDOW_DAYS; i += 1) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
