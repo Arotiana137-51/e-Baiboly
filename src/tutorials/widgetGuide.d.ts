@@ -6,14 +6,15 @@
 import type {ImageSourcePropType} from 'react-native';
 
 // One action per step, shown one at a time: what older users follow best
-// (exact steps, a picture of where to tap, short words).
+// (exact steps, the whole screen with a finger on where to tap, short words).
 export type WidgetGuideStep = {
   text: string;
   // A real screenshot of that moment, and its width / height.
   image?: ImageSourcePropType;
   aspect?: number;
-  // Where to tap, as fractions of the image: a ring is drawn over it.
-  highlight?: {x: number; y: number; w: number; h: number};
+  // Where to tap, as fractions of the image: a finger points at it. hold is
+  // a long press.
+  tap?: {x: number; y: number; hold?: boolean};
   // A way out when the phone doesn't match, shown under this step only.
   tip?: string;
 };

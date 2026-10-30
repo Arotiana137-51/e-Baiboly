@@ -1,14 +1,17 @@
 import type {WidgetGuide} from './widgetGuide';
 
-// Apple's steps (support.apple.com/118610), photographed on an iPhone set to
-// English (iOS 26: the Edit and Done buttons are a brush and a check), with
-// the French labels in brackets. The widget is "Sakafom-panahy" under
-// e-Baiboly; the lock screen sizes need iOS 16. Lock screen photos cropped to
-// the buttons only: the owner's wallpaper and other apps stay out.
+// Apple's steps (support.apple.com/118610), screenshots of a whole iPhone
+// screen set to English (iOS 26: the Edit and Done buttons are a brush and a
+// check), with the French labels in brackets. The widget is "Sakafom-panahy"
+// under e-Baiboly; the lock screen sizes need iOS 16. Other apps' icons and
+// widgets, names and the person in the wallpaper are blurred in the pictures.
 export const WIDGET_PICTURE = {
   image: require('../../assets/illustrations/widget-guide/result.jpg'),
   aspect: 720 / 402,
 };
+
+// Every screenshot is a whole iPhone screen.
+const SCREEN = 720 / 1558;
 
 export const WIDGET_GUIDE: WidgetGuide = {
   intro: "Sakafom-panahy isan'andro: andinin-teny iray isan'andro eo amin'ny écran.",
@@ -18,51 +21,58 @@ export const WIDGET_GUIDE: WidgetGuide = {
       steps: [
         {
           text: "Tsindrio ela (long press) ny toerana malalaka eo amin'ny écran d'accueil, mandra-pihetsiketsiky ny kisary.",
-          image: require('../../assets/illustrations/widget-guide/home_long_press.jpg'),
-          aspect: 720 / 760,
-          highlight: {x: 0.4, y: 0.59, w: 0.2, h: 0.16},
+          image: require('../../assets/illustrations/widget-guide/ios/home_1_long_press.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.5, y: 0.42, hold: true},
         },
         {
           text: 'Tsindrio ny bokotra eo ankavia ambony.',
-          image: require('../../assets/illustrations/widget-guide/ios/edit_button.jpg'),
-          aspect: 4.875,
-          highlight: {x: 0.152, y: 0.117, w: 0.34, h: 0.633},
+          image: require('../../assets/illustrations/widget-guide/ios/home_2_edit.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.161, y: 0.037},
           tip: 'Raha soratra no ao amin\'io bokotra io: "Edit" na "Modifier".',
         },
         {
           text: 'Tsindrio "Add Widget" (na "Ajouter un widget").',
-          image: require('../../assets/illustrations/widget-guide/ios/menu.jpg'),
-          aspect: 1.5811,
-          highlight: {x: 0.094, y: 0.095, w: 0.453, h: 0.135},
+          image: require('../../assets/illustrations/widget-guide/ios/home_3_add_widget.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.33, y: 0.095},
         },
         {
           text: 'Tsindrio "Search Widgets" (na "Rechercher"), dia soraty "e-Baiboly".',
-          image: require('../../assets/illustrations/widget-guide/ios/search_field.jpg'),
-          aspect: 4.875,
-          highlight: {x: 0.062, y: 0.19, w: 0.876, h: 0.6},
+          image: require('../../assets/illustrations/widget-guide/ios/home_4_search.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.5, y: 0.182},
         },
         {
           text: 'Tsindrio "e-Baiboly".',
-          image: require('../../assets/illustrations/widget-guide/ios/search_result.jpg'),
-          aspect: 2.2075,
-          highlight: {x: 0.034, y: 0.532, w: 0.932, h: 0.309},
+          image: require('../../assets/illustrations/widget-guide/ios/home_5_result.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.25, y: 0.275},
         },
         {
           text: 'Akisaho miankavia na miankavanana hifidianana ny habeny, dia tsindrio "Add Widget" (na "Ajouter le widget").',
-          image: require('../../assets/illustrations/widget-guide/ios/add_button.jpg'),
-          aspect: 3.4412,
-          highlight: {x: 0.062, y: 0.379, w: 0.876, h: 0.435},
+          image: require('../../assets/illustrations/widget-guide/ios/home_6_add.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.5, y: 0.9},
         },
         {
           text: 'Tsindrio ny ✓ eo ankavanana ambony.',
-          image: require('../../assets/illustrations/widget-guide/ios/done_button.jpg'),
-          aspect: 4.875,
-          highlight: {x: 0.508, y: 0.117, w: 0.342, h: 0.633},
+          image: require('../../assets/illustrations/widget-guide/ios/home_7_done.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.837, y: 0.037},
           tip: 'Raha soratra no ao amin\'io bokotra io: "Done" na "OK".',
         },
         {
           text: "Vita! Hiseho eo amin'ny écran isan'andro ny andinin-teny.",
           ...WIDGET_PICTURE,
+        },
+        {
+          // TEMP: Malagasy wording to be written by the owner.
+          text: "Raha hanova ny loko na ny soratra: tsindrio ity bokotra ity eo amin'ny widget.",
+          image: require('../../assets/illustrations/widget-guide/ios/home_7_done.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.886, y: 0.469},
         },
       ],
     },
@@ -70,37 +80,57 @@ export const WIDGET_GUIDE: WidgetGuide = {
       title: 'Écran verrouillé',
       steps: [
         {
-          text: 'Tsindrio ela ny écran verrouillé mandra-pisehon\'ny "Customize" (na "Personnaliser"), dia tsindrio izany.',
-          image: require('../../assets/illustrations/widget-guide/ios/lock_customize.jpg'),
-          aspect: 720 / 139,
-          highlight: {x: 0.268, y: 0.144, w: 0.464, h: 0.705},
+          // TEMP: Malagasy wording to be written by the owner (this and the
+          // next step were one step before).
+          text: 'Tsindrio ela ny écran verrouillé.',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_1_long_press.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.5, y: 0.4, hold: true},
         },
         {
-          text: 'Fidio ny écran verrouillé, dia tsindrio "Add Widgets" (na "Ajouter des widgets").',
-          image: require('../../assets/illustrations/widget-guide/ios/lock_add_widgets.jpg'),
-          aspect: 720 / 195,
-          highlight: {x: 0.049, y: 0.077, w: 0.904, h: 0.846},
-          // PLACEHOLDER MG copy — user-owned.
+          text: 'Tsindrio "Customize" (na "Personnaliser").',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_2_customize.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.5, y: 0.93},
+        },
+        {
+          // TEMP: Malagasy wording to be written by the owner.
+          text: "Tsindrio ny efajoro eo ambany, toeran'ny widget.",
+          image: require('../../assets/illustrations/widget-guide/ios/lock_3_widgets.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.5, y: 0.78},
+          tip: 'Raha anontaniana: fidio ny "Lock Screen" (na "Écran verrouillé").',
+        },
+        {
+          // TEMP: Malagasy wording to be written by the owner.
+          text: 'Tadiavo ao amin\'ny lisitra ny "e-Baiboly", dia tsindrio.',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_4_list.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.28, y: 0.86},
           tip: 'Raha feno ilay toerana, tsindrio ny − eo amin\'ny widget iray mba hanesorana azy aloha.',
         },
         {
-          text: 'Tsindrio "e-Baiboly", dia fidio ilay widget.',
-          image: require('../../assets/illustrations/widget-guide/ios/lock_widget_panel.jpg'),
-          aspect: 720 / 557,
-          highlight: {x: 0.303, y: 0.727, w: 0.393, h: 0.228},
+          text: 'Tsindrio ilay widget.',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_5_pick.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.5, y: 0.75},
+        },
+        {
+          text: 'Tsindrio ny ✕.',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_6_close.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.895, y: 0.476},
         },
         {
           text: 'Tsindrio "Done" (na "OK"). (iOS 16 no ho miakatra)',
-          image: require('../../assets/illustrations/widget-guide/ios/lock_done.jpg'),
-          aspect: 720 / 92,
-          highlight: {x: 0.75, y: 0.207, w: 0.172, h: 0.565},
-          // PLACEHOLDER MG copy — user-owned.
-          tip: 'Raha mbola misokatra ny lisitry ny widget, tsindrio aloha ny ✕.',
+          image: require('../../assets/illustrations/widget-guide/ios/lock_7_done.jpg'),
+          aspect: SCREEN,
+          tap: {x: 0.836, y: 0.037},
         },
         {
           text: "Vita! Hiseho eo amin'ny écran isan'andro ny andinin-teny.",
-          image: require('../../assets/illustrations/widget-guide/ios/lock_result.jpg'),
-          aspect: 720 / 194,
+          image: require('../../assets/illustrations/widget-guide/ios/lock_7_done.jpg'),
+          aspect: SCREEN,
         },
       ],
     },
