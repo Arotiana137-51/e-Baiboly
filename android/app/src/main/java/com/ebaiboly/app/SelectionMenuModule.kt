@@ -20,9 +20,9 @@ import com.facebook.react.uimanager.ViewManager
 /**
  * The phone's own text selection on a selectable <Text> (a real TextView in
  * React Native): long-press a word, then drag the handles. The system menu
- * is left empty, so the app shows its own highlight bubble instead; JS hears
- * where the selection is (SelectionMenuShown) and when it ends
- * (SelectionMenuHidden).
+ * (Copy, Share, Translate...) stays, and the app shows its own highlight
+ * bubble next to it; JS hears where the selection is (SelectionMenuShown) and
+ * when it ends (SelectionMenuHidden).
  *
  * A double-tap would also select a word; it is kept for the app's verse menu
  * instead (SelectionMenuDoubleTap) and never reaches the TextView.
@@ -74,9 +74,8 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
     ) : ActionMode.Callback {
 
         // The system fills the menu (Copy, Select all, Translate...) before
-        // each of these; emptying it hides its toolbar but keeps the selection.
+        // each of these and handles its items: they are left as they are.
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            menu.clear()
             activeMode = mode
             emitSelection()
             return true
@@ -84,7 +83,6 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
 
         // Called again once a handle is let go, with the new selection.
         override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
-            menu.clear()
             emitSelection()
             return true
         }

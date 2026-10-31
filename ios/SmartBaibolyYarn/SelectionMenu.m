@@ -7,8 +7,8 @@
 // @bsky.app/react-native-uitextview (class RNUITextView, its text view's
 // delegate). Its methods are hooked at runtime, so the library itself stays
 // untouched:
-// - the system edit menu is left empty (iOS 16+): the app shows its
-//   highlight bubble;
+// - the system edit menu (Copy, Translate, Share...) stays as UIKit makes it:
+//   the app shows its highlight bubble next to it, on the side it leaves free;
 // - each selection change goes to JS with where the words are
 //   (SelectionMenuShown, or SelectionMenuHidden once it is cleared);
 // - a tap on the bubble doesn't clear the selection, as any other tap
@@ -389,24 +389,6 @@ static void EBHookOutsideTap(Class cls)
   }
 }
 
-// iOS 16+: the edit menu is asked from the text view's delegate. An empty
-// menu isn't shown.
-static void EBHookEditMenu(Class cls)
-{
-  if (@available(iOS 16.0, *)) {
-    SEL selector = @selector(textView:editMenuForTextInRange:suggestedActions:);
-    struct objc_method_description description =
-        protocol_getMethodDescription(@protocol(UITextViewDelegate), selector, NO, YES);
-    if (description.types == NULL) {
-      return;
-    }
-    id block = ^UIMenu *(UIView *owner, UITextView *textView, NSRange range, NSArray<UIMenuElement *> *suggested) {
-      return [UIMenu menuWithChildren:@[]];
-    };
-    class_addMethod(cls, selector, imp_implementationWithBlock(block), description.types);
-  }
-}
-
 // UIKit may cache which delegate methods exist when a text view gets its
 // delegate, so the hooks go in at launch, before any passage is created.
 // They apply to every RNUITextView: the Bible's passages and the hymns'
@@ -423,7 +405,6 @@ __attribute__((constructor)) static void EBInstallHooks(void)
   EBHookDraw(cls);
   EBHookMoveToWindow(cls);
   EBHookOutsideTap(cls);
-  EBHookEditMenu(cls);
 }
 
 @interface SelectionMenu : RCTEventEmitter <RCTBridgeModule>
