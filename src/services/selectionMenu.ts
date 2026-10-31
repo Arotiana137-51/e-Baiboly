@@ -9,7 +9,8 @@ import type {TextLine} from '../utils/chapterPassage';
 
 // The phone's own text selection on the reader's passages (native module
 // SelectionMenu): long-press a word, then drag the handles. The system menu
-// stays empty and the app shows its own highlight bubble instead; a double-tap
+// (Copy, Translate, Share...) stays, and the app shows its own highlight bubble
+// on the side that menu leaves free (utils/bubblePlacement); a double-tap
 // is kept for the app's verse menu. On iOS the selectable text is the
 // UITextView of @bsky.app/react-native-uitextview: a React Native <Text>
 // there can only copy its whole text.
@@ -17,9 +18,9 @@ import type {TextLine} from '../utils/chapterPassage';
 const {SelectionMenu} = NativeModules;
 const emitter = SelectionMenu ? new NativeEventEmitter(SelectionMenu) : null;
 
-// iOS 15 has no way for the app to empty the system menu, which would sit on
-// top of the bubble: it keeps the app's own double-tap / long-press menus, as
-// does a build without the module (or Jest).
+// iOS 15 keeps the app's own double-tap / long-press menus: the native path
+// was built for iOS 16's edit menu. So does a build without the module (or
+// Jest).
 const IOS_TOO_OLD = Platform.OS === 'ios' && parseFloat(String(Platform.Version)) < 16;
 
 // True where the reader uses native selection.

@@ -1,6 +1,8 @@
 import {useCallback, useEffect, useRef, useState, type RefObject} from 'react';
 import type {View} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {BUBBLE_ARROW, BUBBLE_HEIGHT, BUBBLE_WIDTH} from '../components/HighlightBubble';
+import {placeBubble as placeNextToMenu} from '../utils/bubblePlacement';
 import type {MarkRange} from '../utils/chapterMarks';
 import {
   attachSelectionMenu,
@@ -11,9 +13,7 @@ import {
   type NativeSelection,
 } from '../services/selectionMenu';
 
-// Room under a selection for Android's handles, when the bubble goes below.
-const HANDLE_ROOM = 30;
-const BUBBLE_MARGIN = 8;
+const BUBBLE_SIZE = {width: BUBBLE_WIDTH, height: BUBBLE_HEIGHT, arrow: BUBBLE_ARROW};
 
 // The selected words (offsets into the chapter or the hymn) and where the
 // highlight bubble sits in the reader.
@@ -44,9 +44,12 @@ type Options<T> = {
 
 // The phone's own word selection on a reader's texts, shared by the Bible
 // and hymn readers: each text by its React tag, so an event leads back to the
-// text, and the highlight bubble placed over the selected words.
+// text, and the highlight bubble placed by the selected words, on the side the
+// phone's own menu (Copy, Translate...) leaves free.
 export const useSelectionBubble = <T>({enabled, rootRef, toRange, onDoubleTap}: Options<T>) => {
   const [bubble, setBubble] = useState<BubbleState | null>(null);
+  // The top of the screen the system menu may use, under the status bar.
+  const safeTop = useSafeAreaInsets().top;
   const texts = useRef(new Map<number, SelectableEntry<T>>());
   // Bumped by every selection event, so a measurement that comes back after a
   // newer event, or after the selection ended, is dropped.
@@ -56,10 +59,18 @@ export const useSelectionBubble = <T>({enabled, rootRef, toRange, onDoubleTap}: 
   // Where that text and the reader sit on screen, measured once per selection
   // (iOS reports every step of a handle drag); forgotten whenever the text
   // could have moved: a scroll, a new size (forgetPlace).
-  const origin = useRef<{tag: number; x: number; y: number; width: number; height: number} | null>(null);
+  // `screenY` is the reader's top under the safe top of the screen.
+  const origin = useRef<{
+    tag: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    screenY: number;
+  } | null>(null);
   // Read at event time, so the subscriptions stay put.
-  const latest = useRef({toRange, onDoubleTap});
-  latest.current = {toRange, onDoubleTap};
+  const latest = useRef({toRange, onDoubleTap, safeTop});
+  latest.current = {toRange, onDoubleTap, safeTop};
 
   // Registers the text drawn under `key`, or forgets it (no instance): its
   // selection, and the bubble over it, go with it. Returns its tag.
@@ -95,22 +106,20 @@ export const useSelectionBubble = <T>({enabled, rootRef, toRange, onDoubleTap}: 
     const showBubble = (range: MarkRange, selection: NativeSelection) => {
       const place = origin.current;
       if (!place) return;
-      // The text's top-left in the reader.
-      const x = place.x + selection.x;
-      // Above the words when it fits, else under them, clear of the handles.
-      const above = place.y + selection.top - BUBBLE_ARROW / 2 - 4 - BUBBLE_HEIGHT;
-      const below = above < BUBBLE_MARGIN;
-      const top = below ? place.y + selection.bottom + HANDLE_ROOM : above;
-      const left = Math.min(
-        Math.max(x - BUBBLE_WIDTH / 2, BUBBLE_MARGIN),
-        place.width - BUBBLE_WIDTH - BUBBLE_MARGIN,
-      );
       setBubble({
         range,
-        left,
-        top: Math.max(BUBBLE_MARGIN, Math.min(top, place.height - BUBBLE_HEIGHT - BUBBLE_MARGIN)),
-        arrowX: Math.min(Math.max(x - left, 18), BUBBLE_WIDTH - 18),
-        below,
+        ...placeNextToMenu(
+          {
+            // The selection in the reader, from its text's top-left.
+            x: place.x + selection.x,
+            top: place.y + selection.top,
+            bottom: place.y + selection.bottom,
+            readerTopOnScreen: place.screenY,
+            readerWidth: place.width,
+            readerHeight: place.height,
+          },
+          BUBBLE_SIZE,
+        ),
       });
     };
 
@@ -136,7 +145,14 @@ export const useSelectionBubble = <T>({enabled, rootRef, toRange, onDoubleTap}: 
           // Kept while the selection lasts, even when a newer step of the
           // drag arrived meanwhile; only the bubble for an old step is dropped.
           if (bubbleTag.current !== tag) return;
-          origin.current = {tag, x: textX - rootX, y: textY - rootY, width: rootWidth, height: rootHeight};
+          origin.current = {
+            tag,
+            x: textX - rootX,
+            y: textY - rootY,
+            width: rootWidth,
+            height: rootHeight,
+            screenY: rootY - latest.current.safeTop,
+          };
           if (seq === selectionSeq.current) showBubble(range, selection);
         });
       });
