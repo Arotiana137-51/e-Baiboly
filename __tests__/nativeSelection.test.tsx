@@ -236,3 +236,23 @@ test("the phone's own menu items show in the bubble and run from it", async () =
   });
   expect(performMenuAction).toHaveBeenCalledWith(0);
 });
+
+test('the arrows show where some of those items are out of view', async () => {
+  await render(<HymnReaderView hymnVerses={hymnVerses} isLoading={false} marks={[]} onMarksChange={() => {}} />);
+  const tag = tagOf('Ny Tompo be fitia');
+  await act(async () => {
+    mockNative.onActions?.({ tag, actions: [{ id: 0, title: 'Copy' }, { id: 1, title: 'Translate' }] });
+    mockNative.onSelection?.(tag, { tag, start: 3, end: 8, x: 40, top: 10, bottom: 30 });
+  });
+  const row = tree.root.findAll(n => n.props.horizontal && typeof n.props.onContentSizeChange === 'function')[0];
+  const shown = (glyph: string) => tree.root.findAll(n => n.type === 'Text' && n.props.children === glyph).length > 0;
+  await act(async () => {
+    row.props.onLayout({ nativeEvent: { layout: { width: 200 } } });
+    row.props.onContentSizeChange(400, 34);
+  });
+  expect([shown('‹'), shown('›')]).toEqual([false, true]);
+  await act(async () => {
+    row.props.onScroll({ nativeEvent: { contentOffset: { x: 200 } } });
+  });
+  expect([shown('‹'), shown('›')]).toEqual([true, false]);
+});

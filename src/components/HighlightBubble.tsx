@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useRef, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useTheme} from '../contexts/ThemeContext';
 import {useTutorialTarget} from '../contexts/TutorialContext';
@@ -84,28 +84,7 @@ export const HighlightBubble = ({
     // The testID tells SelectionMenu.m (iOS) that a tap here keeps the
     // selection, which any other tap outside the text clears.
     <View testID="highlight-bubble" style={[styles.bubble, surface, {left, top}]}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={[styles.actions, {borderColor: theme.colors.divider}]}
-        contentContainerStyle={styles.actionsContent}
-      >
-        {actions.map(action => (
-          <Pressable
-            key={action.id}
-            onPress={() => onAction(action.id)}
-            accessibilityRole="button"
-            style={({pressed}) => [
-              styles.action,
-              pressed && {backgroundColor: theme.colors.backgroundTertiary},
-            ]}
-          >
-            <Text numberOfLines={1} style={[styles.actionLabel, {color: theme.colors.textPrimary}]}>
-              {action.title}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      <ActionsRow actions={actions} onAction={onAction} />
       <View ref={colorsRef} collapsable={false} style={[styles.row, styles.colorRow]}>
         {HIGHLIGHT_COLORS.map(color => {
           const chosen = current.color === color;
@@ -178,6 +157,68 @@ export const HighlightBubble = ({
   );
 };
 
+// The phone's actions in one row. When they don't all fit, a ‹ or › at the
+// edge shows there are more that way, as the phone's own menu does; a tap
+// on it turns the row by most of its width.
+const ActionsRow = ({actions, onAction}: Pick<Props, 'actions' | 'onAction'>) => {
+  const {theme} = useTheme();
+  const scrollRef = useRef<ScrollView>(null);
+  const [x, setX] = useState(0);
+  const [viewWidth, setViewWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const more = {left: x > 1, right: x + viewWidth < contentWidth - 1};
+  const turn = (direction: 1 | -1) => {
+    const to = Math.min(Math.max(x + direction * viewWidth * 0.8, 0), contentWidth - viewWidth);
+    scrollRef.current?.scrollTo({x: to, animated: true});
+  };
+  const arrow = (side: 'left' | 'right') =>
+    more[side] ? (
+      <Pressable
+        onPress={() => turn(side === 'left' ? -1 : 1)}
+        hitSlop={4}
+        // The row itself scrolls for a screen reader.
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+        style={[styles.more, side === 'left' ? styles.moreLeft : styles.moreRight, {backgroundColor: theme.colors.backgroundSecondary}]}
+      >
+        <Text style={[styles.moreLabel, {color: theme.colors.textSecondary}]}>{side === 'left' ? '‹' : '›'}</Text>
+      </Pressable>
+    ) : null;
+
+  return (
+    <View style={[styles.actions, {borderColor: theme.colors.divider}]}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={event => setX(event.nativeEvent.contentOffset.x)}
+        onLayout={event => setViewWidth(event.nativeEvent.layout.width)}
+        onContentSizeChange={width => setContentWidth(width)}
+        contentContainerStyle={styles.actionsContent}
+      >
+        {actions.map(action => (
+          <Pressable
+            key={action.id}
+            onPress={() => onAction(action.id)}
+            accessibilityRole="button"
+            style={({pressed}) => [
+              styles.action,
+              pressed && {backgroundColor: theme.colors.backgroundTertiary},
+            ]}
+          >
+            <Text numberOfLines={1} style={[styles.actionLabel, {color: theme.colors.textPrimary}]}>
+              {action.title}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+      {arrow('left')}
+      {arrow('right')}
+    </View>
+  );
+};
+
 type SelectionBubbleProps = {
   // Where the bubble sits and the words it is for (useSelectionBubble).
   placement: {range: MarkRange; left: number; top: number; arrowX: number; below: boolean};
@@ -228,8 +269,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: {width: 0, height: 3},
   },
-  actions: {flexGrow: 0, height: ACTIONS, borderBottomWidth: StyleSheet.hairlineWidth},
+  actions: {height: ACTIONS, borderBottomWidth: StyleSheet.hairlineWidth},
   actionsContent: {alignItems: 'center'},
+  // Over the row's edge, hiding the cut-off item under it.
+  more: {position: 'absolute', top: 0, bottom: 0, width: 24, alignItems: 'center', justifyContent: 'center'},
+  moreLeft: {left: 0},
+  moreRight: {right: 0},
+  moreLabel: {fontSize: 24, fontWeight: '600', marginTop: -3},
   action: {height: ACTIONS - 4, paddingHorizontal: 10, borderRadius: 8, justifyContent: 'center'},
   actionLabel: {fontSize: 14, fontWeight: '600'},
   row: {flexDirection: 'row', alignItems: 'center', gap: GAP},
