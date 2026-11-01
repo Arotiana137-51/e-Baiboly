@@ -248,7 +248,7 @@ const VerseSpans = React.memo(
     verseStyles: VerseStyleSet;
     verseMarks: ChapterMark[];
     isSelected: boolean;
-    onInlineRefPress?: (ref: InlineBibleRef) => void;
+    onInlineRefPress?: (ref: InlineBibleRef, fromVerse: number) => void;
     onNoteMarkPress?: (noteId: string) => void;
     // Without native selection (iOS 15, or no module): the app's own
     // double-tap and long-press on the verse.
@@ -329,7 +329,10 @@ const VerseSpans = React.memo(
                 {idx === 0 ? '' : '\n'}
                 {renderBibleLineForReader(line, {
                   ...verseStyles.lineOptions,
-                  onRefPress: onInlineRefPress,
+                  // With the verse it sits in, so the screen can come back here.
+                  onRefPress: onInlineRefPress
+                    ? ref => onInlineRefPress(ref, verse.verse_number)
+                    : undefined,
                 })}
               </UITextView>
             );
@@ -391,7 +394,7 @@ type PassageViewProps = {
   onSelectableRef: (passageKey: string, instance: unknown) => void;
   onLines: (passageKey: string, lines: TextLine[]) => void;
   onLayoutY: (passageKey: string, y: number) => void;
-  onInlineRefPress?: (ref: InlineBibleRef) => void;
+  onInlineRefPress?: (ref: InlineBibleRef, fromVerse: number) => void;
   onNoteMarkPress?: (noteId: string) => void;
   onVersePress?: (verse: BibleVerse) => void;
   onVerseLongPress?: (verse: BibleVerse) => void;
@@ -552,7 +555,7 @@ interface BibleReaderViewProps {
   onVerseLongPress?: (verse: BibleVerse) => void;
   selectedVerseNumber?: number | null;
   selectedVerseRange?: SelectedVerseRange;
-  onInlineRefPress?: (ref: InlineBibleRef) => void;
+  onInlineRefPress?: (ref: InlineBibleRef, fromVerse: number) => void;
   // This chapter's notes, drawn as brackets in the margin.
   notes?: Note[];
   onNoteMarkPress?: (noteId: string) => void;
@@ -918,10 +921,10 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   }, []);
 
   // A reference tap is never the first half of a double-tap.
-  const handleInlineRefPress = useCallback((ref: InlineBibleRef) => {
+  const handleInlineRefPress = useCallback((ref: InlineBibleRef, fromVerse: number) => {
     lastTap.current = null;
     spanPressedAt.current = Date.now();
-    contextRef.current.onInlineRefPress?.(ref);
+    contextRef.current.onInlineRefPress?.(ref, fromVerse);
   }, []);
 
   const handleNoteMarkPress = useCallback((noteId: string) => {

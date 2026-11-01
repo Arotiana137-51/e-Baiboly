@@ -31,6 +31,8 @@ type TranslationKey =
   | 'actions.noteOpen'
   | 'actions.hymnNoteAdd'
   | 'actions.hymnNoteOpen'
+  | 'reader.returnTo'
+  | 'reader.returnDismiss'
   | 'cultMode.title'
   | 'cultMode.activate'
   | 'cultMode.deactivate'
@@ -181,6 +183,9 @@ const translations: Translations = {
     'cultMode.title': 'Fotoam-pivavahana',
     'cultMode.activate': 'Velomy ny fotoana',
     'cultMode.deactivate': 'Ajanony',
+    // The pill after a tap on a Bible reference, back to the verse it was in.
+    'reader.returnTo': "Hiverina any amin'ny {{place}}",
+    'reader.returnDismiss': 'Hanafina',
     'cultMode.intro':
       'Ito dia fampidirana ny programam-pivavahana ka rehefa alahatrao mialoha eto ireo tokony ho vakianao mandritra ny fotoana dia tsy mila mikaroka boky/fihirana intsony ianao fa manindry ny teboka (prev, next) ery ambany fotsiny. Alaminao otrany ireny mandamina “Playlist” ireny izy ity mba hanamorana ny fampiasanao ny appli e-Baiboly mandritra ny fotoam-bavaka.',
     'cultMode.emptyState': "Ampio andinin'teny na hira",

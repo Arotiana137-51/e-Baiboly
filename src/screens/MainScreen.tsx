@@ -8,9 +8,10 @@ import {
   Platform,
   AppState,
   PanResponder,
+  BackHandler,
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useIsFocused, useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
@@ -33,6 +34,8 @@ import NoteBubble, {type NoteBubbleTarget} from '../components/NoteBubble';
 import {ScrollViewWithThumb} from '../components/ScrollViewWithThumb';
 import {SheetButton, SheetModal} from '../components/SheetModal';
 import {UndoBar} from '../components/UndoBar';
+import {ReturnToPassageChip} from '../components/ReturnToPassageChip';
+import {useReturnTrail} from '../hooks/useReturnTrail';
 import {ShareCardModal} from '../components/ShareCardModal';
 import {
   buildBibleShareItems,
@@ -634,16 +637,63 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             : 'Fihirana '
         }${currentHymnNumber ?? ''}`.trim();
 
-  const handleInlineBibleRefPress = useCallback((ref: InlineBibleRef) => {
+  // Places left by tapping a reference, so the reader can step back to them.
+  const returnTrail = useReturnTrail();
+
+  // Open a cited passage: the reader narrowed to its verses.
+  const jumpToPassage = useCallback(
+    (target: {bookId: number; bookName: string; chapter: number; verseStart: number; verseEnd: number}) => {
+      setMode('bible');
+      setSelectedVerseNumber(null);
+      setSelectedVerseRange({start: target.verseStart, end: target.verseEnd});
+      setCurrentBook({id: target.bookId, name: target.bookName});
+      setCurrentChapter(target.chapter);
+      // Reset then re-set so repeated taps to the same verse still scroll.
+      setShouldScrollToVerse(null);
+      setTimeout(() => setShouldScrollToVerse(target.verseStart), 0);
+    },
+    [],
+  );
+
+  // Remember the verse a reference was tapped in, then follow it.
+  const followReference = useCallback(
+    (
+      fromVerse: number,
+      target: {bookId: number; bookName: string; chapter: number; verseStart: number; verseEnd: number},
+    ) => {
+      if (currentBook) {
+        returnTrail.push({
+          bookId: currentBook.id,
+          bookName: currentBook.name,
+          chapter: currentChapter,
+          verse: fromVerse,
+          range: selectedVerseRange,
+        });
+      }
+      jumpToPassage(target);
+    },
+    [currentBook, currentChapter, selectedVerseRange, returnTrail, jumpToPassage],
+  );
+
+  const handleInlineBibleRefPress = useCallback(
+    (ref: InlineBibleRef, fromVerse: number) => followReference(fromVerse, ref),
+    [followReference],
+  );
+
+  // Back to the verse the last reference was tapped in, marked so the eye
+  // finds it, with the reader narrowed as it was then.
+  const returnToPreviousSpot = useCallback(() => {
+    const spot = returnTrail.pop();
+    if (!spot) return false;
     setMode('bible');
-    setSelectedVerseNumber(null);
-    setSelectedVerseRange({start: ref.verseStart, end: ref.verseEnd});
-    setCurrentBook({id: ref.bookId, name: ref.bookName});
-    setCurrentChapter(ref.chapter);
-    // Reset then re-set so repeated taps to the same verse still scroll.
+    setCurrentBook({id: spot.bookId, name: spot.bookName});
+    setCurrentChapter(spot.chapter);
+    setSelectedVerseRange(spot.range);
+    setSelectedVerseNumber(spot.verse);
     setShouldScrollToVerse(null);
-    setTimeout(() => setShouldScrollToVerse(ref.verseStart), 0);
-  }, []);
+    setTimeout(() => setShouldScrollToVerse(spot.verse), 0);
+    return true;
+  }, [returnTrail]);
 
   // Cult mode propagator: when the active entry changes, drive the reader
   // (mode + book/chapter/range or hymn id/number/category) from it.
@@ -1187,11 +1237,28 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   const handleCrossRefPress = (ref: BibleCrossReference) => {
-    setMode('bible');
-    setCurrentBook({ id: ref.to_book_id, name: ref.to_book_name });
-    setCurrentChapter(ref.to_chapter);
+    const fromVerse = selectedVerse?.verse_number;
     closeCrossReferences();
+    const target = {
+      bookId: ref.to_book_id,
+      bookName: ref.to_book_name,
+      chapter: ref.to_chapter,
+      verseStart: ref.to_verse_start,
+      verseEnd: ref.to_verse_end,
+    };
+    if (fromVerse != null) followReference(fromVerse, target);
+    else jumpToPassage(target);
   };
+
+  // Android back steps back along the reference trail before it leaves the
+  // app. Not while a note bubble is open: it takes back for itself.
+  const isFocused = useIsFocused();
+  const canStepBack = isFocused && mode === 'bible' && returnTrail.depth > 0 && noteBubble === null;
+  useEffect(() => {
+    if (!canStepBack) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', returnToPreviousSpot);
+    return () => sub.remove();
+  }, [canStepBack, returnToPreviousSpot]);
 
   const handleHymnSelect = (hymnId: string, category: string, number: number) => {
     setCurrentHymnId(hymnId);
@@ -1576,6 +1643,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
         {cultMode.isActive && cultMode.entries.length > 0 ? (
           <CultProgressBar current={cultMode.currentIndex} count={cultMode.entries.length} />
+        ) : null}
+
+        {mode === 'bible' ? (
+          <ReturnToPassageChip
+            spot={returnTrail.top}
+            onReturn={returnToPreviousSpot}
+            onDismiss={returnTrail.clear}
+          />
         ) : null}
       </View>
       <CustomBottomNav
