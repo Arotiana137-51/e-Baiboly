@@ -14,7 +14,7 @@ import { JesusNameProvider } from '../src/contexts/JesusNameContext';
 import BibleReaderView from '../src/components/BibleReaderView';
 import HymnReaderView from '../src/components/HymnReaderView';
 import { buildChapterDisplay, buildHymnDisplay, HYMN_CHORUS_LABEL, type ChapterMark } from '../src/utils/chapterMarks';
-import type { NativeSelection } from '../src/services/selectionMenu';
+import { performMenuAction, type MenuAction, type NativeSelection } from '../src/services/selectionMenu';
 import type { BibleVerse } from '../src/hooks/useBibleData';
 import type { HymnVerse } from '../src/hooks/useHymnsData';
 import { buildPassages } from '../src/utils/chapterPassage';
@@ -33,6 +33,7 @@ const mockNative = {
   texts: new Map<number, Node>(),
   onSelection: null as ((tag: number, selection: NativeSelection | null) => void) | null,
   onDoubleTap: null as ((tap: { tag: number; offset: number }) => void) | null,
+  onActions: null as ((event: { tag: number; actions: MenuAction[] }) => void) | null,
 };
 
 jest.mock('../src/services/selectionMenu', () => ({
@@ -56,6 +57,11 @@ jest.mock('../src/services/selectionMenu', () => ({
     mockNative.onDoubleTap = listener;
     return { remove: () => {} };
   },
+  onMenuActions: (listener: typeof mockNative.onActions) => {
+    mockNative.onActions = listener;
+    return { remove: () => {} };
+  },
+  performMenuAction: jest.fn(),
   skipLines: jest.fn(),
 }));
 
@@ -102,6 +108,7 @@ beforeEach(() => {
   mockNative.texts.clear();
   mockNative.onSelection = null;
   mockNative.onDoubleTap = null;
+  mockNative.onActions = null;
 });
 afterEach(() => act(() => tree.unmount()));
 
@@ -212,4 +219,20 @@ test('a hymn: the chorus double-tapped after stanza 2 is the one marked', async 
   );
   expect(choruses).toHaveLength(2);
   expect(choruses.indexOf(marked[0])).toBe(1);
+});
+
+test("the phone's own menu items show in the bubble and run from it", async () => {
+  await render(<HymnReaderView hymnVerses={hymnVerses} isLoading={false} marks={[]} onMarksChange={() => {}} />);
+  const tag = tagOf('Ny Tompo be fitia');
+  await act(async () => {
+    mockNative.onActions?.({ tag, actions: [{ id: 0, title: 'Copy' }, { id: 1, title: 'Translate' }] });
+    mockNative.onSelection?.(tag, { tag, start: 3, end: 8, x: 40, top: 10, bottom: 30 });
+  });
+  const button = (title: string) =>
+    tree.root.findAll(n => typeof n.props.onPress === 'function' && mockTextOf(n.props.children) === title)[0];
+  expect(button('Translate')).toBeDefined();
+  await act(async () => {
+    button('Copy').props.onPress();
+  });
+  expect(performMenuAction).toHaveBeenCalledWith(0);
 });

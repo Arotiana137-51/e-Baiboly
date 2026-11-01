@@ -651,7 +651,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   // --- The highlight bubble over a native selection, as in BibleReaderView:
   // each stanza's text by its React tag, so an event leads back to the stanza
   // and the bubble can be placed by it. ---
-  const {bubble, register, forgetPlace, dismiss} = useSelectionBubble<StanzaText>({
+  const {bubble, actions, register, forgetPlace, dismiss} = useSelectionBubble<StanzaText>({
     enabled: nativeSelection,
     rootRef,
     // A stanza's selection as offsets into the whole hymn text.
@@ -1007,6 +1007,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       {bubble && onMarksChange ? (
         <SelectionHighlightBubble
           placement={bubble}
+          actions={actions}
           marks={marks ?? EMPTY_MARKS}
           onMarksChange={onMarksChange}
           onDone={dismiss}

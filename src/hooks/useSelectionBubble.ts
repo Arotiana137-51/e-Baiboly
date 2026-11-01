@@ -5,9 +5,11 @@ import type {MarkRange} from '../utils/chapterMarks';
 import {
   attachSelectionMenu,
   clearSelection,
+  onMenuActions,
   onSelectionChange,
   onTextDoubleTap,
   reportSelection,
+  type MenuAction,
   type NativeSelection,
 } from '../services/selectionMenu';
 
@@ -47,6 +49,8 @@ type Options<T> = {
 // text, and the highlight bubble placed over the selected words.
 export const useSelectionBubble = <T>({enabled, rootRef, toRange, onDoubleTap}: Options<T>) => {
   const [bubble, setBubble] = useState<BubbleState | null>(null);
+  // The phone's own menu items for the selection, shown in the bubble.
+  const [actions, setActions] = useState<MenuAction[]>([]);
   const texts = useRef(new Map<number, SelectableEntry<T>>());
   // Bumped by every selection event, so a measurement that comes back after a
   // newer event, or after the selection ended, is dropped.
@@ -123,7 +127,10 @@ export const useSelectionBubble = <T>({enabled, rootRef, toRange, onDoubleTap}: 
       const entry = selection ? texts.current.get(tag) : undefined;
       const range = selection && entry ? latest.current.toRange(entry, selection) : null;
       if (!selection || !entry || !range) {
-        if (!selection) origin.current = null;
+        if (!selection) {
+          origin.current = null;
+          setActions([]);
+        }
         setBubble(null);
         return;
       }
@@ -143,6 +150,8 @@ export const useSelectionBubble = <T>({enabled, rootRef, toRange, onDoubleTap}: 
     };
 
     const stopSelection = onSelectionChange(placeBubble);
+    // One selection at a time, so the latest items are this one's.
+    const menuActions = onMenuActions(event => setActions(event.actions));
     const doubleTaps = onTextDoubleTap(({tag, offset}) => {
       const entry = texts.current.get(tag);
       if (entry) latest.current.onDoubleTap(entry, offset);
@@ -150,8 +159,9 @@ export const useSelectionBubble = <T>({enabled, rootRef, toRange, onDoubleTap}: 
     return () => {
       stopSelection();
       doubleTaps?.remove();
+      menuActions?.remove();
     };
   }, [enabled, rootRef]);
 
-  return {bubble, texts, register, forgetPlace, dismiss};
+  return {bubble, actions, texts, register, forgetPlace, dismiss};
 };

@@ -702,7 +702,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
 
   // --- Native selection: each passage's <Text> by its React tag, so an event
   // can be traced back to its passage and the bubble placed by it. ---
-  const {bubble, texts: selectableTexts, register, forgetPlace, dismiss} = useSelectionBubble<undefined>({
+  const {bubble, actions, texts: selectableTexts, register, forgetPlace, dismiss} = useSelectionBubble<undefined>({
     enabled: NATIVE_SELECTION,
     rootRef,
     toRange: ({key}, selection) => {
@@ -1108,6 +1108,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       {bubble && onChapterMarksChange ? (
         <SelectionHighlightBubble
           placement={bubble}
+          actions={actions}
           marks={chapterMarks ?? EMPTY_MARKS}
           onMarksChange={onChapterMarksChange}
           onDone={dismiss}

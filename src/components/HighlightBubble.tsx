@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useTheme} from '../contexts/ThemeContext';
 import {useTutorialTarget} from '../contexts/TutorialContext';
 import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
@@ -10,6 +10,7 @@ import {
   type ChapterMark,
   type MarkRange,
 } from '../utils/chapterMarks';
+import {performMenuAction, type MenuAction} from '../services/selectionMenu';
 import {t} from '../i18n/strings';
 
 // The pen colours: six of the old editor's twelve, the most distinct ones.
@@ -28,10 +29,13 @@ const SWATCH = 30;
 const GAP = 8;
 const PAD = 10;
 const BUTTON = 34;
+const ACTIONS = 34;
 export const BUBBLE_ARROW = 12;
 // Fixed size, so the reader can place the bubble without measuring it first.
+// The phone's actions keep their row even before they arrive (iOS sends
+// them just after the selection).
 export const BUBBLE_WIDTH = PAD * 2 + HIGHLIGHT_COLORS.length * SWATCH + (HIGHLIGHT_COLORS.length - 1) * GAP;
-export const BUBBLE_HEIGHT = PAD * 2 + SWATCH + GAP + BUTTON;
+export const BUBBLE_HEIGHT = PAD * 2 + ACTIONS + GAP + SWATCH + GAP + BUTTON;
 
 type Props = {
   // Top-left corner in the reader.
@@ -43,14 +47,30 @@ type Props = {
   below: boolean;
   // What the selected words already have, shown as chosen.
   current: {color?: string} & Record<TextStyleKey, boolean>;
+  // The phone's own menu items (Copy, Select all, Translate...), as it
+  // offers them.
+  actions: MenuAction[];
+  onAction: (id: number) => void;
   onColor: (color: string) => void;
   onStyle: (style: TextStyleKey) => void;
   onErase: () => void;
 };
 
-// The highlighter over selected words, like an infobulle: a colour, bold,
-// italic, underline, or Fafao to take them all off.
-export const HighlightBubble = ({left, top, arrowX, below, current, onColor, onStyle, onErase}: Props) => {
+// The highlighter over selected words, like an infobulle: the phone's own
+// actions on top, then a colour, bold, italic, underline, or Fafao to take
+// them all off.
+export const HighlightBubble = ({
+  left,
+  top,
+  arrowX,
+  below,
+  current,
+  actions,
+  onAction,
+  onColor,
+  onStyle,
+  onErase,
+}: Props) => {
   const {theme} = useTheme();
   const colorsRef = useTutorialTarget('hlColorPicker');
   const eraseRef = useTutorialTarget('hlEraseBtn');
@@ -64,7 +84,29 @@ export const HighlightBubble = ({left, top, arrowX, below, current, onColor, onS
     // The testID tells SelectionMenu.m (iOS) that a tap here keeps the
     // selection, which any other tap outside the text clears.
     <View testID="highlight-bubble" style={[styles.bubble, surface, {left, top}]}>
-      <View ref={colorsRef} collapsable={false} style={styles.row}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={[styles.actions, {borderColor: theme.colors.divider}]}
+        contentContainerStyle={styles.actionsContent}
+      >
+        {actions.map(action => (
+          <Pressable
+            key={action.id}
+            onPress={() => onAction(action.id)}
+            accessibilityRole="button"
+            style={({pressed}) => [
+              styles.action,
+              pressed && {backgroundColor: theme.colors.backgroundTertiary},
+            ]}
+          >
+            <Text numberOfLines={1} style={[styles.actionLabel, {color: theme.colors.textPrimary}]}>
+              {action.title}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+      <View ref={colorsRef} collapsable={false} style={[styles.row, styles.colorRow]}>
         {HIGHLIGHT_COLORS.map(color => {
           const chosen = current.color === color;
           return (
@@ -139,6 +181,8 @@ export const HighlightBubble = ({left, top, arrowX, below, current, onColor, onS
 type SelectionBubbleProps = {
   // Where the bubble sits and the words it is for (useSelectionBubble).
   placement: {range: MarkRange; left: number; top: number; arrowX: number; below: boolean};
+  // The phone's own menu items for the selection (useSelectionBubble).
+  actions: MenuAction[];
   marks: ChapterMark[];
   onMarksChange: (next: ChapterMark[]) => void;
   // Called once a colour or style has landed: the selection then ends.
@@ -147,7 +191,7 @@ type SelectionBubbleProps = {
 
 // The bubble over a reader's selection, editing the reader's marks: what the
 // words already have shows as chosen, and a colour or style lands at once.
-export const SelectionHighlightBubble = ({placement, marks, onMarksChange, onDone}: SelectionBubbleProps) => {
+export const SelectionHighlightBubble = ({placement, actions, marks, onMarksChange, onDone}: SelectionBubbleProps) => {
   const {range} = placement;
   const current = useMemo(() => rangeStyles(marks, range), [marks, range]);
   const edit = (change: (from: ChapterMark[], at: MarkRange) => ChapterMark[]) => {
@@ -161,6 +205,8 @@ export const SelectionHighlightBubble = ({placement, marks, onMarksChange, onDon
       arrowX={placement.arrowX}
       below={placement.below}
       current={current}
+      actions={actions}
+      onAction={performMenuAction}
       onColor={color => edit((from, at) => applyMarkToRange(from, at, 'highlight', color))}
       onStyle={style => edit((from, at) => applyMarkToRange(from, at, style))}
       onErase={() => edit(eraseMarksInRange)}
@@ -182,7 +228,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: {width: 0, height: 3},
   },
+  actions: {flexGrow: 0, height: ACTIONS, borderBottomWidth: StyleSheet.hairlineWidth},
+  actionsContent: {alignItems: 'center'},
+  action: {height: ACTIONS - 4, paddingHorizontal: 10, borderRadius: 8, justifyContent: 'center'},
+  actionLabel: {fontSize: 14, fontWeight: '600'},
   row: {flexDirection: 'row', alignItems: 'center', gap: GAP},
+  colorRow: {marginTop: GAP},
   styleRow: {marginTop: GAP},
   swatch: {width: SWATCH, height: SWATCH, borderRadius: SWATCH / 2},
   swatchChosen: {borderWidth: 2.5},

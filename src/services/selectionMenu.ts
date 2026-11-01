@@ -9,7 +9,8 @@ import type {TextLine} from '../utils/chapterPassage';
 
 // The phone's own text selection on the reader's passages (native module
 // SelectionMenu): long-press a word, then drag the handles. The system menu
-// stays empty and the app shows its own highlight bubble instead; a double-tap
+// stays hidden and the app shows its own highlight bubble instead, with the
+// menu's items (Copy, Translate...) in it; a double-tap
 // is kept for the app's verse menu. On iOS the selectable text is the
 // UITextView of @bsky.app/react-native-uitextview: a React Native <Text>
 // there can only copy its whole text.
@@ -72,6 +73,22 @@ export const onSelectionChange = (
 export const onTextDoubleTap = (
   listener: (tap: {tag: number; offset: number}) => void,
 ): EmitterSubscription | null => emitter?.addListener('SelectionMenuDoubleTap', listener) ?? null;
+
+// One item of the phone's own selection menu (Copy, Select all, Translate...),
+// in the phone's language; which ones depends on the OS and the apps
+// installed.
+export type MenuAction = {id: number; title: string};
+
+// The system menu's items for the selection on screen, each time they change.
+export const onMenuActions = (
+  listener: (event: {tag: number; actions: MenuAction[]}) => void,
+): EmitterSubscription | null => emitter?.addListener('SelectionMenuActions', listener) ?? null;
+
+// Runs one of them on the selection; the native side then ends the selection,
+// except for Select all.
+export const performMenuAction = (id: number): void => {
+  SelectionMenu?.performAction?.(id);
+};
 
 // iOS: the library's onTextLayout doesn't say where its lines sit, so the
 // native module sends them after each layout. Kept for the last few texts, so
