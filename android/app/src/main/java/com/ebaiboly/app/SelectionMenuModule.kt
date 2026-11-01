@@ -1,5 +1,7 @@
 package com.ebaiboly.app
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.view.ActionMode
 import android.view.GestureDetector
 import android.view.Menu
@@ -20,7 +22,8 @@ import com.facebook.react.uimanager.ViewManager
 /**
  * The phone's own text selection on a selectable <Text> (a real TextView in
  * React Native): long-press a word, then drag the handles. The system menu
- * is left empty, so the app shows its own highlight bubble instead; JS hears
+ * is hidden and the app shows its own highlight bubble instead, with the
+ * menu's items in it (SelectionMenuActions, run by performAction); JS hears
  * where the selection is (SelectionMenuShown) and when it ends
  * (SelectionMenuHidden).
  *
@@ -34,6 +37,12 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
 
     // One selection on screen at a time.
     private var activeMode: ActionMode? = null
+
+    // The system menu's items for that selection (Copy, Share, Translate...),
+    // by their place in the list: the Translate-type items all have id 0.
+    private class MenuEntry(val itemId: Int, val title: String, val intent: Intent?)
+    private var menuEntries: List<MenuEntry> = emptyList()
+    private var menuTextView: TextView? = null
 
     // Hooks one selectable <Text>, found by its React tag. Calling it again on
     // the same view just replaces the hooks.
@@ -57,6 +66,37 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
         UiThreadUtil.runOnUiThread { activeMode?.finish() }
     }
 
+    // Runs one of the system menu's items from the bubble, as the menu would
+    // have, then ends the selection (Select all keeps it, for the bubble to
+    // follow).
+    @ReactMethod
+    fun performAction(id: Int) {
+        UiThreadUtil.runOnUiThread {
+            val entry = menuEntries.getOrNull(id) ?: return@runOnUiThread
+            val textView = menuTextView ?: return@runOnUiThread
+            val intent = entry.intent
+            if (intent != null) {
+                // A text-processing app (Translate...): handed the words, as
+                // the system's own menu does.
+                val start = minOf(textView.selectionStart, textView.selectionEnd)
+                val end = maxOf(textView.selectionStart, textView.selectionEnd)
+                if (start >= 0 && end > start) {
+                    val words = textView.text.subSequence(start, end).toString()
+                    try {
+                        reactContext.currentActivity?.startActivity(
+                            Intent(intent).putExtra(Intent.EXTRA_PROCESS_TEXT, words),
+                        )
+                    } catch (e: ActivityNotFoundException) {
+                        // The app was uninstalled since the menu was made.
+                    }
+                }
+            } else {
+                textView.onTextContextMenuItem(entry.itemId)
+            }
+            if (entry.itemId != android.R.id.selectAll) activeMode?.finish()
+        }
+    }
+
     // NativeEventEmitter on the JS side expects these two.
     @ReactMethod
     fun addListener(eventName: String) {}
@@ -73,18 +113,18 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
         private val tag: Int,
     ) : ActionMode.Callback {
 
-        // The system fills the menu (Copy, Select all, Translate...) before
-        // each of these; emptying it hides its toolbar but keeps the selection.
+        // The system fills the menu (Copy, Share, Translate...) around this
+        // one and adds to it before each prepare below.
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            menu.clear()
             activeMode = mode
             emitSelection()
             return true
         }
 
-        // Called again once a handle is let go, with the new selection.
+        // Called after the create, and again once a handle is let go, with
+        // the new selection.
         override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
-            menu.clear()
+            emitActions(menu)
             emitSelection()
             return true
         }
@@ -92,8 +132,38 @@ class SelectionMenuModule(private val reactContext: ReactApplicationContext) :
         override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
 
         override fun onDestroyActionMode(mode: ActionMode) {
-            if (activeMode === mode) activeMode = null
+            if (activeMode === mode) {
+                activeMode = null
+                menuEntries = emptyList()
+                menuTextView = null
+            }
             emitTag("SelectionMenuHidden", tag)
+        }
+
+        // Sends the menu's items to the bubble, then hides them, which hides
+        // the system toolbar but keeps the selection. Hidden rather than
+        // removed: the system adds Copy, Share and Translate only once, at
+        // create, so the next prepare still finds them. Every item counts,
+        // visible or not, since the system adds and removes items but never
+        // hides them. Smart actions (textAssist) are left out unless they
+        // carry an intent: their click handler stays inside the system.
+        private fun emitActions(menu: Menu) {
+            menuEntries = (0 until menu.size()).map { menu.getItem(it) }
+                .filter { !it.title.isNullOrBlank() && (it.groupId != android.R.id.textAssist || it.intent != null) }
+                .map { MenuEntry(it.itemId, it.title.toString(), it.intent) }
+            menuTextView = textView
+            for (i in 0 until menu.size()) menu.getItem(i).isVisible = false
+            reactContext.emitDeviceEvent("SelectionMenuActions", Arguments.createMap().apply {
+                putInt("tag", tag)
+                putArray("actions", Arguments.createArray().apply {
+                    menuEntries.forEachIndexed { i, entry ->
+                        pushMap(Arguments.createMap().apply {
+                            putInt("id", i)
+                            putString("title", entry.title)
+                        })
+                    }
+                })
+            })
         }
 
         // The selected characters, and where they sit in the TextView (dp from

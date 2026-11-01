@@ -8,7 +8,7 @@
 // delegate). Its methods are hooked at runtime, so the library itself stays
 // untouched:
 // - the system edit menu is left empty (iOS 16+): the app shows its
-//   highlight bubble;
+//   highlight bubble, with the menu's own items in it;
 // - each selection change goes to JS with where the words are
 //   (SelectionMenuShown, or SelectionMenuHidden once it is cleared);
 // - a tap on the bubble doesn't clear the selection, as any other tap
@@ -389,8 +389,35 @@ static void EBHookOutsideTap(Class cls)
   }
 }
 
-// iOS 16+: the edit menu is asked from the text view's delegate. An empty
-// menu isn't shown.
+// The edit menu's items for the selection on screen (Copy, Look Up,
+// Translate...), by their place in the list, and the text view they act on.
+static NSArray *EBMenuLeaves;
+static __weak UITextView *EBMenuTextView;
+
+// Every item of the menu, out of its groups, as UIKit offers them right now
+// (they vary with the iOS version and the selection).
+API_AVAILABLE(ios(16.0))
+static void EBCollectLeaves(NSArray<UIMenuElement *> *elements, NSMutableArray<id<UIMenuLeaf>> *leaves)
+{
+  for (UIMenuElement *element in elements) {
+    if ([element isKindOfClass:[UIMenu class]]) {
+      EBCollectLeaves(((UIMenu *)element).children, leaves);
+      continue;
+    }
+    if (![element conformsToProtocol:@protocol(UIMenuLeaf)]) {
+      continue;
+    }
+    id<UIMenuLeaf> leaf = (id<UIMenuLeaf>)element;
+    if (leaf.title.length > 0 &&
+        (leaf.attributes & (UIMenuElementAttributesHidden | UIMenuElementAttributesDisabled)) == 0) {
+      [leaves addObject:leaf];
+    }
+  }
+}
+
+// iOS 16+: the edit menu is asked from the text view's delegate. Its items go
+// to the app's bubble (SelectionMenuActions, run by performAction), and the
+// menu itself comes back empty, so it isn't shown.
 static void EBHookEditMenu(Class cls)
 {
   if (@available(iOS 16.0, *)) {
@@ -401,6 +428,15 @@ static void EBHookEditMenu(Class cls)
       return;
     }
     id block = ^UIMenu *(UIView *owner, UITextView *textView, NSRange range, NSArray<UIMenuElement *> *suggested) {
+      NSMutableArray<id<UIMenuLeaf>> *leaves = [NSMutableArray new];
+      EBCollectLeaves(suggested, leaves);
+      EBMenuLeaves = leaves;
+      EBMenuTextView = textView;
+      NSMutableArray<NSDictionary *> *actions = [NSMutableArray new];
+      [leaves enumerateObjectsUsingBlock:^(id<UIMenuLeaf> leaf, NSUInteger index, BOOL *stop) {
+        [actions addObject:@{@"id" : @(index), @"title" : leaf.title}];
+      }];
+      EBPost(@"SelectionMenuActions", @{@"tag" : @(owner.tag), @"actions" : actions});
       return [UIMenu menuWithChildren:@[]];
     };
     class_addMethod(cls, selector, imp_implementationWithBlock(block), description.types);
@@ -458,7 +494,10 @@ RCT_EXPORT_MODULE();
 
 - (NSArray<NSString *> *)supportedEvents
 {
-  return @[ @"SelectionMenuShown", @"SelectionMenuHidden", @"SelectionMenuLines", @"SelectionMenuDoubleTap" ];
+  return @[
+    @"SelectionMenuShown", @"SelectionMenuHidden", @"SelectionMenuLines", @"SelectionMenuDoubleTap",
+    @"SelectionMenuActions"
+  ];
 }
 
 - (void)startObserving
@@ -483,6 +522,31 @@ RCT_EXPORT_METHOD(clearSelection)
 {
   dispatch_async(dispatch_get_main_queue(), ^{
     EBClearSelections(nil);
+  });
+}
+
+// Runs one of the edit menu's items from the bubble, as the menu would have,
+// then ends the selection (Select All keeps it, for the bubble to follow).
+RCT_EXPORT_METHOD(performAction : (double)index)
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (@available(iOS 16.0, *)) {
+      UITextView *textView = EBMenuTextView;
+      const NSUInteger i = (NSUInteger)index;
+      if (textView == nil || i >= EBMenuLeaves.count) {
+        return;
+      }
+      id<UIMenuLeaf> leaf = EBMenuLeaves[i];
+      [leaf performWithSender:nil target:textView];
+      const BOOL selectAll =
+          [leaf isKindOfClass:[UICommand class]] && ((UICommand *)leaf).action == @selector(selectAll:);
+      if (!selectAll) {
+        // Once the item is done with the words (Share, Translate read them).
+        dispatch_async(dispatch_get_main_queue(), ^{
+          EBClearSelections(nil);
+        });
+      }
+    }
   });
 }
 
