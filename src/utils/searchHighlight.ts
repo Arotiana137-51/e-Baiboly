@@ -68,7 +68,13 @@ export const findHighlightRanges = (
       if (idx < 0) break;
       const startOrig = flatToOrig(idx);
       const endOrig = flatToOrig(idx + token.length - 1) + 1;
-      if (endOrig > startOrig) raw.push({ start: startOrig, end: endOrig });
+      // Grow to whole words: a bold slice inside a word renders as mixed
+      // fonts on iOS (semibold glyphs next to regular ones).
+      let start = startOrig;
+      let end = endOrig;
+      while (start > 0 && folded[start - 1] !== ' ') start--;
+      while (end < text.length && folded[end] !== ' ') end++;
+      if (end > start) raw.push({ start, end });
       from = idx + token.length;
     }
   }
