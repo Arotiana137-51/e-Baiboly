@@ -57,7 +57,7 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
   const {theme} = useTheme();
   const {saveNote, removeNote} = useNotes();
   const tutorial = useTutorial();
-  const inputRef = useTutorialTarget('noteInput');
+  const bubbleRef = useTutorialTarget('noteBubble');
   const {height: windowHeight} = useWindowDimensions();
   // Until the keyboard reports its size, assume a typical one (~40% of the
   // window), so the field doesn't jump when it opens.
@@ -156,6 +156,8 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
   return (
     <View style={styles.wrap}>
       <View
+        ref={bubbleRef}
+        collapsable={false}
         style={[
           styles.bubble,
           {backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.accentBlue},
@@ -186,33 +188,33 @@ const NoteBubble: React.FC<Props> = ({target, onClose, onSaved, onDeleted, onFoc
           </Pressable>
         </View>
 
-        <View ref={inputRef} collapsable={false}>
-          {editing ? (
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              onFocus={onFocus}
-              multiline
-              autoFocus
-              placeholder={t('notes.placeholder')}
-              placeholderTextColor={theme.colors.textSecondary}
-              textAlignVertical="top"
-              style={[
-                styles.input,
-                {
-                  height: fieldHeight,
-                  color: theme.colors.textPrimary,
-                  backgroundColor: theme.colors.readerBackground,
-                  borderColor: theme.colors.divider,
-                },
-              ]}
-            />
-          ) : (
-            <Pressable onPress={() => setEditing(true)} accessibilityHint={t('notes.edit')}>
-              <Text style={[styles.readText, {color: theme.colors.textPrimary}]}>{text}</Text>
-            </Pressable>
-          )}
-        </View>
+        {editing ? (
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            onFocus={onFocus}
+            multiline
+            // Not during a tutorial: the keyboard would come up over its card
+            // before it is read (the notes tutorial's writing step).
+            autoFocus={!tutorial.activeTutorial}
+            placeholder={t('notes.placeholder')}
+            placeholderTextColor={theme.colors.textSecondary}
+            textAlignVertical="top"
+            style={[
+              styles.input,
+              {
+                height: fieldHeight,
+                color: theme.colors.textPrimary,
+                backgroundColor: theme.colors.readerBackground,
+                borderColor: theme.colors.divider,
+              },
+            ]}
+          />
+        ) : (
+          <Pressable onPress={() => setEditing(true)} accessibilityHint={t('notes.edit')}>
+            <Text style={[styles.readText, {color: theme.colors.textPrimary}]}>{text}</Text>
+          </Pressable>
+        )}
 
         {editing && bibleAnchor && typeof maxVerse === 'number' ? (
           <View style={styles.stepper}>

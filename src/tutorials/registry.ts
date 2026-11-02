@@ -35,7 +35,7 @@ export type TargetId =
   | 'cultStopButton'    // ■ stop button in the reader transport bar (Home)
   // Notes tutorial.
   | 'noteActionItem'    // "Hanoratra naoty" in the verse action popover (double-tap)
-  | 'noteInput'         // the text field of the note bubble above the verse
+  | 'noteBubble'        // the whole note bubble above the verse: field, range, Tahirizo
   | 'noteMarker'        // first verse of the chapter's most recently edited note
   // Highlight tutorial — targets inside the ChapterEditorModal (a native RN
   // Modal; the verse text is a WebView, everything else is native RN Views),
@@ -672,14 +672,19 @@ export const TUTORIALS: Tutorial[] = [
         awaitProgress: 'noteOpened',
       },
       {
-        // The bubble opens in the reader itself (screen scope), scrolled to
-        // the top; the card goes below it, above the keyboard. Advances on any
-        // close, saved or not (NoteBubble emits noteClosed for Tahirizo, back
-        // and delete), so closing an empty bubble can't strand the tutorial.
+        // The hole is the whole bubble (screen scope), so Tahirizo and the
+        // range buttons stay lit and tappable. The bubble opens without the
+        // keyboard during the tutorial: the card is read first, then a tap on
+        // the field brings the keyboard up over the card, never over the
+        // bubble. Advances on any close, saved or not (NoteBubble emits
+        // noteClosed for Tahirizo, back and delete), so closing an empty
+        // bubble can't strand the tutorial.
         id: 'noteWrite',
-        targetId: 'noteInput',
+        targetId: 'noteBubble',
         scope: 'screen',
-        text: "Soraty eto ny naotinao. Raha andininy maromaro no resahiny, ampitomboy amin'ny + ny \"Hatramin'ny andininy\". Rehefa vita, tsindrio \"Tahirizo\" eo ambony.",
+        // TEMP: "eo ambany" (Tahirizo moved to the bottom right), wording to be
+        // checked by the owner.
+        text: "Soraty eto ny naotinao. Raha andininy maromaro no resahiny, ampitomboy amin'ny + ny \"Hatramin'ny andininy\". Rehefa vita, tsindrio \"Tahirizo\" eo ambany.",
         advanceOn: 'targetEvent',
         awaitProgress: 'noteClosed',
       },
