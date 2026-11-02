@@ -15,7 +15,6 @@ import {
   isLive,
   planPositions,
   situationSchedule,
-  versesForDate,
   type ActiveSituation,
 } from '../src/utils/lifeSituations';
 import {
@@ -38,6 +37,9 @@ const plusDays = (iso: string, n: number) => {
   date.setDate(date.getDate() + n);
   return date;
 };
+// The plan verses of a single day.
+const versesForDate = (date: Date, actives: ReadonlyArray<ActiveSituation>, since?: string) =>
+  situationSchedule(actives, date, 1, since)[0];
 
 // Plans for people who are hurting: no correction verse (see the content
 // rules in constants/lifeSituations.ts).

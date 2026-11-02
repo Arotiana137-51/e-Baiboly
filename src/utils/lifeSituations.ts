@@ -122,12 +122,6 @@ export const situationSchedule = (
   return result;
 };
 
-export const versesForDate = (
-  date: Date,
-  actives: ReadonlyArray<ActiveSituation>,
-  since?: string,
-): ScheduledVerse[] => situationSchedule(actives, date, 1, since)[0];
-
 /**
  * Freezes each plan's position at `today` and drops the plans that have
  * ended, so a change made today (add, remove, reorder, answer) leaves every
