@@ -713,6 +713,8 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     if (!pendingReveal.current || !covered || !block || !root) return;
     block.measureInWindow((_bx, blockTop, _bw, blockHeight) => {
       root.measureInWindow((_rx, rootTop, _rw, rootHeight) => {
+        // Another reveal measured at the same time may have scrolled already.
+        if (!pendingReveal.current) return;
         const visibleBottom = Math.min(rootTop + rootHeight, screen - covered);
         let delta = 0;
         if (blockTop < rootTop + REVEAL_MARGIN) {

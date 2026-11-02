@@ -13,10 +13,8 @@ import {
   checkInsDue,
   isCheckInDay,
   isLive,
-  planPosition,
   planPositions,
   situationSchedule,
-  versesForDate,
   type ActiveSituation,
 } from '../src/utils/lifeSituations';
 import {
@@ -39,6 +37,9 @@ const plusDays = (iso: string, n: number) => {
   date.setDate(date.getDate() + n);
   return date;
 };
+// The plan verses of a single day.
+const versesForDate = (date: Date, actives: ReadonlyArray<ActiveSituation>, since?: string) =>
+  situationSchedule(actives, date, 1, since)[0];
 
 // Plans for people who are hurting: no correction verse (see the content
 // rules in constants/lifeSituations.ts).
@@ -189,11 +190,11 @@ describe('lifeSituations schedule', () => {
   });
 
   it('counts the verses a plan has shown, today included', () => {
-    expect(planPosition('grief', [grief], day('2026-10-03'))).toEqual({shown: 3, days: byId('grief').days});
+    expect(planPositions([grief], day('2026-10-03')).get('grief')).toBe(3);
     // Two plans take turns, so each moves at half speed.
-    expect(planPosition('grief', [grief, work], day('2026-10-04')).shown).toBe(2);
-    expect(planPosition('work', [grief, work], day('2026-10-04'))).toEqual({shown: 2, days: undefined});
-    expect(planPosition('grief', [grief], day('2026-09-30')).shown).toBe(0);
+    expect(planPositions([grief, work], day('2026-10-04')).get('grief')).toBe(2);
+    expect(planPositions([grief, work], day('2026-10-04')).get('work')).toBe(2);
+    expect(planPositions([grief], day('2026-09-30')).get('grief') ?? 0).toBe(0);
   });
 
   it('gives every plan its position from one replay, capped at the plan length', () => {

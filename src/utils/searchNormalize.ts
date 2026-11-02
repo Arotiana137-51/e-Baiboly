@@ -267,6 +267,65 @@ const splitIntoKnownWords = async (
   return best;
 };
 
+// The corpus words one edit away from `token`: a letter dropped, swapped,
+// changed or added ("ity" -> "inty", "iny", "izy"). A real word typed for
+// another is a known prefix, so the correction below never looks at it.
+const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+const NEAR_MAX_LENGTH = 15;
+const nearKnownWords = async (service: QueryRunner, token: string): Promise<string[]> => {
+  if (token.length > NEAR_MAX_LENGTH) return [];
+  const edits = new Set<string>();
+  for (let i = 0; i <= token.length; i++) {
+    if (i < token.length) edits.add(token.slice(0, i) + token.slice(i + 1));
+    if (i < token.length - 1) edits.add(token.slice(0, i) + token[i + 1] + token[i] + token.slice(i + 2));
+    for (const letter of LETTERS) {
+      if (i < token.length) edits.add(token.slice(0, i) + letter + token.slice(i + 1));
+      edits.add(token.slice(0, i) + letter + token.slice(i));
+    }
+  }
+  edits.delete(token);
+  const candidates = [...edits].filter(word => word.length > 1);
+  const {rows} = await service.executeQuerySilent<{word: string}>(
+    `SELECT word FROM Vocabulary WHERE word IN (${candidates.map(() => '?').join(',')})`,
+    candidates,
+  );
+  return rows.map(r => r.word);
+};
+
+// A looser MATCH for a line typed from memory, run when the strict search
+// finds few results: each word of 3+ letters may also be a near word, or the
+// two halves of a glued word ("vitampo" -> vitam AND po). Two-letter words
+// have too many neighbours, so they drop out of the match while two longer
+// words remain. Null for a single word (the correction above covers it) or
+// when the Vocabulary table is missing.
+export const makeNearMatchQuery = async (
+  service: QueryRunner,
+  normalized: string,
+  expandToken?: TokenExpander,
+): Promise<string | null> => {
+  const all = normalized.split(' ').filter(t => t.length > 1);
+  const long = all.filter(t => t.length >= 3);
+  const tokens = long.length >= 2 ? long : all;
+  if (tokens.length < 2) return null;
+
+  try {
+    const parts: string[] = [];
+    for (const token of tokens) {
+      const alternatives = [`${token}*`, ...(expandToken?.(token) ?? []).map(s => `${s}*`)];
+      if (token.length >= 3) {
+        alternatives.push(...(await nearKnownWords(service, token)));
+        const split = await splitIntoKnownWords(service, token);
+        if (split) alternatives.push(`(${split[0]} AND ${split[1]})`);
+      }
+      parts.push(`(${[...new Set(alternatives)].join(' OR ')})`);
+    }
+    return parts.join(' AND ');
+  } catch (e: any) {
+    console.warn('Near-word search unavailable:', e?.message ?? e);
+    return null;
+  }
+};
+
 // Closest real word to a typo, by trigram overlap. Ties break on corpus
 // frequency, so a typo equally close to a common and an obscure word picks
 // the one the user more likely meant.

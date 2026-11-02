@@ -2,7 +2,7 @@ import React, {useMemo} from 'react';
 import {StyleSheet, View} from 'react-native';
 
 // Simple View-drawn magnifier, no icon lib: the lens and a handle at 45°.
-// Shared by the search fields (global search, dictionary).
+// The dictionary's search field (global search has its own whole-word icon).
 export const MagnifyingGlass = ({color, size = 18}: {color: string; size?: number}) => {
   const sized = useMemo(
     () =>

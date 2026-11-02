@@ -72,6 +72,7 @@ type TranslationKey =
   | 'search.resultCount'
   | 'search.categorized'
   | 'search.simple'
+  | 'search.wholeWord'
   | 'verseList.title'
   | 'verseList.searchLabel'
   | 'verseList.empty'
@@ -223,6 +224,8 @@ const translations: Translations = {
     // Shown as a pair in the "Fikarohana" header bar, so neither repeats it.
     'search.categorized': 'Isan-tsokajiny',
     'search.simple': 'Tsotra',
+    // The search field's whole-word toggle, read out by screen readers.
+    'search.wholeWord': 'Teny manontolo',
     'verseList.title': "Valin'ny fikarohana",
     'verseList.searchLabel': 'Fikarohana: "{{query}}"',
     'verseList.empty': "Tsy nahitana andininy ho an'ny \"{{query}}\" ao amin'ny {{book}}",

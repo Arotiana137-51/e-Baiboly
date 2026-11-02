@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback } fro
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -26,9 +27,15 @@ import {
   segmentTextForHighlight,
 } from '../utils/searchHighlight';
 import { t } from '../i18n/strings';
-import {MagnifyingGlass} from '../components/MagnifyingGlass';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
+
+// The search field's magnifier, with an "ab" badge: tinted when whole-word
+// search is off, filled (the letters cut out) when it is on. Tinted per theme.
+const WHOLE_WORD_OFF = require('../components/shared/searchWholeWordOff.png');
+const WHOLE_WORD_ON = require('../components/shared/searchWholeWordOn.png');
+// How long the "Teny manontolo" tip stays under the icon after turning it on.
+const WHOLE_WORD_TIP_MS = 2500;
 
 // One flat, virtualized list standing in for a nested accordion: Baiboly /
 // Fihirana totals -> Testament / hymn category -> genre / theme (where we
@@ -178,6 +185,20 @@ const GlobalSearchScreen = () => {
   // the genre/theme layer is opt-in. Switching never changes what matched or
   // any count, just how many taps deep a result sits. Tsotra is the default.
   const [categorized, setCategorized] = useState(false);
+  // Whole words only ("tia" without tiako, tianao...), the "Teny manontolo"
+  // Bible-study users count a word's verses with. Off each time search opens.
+  const [wholeWord, setWholeWord] = useState(false);
+  // Turning it on says so for a moment, in words, under the icon.
+  const [wholeWordTip, setWholeWordTip] = useState(false);
+  useEffect(() => {
+    if (!wholeWordTip) return;
+    const id = setTimeout(() => setWholeWordTip(false), WHOLE_WORD_TIP_MS);
+    return () => clearTimeout(id);
+  }, [wholeWordTip]);
+  const toggleWholeWord = () => {
+    setWholeWord(!wholeWord);
+    setWholeWordTip(!wholeWord);
+  };
 
   useEffect(() => {
     if (!query.trim()) {
@@ -189,7 +210,7 @@ const GlobalSearchScreen = () => {
     // newer one: clearing the timer can't stop it, so its results are dropped.
     let cancelled = false;
     const id = setTimeout(async () => {
-      const res = await search(query);
+      const res = await search(query, { matchWholeWord: wholeWord });
       if (cancelled) return;
       setBible(res.bible);
       setHymns(res.hymns);
@@ -198,7 +219,7 @@ const GlobalSearchScreen = () => {
       cancelled = true;
       clearTimeout(id);
     };
-  }, [query, search]);
+  }, [query, search, wholeWord]);
 
   // The toggle lives in the native header next to the "Fikarohana" title, so
   // neither label repeats that word. White-on-teal segmented control: the
@@ -246,7 +267,7 @@ const GlobalSearchScreen = () => {
     (text: string, baseColor: string) => {
       if (!text) return null;
       if (!normalizedHighlight) return <Text style={{ color: baseColor }}>{text}</Text>;
-      const ranges = findHighlightRanges(text, normalizedHighlight);
+      const ranges = findHighlightRanges(text, normalizedHighlight, wholeWord);
       const segments = segmentTextForHighlight(text, ranges);
       return segments.map((seg, i) => (
         <Text
@@ -257,7 +278,7 @@ const GlobalSearchScreen = () => {
         </Text>
       ));
     },
-    [normalizedHighlight, theme.colors.accentBlue],
+    [normalizedHighlight, wholeWord, theme.colors.accentBlue],
   );
 
   // Flatten into the accordion: Baiboly / Fihirana totals, then Testament or
@@ -355,9 +376,11 @@ const GlobalSearchScreen = () => {
         bookId: item.bookId,
         bookName: item.bookName,
         query,
+        // The book's verses must match the way its count did.
+        matchWholeWord: wholeWord,
       });
     },
-    [navigation, query],
+    [navigation, query, wholeWord],
   );
 
   const openHymn = useCallback(
@@ -496,7 +519,20 @@ const GlobalSearchScreen = () => {
             { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.divider },
           ]}
         >
-          <MagnifyingGlass color={theme.colors.textSecondary} size={18} />
+          <Pressable
+            onPress={toggleWholeWord}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('search.wholeWord')}
+            accessibilityState={{ selected: wholeWord }}
+          >
+            <Image
+              source={wholeWord ? WHOLE_WORD_ON : WHOLE_WORD_OFF}
+              // A switch: no Android fade-in between its two images.
+              fadeDuration={0}
+              style={[styles.wholeWordIcon, { tintColor: wholeWord ? theme.colors.accentBlue : theme.colors.textSecondary }]}
+            />
+          </Pressable>
           <TextInput
             style={[styles.input, { color: theme.colors.textPrimary }]}
             placeholder={t('search.placeholderBible')}
@@ -511,6 +547,12 @@ const GlobalSearchScreen = () => {
             autoFocus
           />
         </View>
+        {wholeWordTip ? (
+          <View pointerEvents="none" style={[styles.tip, { backgroundColor: theme.colors.textPrimary }]}>
+            <View style={[styles.tipArrow, { backgroundColor: theme.colors.textPrimary }]} />
+            <Text style={[styles.tipText, { color: theme.colors.backgroundPrimary }]}>{t('search.wholeWord')}</Text>
+          </View>
+        ) : null}
       </View>
 
 
@@ -615,7 +657,8 @@ const GlobalSearchScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchBarWrap: { padding: 12 },
+  // Above the results, which the whole-word tip overlaps.
+  searchBarWrap: { padding: 12, zIndex: 1 },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -625,6 +668,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   input: { flex: 1, marginLeft: 10, fontSize: 16, paddingVertical: 2 },
+  wholeWordIcon: { width: 33, height: 24 },
+  // Under the field, its arrow pointing up at the whole-word icon.
+  tip: { position: 'absolute', top: 60, left: 14, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, elevation: 4 },
+  tipArrow: { position: 'absolute', top: -4, left: 20, width: 10, height: 10, transform: [{ rotate: '45deg' }] },
+  tipText: { fontSize: 13, fontWeight: '600' },
   // Sits in the header bar, so it has to stay narrow enough to leave the
   // "Fikarohana" title room — hence the small type and tight padding, with
   // hitSlop on each half making up the tap area the visual size gives up.
