@@ -144,21 +144,7 @@ export const rebaseSituations = (
     .map(active => ({...active, shown: shown.get(active.id) ?? 0}));
 };
 
-/**
- * How far a plan has got by the end of `today`: verses shown so far, and the
- * plan length (undefined for long plans, which have none).
- */
-export const planPosition = (
-  id: SituationId,
-  actives: ReadonlyArray<ActiveSituation>,
-  today: Date,
-  since?: string,
-): {shown: number; days?: number} => ({
-  shown: planPositions(actives, today, since).get(id) ?? 0,
-  days: situationById(id)?.days,
-});
-
-/** Every plan's position by the end of `today`, from one replay. */
+/** Every plan's position by the end of `today` (verses shown so far), from one replay. */
 export const planPositions = (
   actives: ReadonlyArray<ActiveSituation>,
   today: Date,
