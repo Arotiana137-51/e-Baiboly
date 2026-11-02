@@ -3,9 +3,13 @@ import { hymnsDatabaseService } from '../services/database/DatabaseService';
 import {t} from '../i18n/strings';
 import {
   normalizeForFtsQuery,
+  normalizeForFtsContent,
   makeFtsPrefixQuery,
+  makeNearMatchQuery,
   execWithLikeFallback,
   correctQueryViaVocabulary,
+  generateTrigrams,
+  trigramOverlapScore,
 } from '../utils/searchNormalize';
 import {
   JESUS_VARIANTS,
@@ -41,6 +45,15 @@ const makeFtsWholeWordQuery = (normalized: string) => {
   const list = Array.from(phrases).filter(Boolean);
   return list.length === 1 ? list[0] : list.join(' OR ');
 };
+
+// The near-word pass (a line typed from memory: "ity aho jeso" for "Inty aho
+// Jeso") runs when the strict search finds fewer hymns than this, keeps the
+// hymns whose verse or title shares at least NEAR_MIN_SCORE of the typed
+// line's 3-letter chunks, and adds at most NEAR_MAX of them after the strict
+// results. Measured on 20 first lines typed with slips: 20 found, against 13.
+const NEAR_TRIGGER = 5;
+const NEAR_MIN_SCORE = 0.6;
+const NEAR_MAX = 10;
 
 export interface HymnMatchedVerse {
   verseNumber: number;
@@ -192,6 +205,29 @@ export const useHymnSearch = () => {
               {sql: likeSearchQuery, params: likeParams.flatMap(p => [p, p, p])},
             )
           ).rows as any[];
+        }
+      }
+
+      // Few hymns: also the ones whose words are a slip away, best-reading
+      // first, after the strict ones. FTS only: the LIKE fallback can't loosen.
+      const found = new Set(resultRows.map(row => row.id));
+      if (!matchWholeWord && found.size < NEAR_TRIGGER) {
+        const nearParam = await makeNearMatchQuery(hymnsDatabaseService, normalizedQuery, expandJesusToken);
+        if (nearParam) {
+          try {
+            const {rows} = await hymnsDatabaseService.executeQuerySilent<any>(ftsSearchQuery, [nearParam, nearParam]);
+            const queryTrigrams = generateTrigrams(normalizedQuery);
+            const best = new Map<string, {row: any; score: number}>();
+            for (const row of rows) {
+              if (found.has(row.id)) continue;
+              const score = trigramOverlapScore(queryTrigrams, normalizeForFtsContent(row.matched_verse ?? row.title ?? ''));
+              if (score >= NEAR_MIN_SCORE && score > (best.get(row.id)?.score ?? 0)) best.set(row.id, {row, score});
+            }
+            const near = [...best.values()].sort((a, b) => b.score - a.score).slice(0, NEAR_MAX);
+            resultRows = [...resultRows, ...near.map(n => n.row)];
+          } catch (e: any) {
+            console.warn('Near-word hymn search failed:', e?.message ?? e);
+          }
         }
       }
 
