@@ -70,7 +70,7 @@ const VerseListScreen = () => {
       if (!normalizedHighlightQuery) {
         return <Text>{text}</Text>;
       }
-      const ranges = findHighlightRanges(text, normalizedHighlightQuery);
+      const ranges = findHighlightRanges(text, normalizedHighlightQuery, matchWholeWord);
       const segments = segmentTextForHighlight(text, ranges);
       return (
         <Text>
@@ -89,7 +89,7 @@ const VerseListScreen = () => {
         </Text>
       );
     },
-    [normalizedHighlightQuery, theme.colors.accentBlue]
+    [normalizedHighlightQuery, matchWholeWord, theme.colors.accentBlue]
   );
 
   const renderVerse = useCallback(

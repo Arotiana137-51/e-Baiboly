@@ -17,9 +17,12 @@ export type HighlightRange = { start: number; end: number };
 
 // Find ranges in `text` (in its ORIGINAL form) that match any token of
 // `normalizedQuery`, ignoring diacritics and punctuation.
+// `wholeWord`: only words that are a token exactly ("tia", not "tiako"), as
+// the whole-word search matched them.
 export const findHighlightRanges = (
   text: string,
   normalizedQuery: string,
+  wholeWord = false,
 ): HighlightRange[] => {
   if (!text || !normalizedQuery) return [];
   const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
@@ -74,7 +77,7 @@ export const findHighlightRanges = (
       let end = endOrig;
       while (start > 0 && folded[start - 1] !== ' ') start--;
       while (end < text.length && folded[end] !== ' ') end++;
-      if (end > start) raw.push({ start, end });
+      if (end > start && (!wholeWord || (start === startOrig && end === endOrig))) raw.push({ start, end });
       from = idx + token.length;
     }
   }
