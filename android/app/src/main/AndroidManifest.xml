@@ -28,6 +28,16 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+    <!-- Other apps' actions on selected text (Translate...), which the phone's
+         selection menu lists and the highlight bubble shows (see
+         SelectionMenuModule.kt). Android 11+ hides them unless declared. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
+
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"
