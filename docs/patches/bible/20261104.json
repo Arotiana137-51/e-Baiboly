@@ -1,0 +1,671 @@
+{
+  "version": 20261104,
+  "appliesTo": "bible",
+  "verses": [
+    {
+      "book_id": 1,
+      "chapter": 27,
+      "verse_number": 41,
+      "text": "Ary Esao nanao fo-lentika tamin'i Jakoba noho ny tso-drano izay nataon-drainy taminy; dia hoy Esao anakampo: Efa antomotra ny andro hisaonana an'ikaky, dia hamono an'i Jakoba rahalahiko aho.",
+      "text_plain": "ary esao nanao fo lentika tamin i jakoba noho ny tso drano izay nataon drainy taminy dia hoy esao anakampo efa antomotra ny andro hisaonana an ikaky dia hamono an i jakoba rahalahiko aho",
+      "title": "Ny nialan'i Jakoba tao amin'ny rainy handositra an'i Esao, ary ny nampakaran'i Esao ny zanakavavin'Isimaela ho vadiny"
+    },
+    {
+      "book_id": 3,
+      "chapter": 17,
+      "verse_number": 5,
+      "text": "mba ho entin'ny Zanak'Isiraely ho an'i Jehovah eo anoloan'ny varavaran'ny trano-lay fihaonana, ho amin'ny mpisorona, ny zavatra vonoiny ho fanatitra, izay famonony tany an-tsaha; ary dia hateriny ho fanati-pihavanana ho an'i Jehovah izany.",
+      "text_plain": "mba ho entin ny zanak isiraely ho an i jehovah eo anoloan ny varavaran ny trano lay fihaonana ho amin ny mpisorona ny zavatra vonoiny ho fanatitra izay famonony tany an tsaha ary dia hateriny ho fanati pihavanana ho an i jehovah izany",
+      "title": null
+    },
+    {
+      "book_id": 4,
+      "chapter": 25,
+      "verse_number": 14,
+      "text": "Ary ny anaran'ilay lehilahy Isiraelita novonoina, izay niaraka novonoina tamin-dravehivavy Midianita, dia Zimry, zanak'i Salo, lohan'ny fianakaviana tamin'ny Simeonita.",
+      "text_plain": "ary ny anaran ilay lehilahy isiraelita novonoina izay niaraka novonoina tamin dravehivavy midianita dia zimry zanak i salo lohan ny fianakaviana tamin ny simeonita",
+      "title": null
+    },
+    {
+      "book_id": 4,
+      "chapter": 27,
+      "verse_number": 1,
+      "text": "Ary avy ny zanakavavin'i Zelofada, zanakalahin'i Hefera, zanak'i Gileada, zanak'i Makira, zanak'i Manase, avy tamin'ny fokon'i Manase, zanak'i Josefa (ary izao no anarany: Mahala sy Noa sy Hogla sy Milka ary Tirza),",
+      "text_plain": "ary avy ny zanakavavin i zelofada zanakalahin i hefera zanak i gileada zanak i makira zanak i manase avy tamin ny fokon i manase zanak i josefa ary izao no anarany mahala sy noa sy hogla sy milka ary tirza",
+      "title": "Ny fanontanian'ny zanakavavin'i Zelofada, sy ny lalàna izay natao ny amin'izany"
+    },
+    {
+      "book_id": 4,
+      "chapter": 31,
+      "verse_number": 21,
+      "text": "Ary hoy Eleazara mpisorona tamin'ny mpanafika, izay efa tany amin'ny ady: Izao no lalàna hotandremana, izay nandidian'i Jehovah an'i Mosesy:",
+      "text_plain": "ary hoy eleazara mpisorona tamin ny mpanafika izay efa tany amin ny ady izao no lalana hotandremana izay nandidian i jehovah an i mosesy",
+      "title": null
+    },
+    {
+      "book_id": 6,
+      "chapter": 14,
+      "verse_number": 2,
+      "text": "tamin'ny filokana no nahazoany ny lovany, araka izay efa nandidian'i Jehovah an'i Mosesy ny amin'ny firenena sivy sy sasany.",
+      "text_plain": "tamin ny filokana no nahazoany ny lovany araka izay efa nandidian i jehovah an i mosesy ny amin ny firenena sivy sy sasany",
+      "title": null
+    },
+    {
+      "book_id": 10,
+      "chapter": 24,
+      "verse_number": 2,
+      "text": "Dia hoy ny mpanjaka tamin'i Joaba, komandin'ny miaramila, izay teo aminy: Mandehana mitety ny firenen'Isiraely rehetra hatrany Dana ka hatrany Beri-sheba, ary alaminonareo ny vahoaka mba ho fantatro ny isany.",
+      "text_plain": "dia hoy ny mpanjaka tamin i joaba komandin ny miaramila izay teo aminy mandehana mitety ny firenen isiraely rehetra hatrany dana ka hatrany beri sheba ary alaminonareo ny vahoaka mba ho fantatro ny isany",
+      "title": null
+    },
+    {
+      "book_id": 11,
+      "chapter": 16,
+      "verse_number": 21,
+      "text": "Ary tamin'izany dia nizara roa ny lehilahy amin'ny Isiraely: ny antsasany nomba an'i Tibny, zanak'i Ginata, hampanjaka azy; ary ny antsasany kosa nomba an'i Omry.",
+      "text_plain": "ary tamin izany dia nizara roa ny lehilahy amin ny isiraely ny antsasany nomba an i tibny zanak i ginata hampanjaka azy ary ny antsasany kosa nomba an i omry",
+      "title": null
+    },
+    {
+      "book_id": 11,
+      "chapter": 18,
+      "verse_number": 46,
+      "text": "Ary ny tanan'i Jehovah dia tao amin'i Elia, dia nisikina izy ka nihazakazaka teo alohan'i Ahaba mandra-pahatongany tany Jezirela.",
+      "text_plain": "ary ny tanan i jehovah dia tao amin i elia dia nisikina izy ka nihazakazaka teo alohan i ahaba mandra pahatongany tany jezirela",
+      "title": null
+    },
+    {
+      "book_id": 13,
+      "chapter": 1,
+      "verse_number": 42,
+      "text": "Ary ny zanakalahin'i Ezera dia Bilana sy Zavana ary Jakana. Ny zanakalahin'i Disana dia Oza sy Arana.",
+      "text_plain": "ary ny zanakalahin i ezera dia bilana sy zavana ary jakana ny zanakalahin i disana dia oza sy arana",
+      "title": null
+    },
+    {
+      "book_id": 13,
+      "chapter": 3,
+      "verse_number": 12,
+      "text": "Amazia no zanakalahin'i Joasy, Azaria no zanakalahin'Amazia, Jotama no zanakalahin'i Azaria,",
+      "text_plain": "amazia no zanakalahin i joasy azaria no zanakalahin amazia jotama no zanakalahin i azaria",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 5,
+      "verse_number": 2,
+      "text": "Ary tamin'izany dia novorin'i Solomona ny loholon'ny Isiraely sy ny lehiben'ny firenena rehetra, dia ny lohan'ny fianakavian'ny Zanak'Isiraely ho any Jerosalema hampakatra ny fiaran'ny faneken'i Jehovah avy any Ziona, Tanànan'i Davida.",
+      "text_plain": "ary tamin izany dia novorin i solomona ny loholon ny isiraely sy ny lehiben ny firenena rehetra dia ny lohan ny fianakavian ny zanak isiraely ho any jerosalema hampakatra ny fiaran ny faneken i jehovah avy any ziona tananan i davida",
+      "title": "Ny nitokanana ny tempoly"
+    },
+    {
+      "book_id": 14,
+      "chapter": 5,
+      "verse_number": 10,
+      "text": "Ary tsy nisy na inona na inona tao anatin'ny fiara afa-tsy ny vato fisaka roa ihany izay nataon'i Mosesy tao anatiny fony tany Horeba, tamin'i Jehovah nanao fanekena tamin'ny Zanak'Isiraely, tamin'ny nivoahany avy tany Egypta.",
+      "text_plain": "ary tsy nisy na inona na inona tao anatin ny fiara afa tsy ny vato fisaka roa ihany izay nataon i mosesy tao anatiny fony tany horeba tamin i jehovah nanao fanekena tamin ny zanak isiraely tamin ny nivoahany avy tany egypta",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 6,
+      "verse_number": 5,
+      "text": "Hatramin'ny andro nitondrako ny oloko nivoaka avy tany Egypta dia tsy mbola nisy tanàna nofidiko tamin'ny firenen'Isiraely rehetra hanaovana trano mba hitoeran'ny anarako; ary tsy nisy olona nofidiko ho mpanapaka ny Isiraely oloko;",
+      "text_plain": "hatramin ny andro nitondrako ny oloko nivoaka avy tany egypta dia tsy mbola nisy tanana nofidiko tamin ny firenen isiraely rehetra hanaovana trano mba hitoeran ny anarako ary tsy nisy olona nofidiko ho mpanapaka ny isiraely oloko",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 6,
+      "verse_number": 11,
+      "text": "Ary napetrako tao ny fiara izay itoeran'ny faneken'i Jehovah, ilay nataony tamin'ny Zanak'Isiraely.",
+      "text_plain": "ary napetrako tao ny fiara izay itoeran ny faneken i jehovah ilay nataony tamin ny zanak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 8,
+      "verse_number": 2,
+      "text": "dia namboariny ny tanàna izay nomen'i Hirama azy ka namponenany ny Zanak'Isiraely.",
+      "text_plain": "dia namboariny ny tanana izay nomen i hirama azy ka namponenany ny zanak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 8,
+      "verse_number": 9,
+      "text": "Fa ny Zanak'Isiraely dia tsy mba nampanaovin'i Solomona izany, fa ireo kosa no miaramila sy komandin'ny mpanafika malaza ary komandin'ny kalesiny sy ny mpitaingin-tsoavaliny",
+      "text_plain": "fa ny zanak isiraely dia tsy mba nampanaovin i solomona izany fa ireo kosa no miaramila sy komandin ny mpanafika malaza ary komandin ny kalesiny sy ny mpitaingin tsoavaliny",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 10,
+      "verse_number": 17,
+      "text": "Fa ny Zanak'Isiraely izay nonina tany an-tanànan'ny Joda ihany no nanjakan-dRehoboama.",
+      "text_plain": "fa ny zanak isiraely izay nonina tany an tananan ny joda ihany no nanjakan drehoboama",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 10,
+      "verse_number": 18,
+      "text": "Ary dia naniraka an'i Adorama, komandin'ny mpanao fanompoana, Rehoboama mpanjaka, nefa ny Zanak'Isiraely nitora-bato azy, ka maty izy. Dia niezaka faingana nankeo amin'ny kalesiny Rehoboama mpanjaka handositra ho any Jerosalema.",
+      "text_plain": "ary dia naniraka an i adorama komandin ny mpanao fanompoana rehoboama mpanjaka nefa ny zanak isiraely nitora bato azy ka maty izy dia niezaka faingana nankeo amin ny kalesiny rehoboama mpanjaka handositra ho any jerosalema",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 13,
+      "verse_number": 12,
+      "text": "Ary, indro, ato aminay Andriamanitra ho mpitarika anay, ary ny mpisorony sy ny trompetra avo faneno hotsofina mafy hamelezana anareo Ry Zanak'Isiraely o, aza miady amin'i Jehovah, Andriamanitry ny razanareo; fa tsy hambinina ianareo.",
+      "text_plain": "ary indro ato aminay andriamanitra ho mpitarika anay ary ny mpisorony sy ny trompetra avo faneno hotsofina mafy hamelezana anareo ry zanak isiraely o aza miady amin i jehovah andriamanitry ny razanareo fa tsy hambinina ianareo",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 13,
+      "verse_number": 16,
+      "text": "Ary ny Zanak'Isiraely nandositra niala teo anoloan'ny Joda; ary Andriamanitra nanolotra azy ho eo an-tanany,",
+      "text_plain": "ary ny zanak isiraely nandositra niala teo anoloan ny joda ary andriamanitra nanolotra azy ho eo an tanany",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 13,
+      "verse_number": 18,
+      "text": "Toy izany no nampietrena ny Zanak'Isiraely fahizay; ary ny taranak'i Joda no nahery, satria niankina tamin'i Jehovah, Andriamanitry ny razany, izy.",
+      "text_plain": "toy izany no nampietrena ny zanak isiraely fahizay ary ny taranak i joda no nahery satria niankina tamin i jehovah andriamanitry ny razany izy",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 24,
+      "verse_number": 4,
+      "text": "Ary nony afaka izany, dia mby ao am-pon'i Joasy ny hanamboatra ny tranon'i Jehovah.",
+      "text_plain": "ary nony afaka izany dia mby ao am pon i joasy ny hanamboatra ny tranon i jehovah",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 28,
+      "verse_number": 3,
+      "text": "Ary nandoro ditin-kazo manitra tao amin'ny lohasahan'ny taranak'i Hinoma koa izy, ary ny zanany dia nodorany tamin'ny afo, araka ny fahavetavetan'ny jentilisa izay noroahin'i Jehovah tsy ho eo anoloan'ny Zanak'Isiraely.",
+      "text_plain": "ary nandoro ditin kazo manitra tao amin ny lohasahan ny taranak i hinoma koa izy ary ny zanany dia nodorany tamin ny afo araka ny fahavetavetan ny jentilisa izay noroahin i jehovah tsy ho eo anoloan ny zanak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 28,
+      "verse_number": 8,
+      "text": "Ary ny Zanak'Isiraely nahazo sambo-belona roa hetsy tamin'ireo havany, dia vehivavy sy zazalahy sy zazavavy, ary nahazo babo betsaka taminy koa izy, dia nentiny tany Samaria ireny.",
+      "text_plain": "ary ny zanak isiraely nahazo sambo belona roa hetsy tamin ireo havany dia vehivavy sy zazalahy sy zazavavy ary nahazo babo betsaka taminy koa izy dia nentiny tany samaria ireny",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 30,
+      "verse_number": 6,
+      "text": "Dia lasa ny tsimandoa nitondra ny taratasy avy tamin'ny mpanjaka sy ny mpanapaka hitety ny Isiraely sy ny Joda rehetra ka nilaza araka ny didin'ny mpanjaka hoe: Ry zanak'Isiraely o, miverena amin'i Jehovah, Andriamanitr'i Abrahama sy Isaka ary Isiraely, mba hiverenany ho amin'izay sisa aminareo izay tsy azon'ny tanan'ireo mpanjakan'i Asyria.",
+      "text_plain": "dia lasa ny tsimandoa nitondra ny taratasy avy tamin ny mpanjaka sy ny mpanapaka hitety ny isiraely sy ny joda rehetra ka nilaza araka ny didin ny mpanjaka hoe ry zanak isiraely o miverena amin i jehovah andriamanitr i abrahama sy isaka ary isiraely mba hiverenany ho amin izay sisa aminareo izay tsy azon ny tanan ireo mpanjakan i asyria",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 30,
+      "verse_number": 21,
+      "text": "Ary ny Zanak'Isiraely izay tany Jerosalema dia nitandrina hafitoana ny andro firavoravoana fihinanana ny mofo tsy misy masirasira tamin'ny fifaliana lehibe; ary ny Levita sy ny mpisorona nidera an'i Jehovah isan'andro sady nampaneno zavatra mafy faneno* ho an'i Jehovah. [*Na: fiderana]",
+      "text_plain": "ary ny zanak isiraely izay tany jerosalema dia nitandrina hafitoana ny andro firavoravoana fihinanana ny mofo tsy misy masirasira tamin ny fifaliana lehibe ary ny levita sy ny mpisorona nidera an i jehovah isan andro sady nampaneno zavatra mafy faneno ho an i jehovah na fiderana",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 31,
+      "verse_number": 1,
+      "text": "Ary nony vita izany rehetra izany, dia niainga nankany an-tanànan'ny Joda ny Isiraely rehetra izay tao ka nanorotoro ny tsangam-baton-tsampy sy nikapa ny Aseraha ary nandrava ny fitoerana avo sy ny alitara eran'i Joda sy Benjamina rehetra ary tany Efraima sy Manase koa ambara-paharavany azy rehetra. Dia samy nody ho any amin'ny taniny sy ny tanànany avy ny Zanak'Isiraely rehetra.",
+      "text_plain": "ary nony vita izany rehetra izany dia niainga nankany an tananan ny joda ny isiraely rehetra izay tao ka nanorotoro ny tsangam baton tsampy sy nikapa ny aseraha ary nandrava ny fitoerana avo sy ny alitara eran i joda sy benjamina rehetra ary tany efraima sy manase koa ambara paharavany azy rehetra dia samy nody ho any amin ny taniny sy ny tananany avy ny zanak isiraely rehetra",
+      "title": "Ny nandravan'ny olona ny zavatra momba ny sampy, sy ny nandaminan'i Hezekia ny fanompoam-pivavahana"
+    },
+    {
+      "book_id": 14,
+      "chapter": 31,
+      "verse_number": 5,
+      "text": "Ary nony niely izany teny izany, dia nitondra voaloham-bokatra betsaka ny Zanak'Isiraely, dia vary sy ranom-boaloboka sy diloilo sy tantely ary vokatry ny tany isan-karazany; ary ny fahafolon-karena tamin'ny zavatra rehetra, dia betsaka koa no nentiny.",
+      "text_plain": "ary nony niely izany teny izany dia nitondra voaloham bokatra betsaka ny zanak isiraely dia vary sy ranom boaloboka sy diloilo sy tantely ary vokatry ny tany isan karazany ary ny fahafolon karena tamin ny zavatra rehetra dia betsaka koa no nentiny",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 33,
+      "verse_number": 2,
+      "text": "Ary nanao izay ratsy eo imason'i Jehovah izy tahaka ny fahavetavetan'ny firenena izay noroahin'i Jehovah tsy ho eo anoloan'ny Zanak'Isiraely.",
+      "text_plain": "ary nanao izay ratsy eo imason i jehovah izy tahaka ny fahavetavetan ny firenena izay noroahin i jehovah tsy ho eo anoloan ny zanak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 33,
+      "verse_number": 7,
+      "text": "Ary izay sarin-javatra voasokitra momba ny sampy nataony dia napetrany tao an-tranon'Andriamanitra, izay nolazain'Andriamanitra tamin'i Davida sy Solomona zanany hoe : Eto amin'ity trano ity sy eto Jerosalema, izay nofidiko tamin'ny firenen'Isiraely rehetra, no hasiako ny anarako mandrakizay;",
+      "text_plain": "ary izay sarin javatra voasokitra momba ny sampy nataony dia napetrany tao an tranon andriamanitra izay nolazain andriamanitra tamin i davida sy solomona zanany hoe eto amin ity trano ity sy eto jerosalema izay nofidiko tamin ny firenen isiraely rehetra no hasiako ny anarako mandrakizay",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 33,
+      "verse_number": 9,
+      "text": "Kanjo nampivily ny Joda sy ny mponina tany Jerosalema Manase mba hanao ratsy mihoatra noho ny firenena izay naringan'i Jehovah tsy ho eo anoloan'ny Zanak'Isiraely.",
+      "text_plain": "kanjo nampivily ny joda sy ny mponina tany jerosalema manase mba hanao ratsy mihoatra noho ny firenena izay naringan i jehovah tsy ho eo anoloan ny zanak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 14,
+      "chapter": 34,
+      "verse_number": 33,
+      "text": "Ary Josia nanaisotra ny fahavetavetana rehetra tamin'ny tany rehetra izay an'ny Zanak'Isiraely sady nandidy izay rehetra teo amin'ny Isiraely hanompo an'i Jehovah Andriamaniny. Tamin'ny andro rehetra niainan'i Josia dia tsy mba niala tamin'ny fanarahana an'i Jehovah, Andriamanitry ny razany, ny olona.",
+      "text_plain": "ary josia nanaisotra ny fahavetavetana rehetra tamin ny tany rehetra izay an ny zanak isiraely sady nandidy izay rehetra teo amin ny isiraely hanompo an i jehovah andriamaniny tamin ny andro rehetra niainan i josia dia tsy mba niala tamin ny fanarahana an i jehovah andriamanitry ny razany ny olona",
+      "title": null
+    },
+    {
+      "book_id": 15,
+      "chapter": 2,
+      "verse_number": 30,
+      "text": "ny taranak'i Magbisy dia enina amby dimam-polo amby zato;",
+      "text_plain": "ny taranak i magbisy dia enina amby dimam polo amby zato",
+      "title": null
+    },
+    {
+      "book_id": 19,
+      "chapter": 32,
+      "verse_number": 6,
+      "text": "Izany no aoka hivavahan'ny tsara fanahy rehetra aminao amin'izay andro hahitana Anao; eny tokoa, na dia tondraka aza ny rano be, tsy hahatratra azy izany.",
+      "text_plain": "izany no aoka hivavahan ny tsara fanahy rehetra aminao amin izay andro hahitana anao eny tokoa na dia tondraka aza ny rano be tsy hahatratra azy izany",
+      "title": null
+    },
+    {
+      "book_id": 19,
+      "chapter": 50,
+      "verse_number": 1,
+      "text": "Salamo nataon'i Asafa. Andriamanitra Andriananahary, dia Jehovah, no miteny ka miantso ny tany hatramin'ny fiposahan'ny masoandro ka hatramin'ny filentehany.",
+      "text_plain": "salamo nataon i asafa andriamanitra andriananahary dia jehovah no miteny ka miantso ny tany hatramin ny fiposahan ny masoandro ka hatramin ny filentehany",
+      "title": "Ny amin'ny fivavahana marina sy ny fanatitra sitrak'Andriamanitra"
+    },
+    {
+      "book_id": 19,
+      "chapter": 96,
+      "verse_number": 7,
+      "text": "Ry firenena, manomeza an'i Jehovah, Eny, manomeza voninahitra sy hery ho an'i Jehovah.",
+      "text_plain": "ry firenena manomeza an i jehovah eny manomeza voninahitra sy hery ho an i jehovah",
+      "title": null
+    },
+    {
+      "book_id": 19,
+      "chapter": 132,
+      "verse_number": 9,
+      "text": "Aoka ny mpisoronao hitafy fahamarinana Ary aoka ny olonao masina hihoby.",
+      "text_plain": "aoka ny mpisoronao hitafy fahamarinana ary aoka ny olonao masina hihoby",
+      "title": null
+    },
+    {
+      "book_id": 23,
+      "chapter": 29,
+      "verse_number": 3,
+      "text": "Ary hanao fahirano anao Aho, ka hasiako miaramila hanemitra anao, ary hananganako manda hamelezana anao.",
+      "text_plain": "ary hanao fahirano anao aho ka hasiako miaramila hanemitra anao ary hananganako manda hamelezana anao",
+      "title": null
+    },
+    {
+      "book_id": 23,
+      "chapter": 33,
+      "verse_number": 5,
+      "text": "Manerinerina Jehovah, fa mitoetra any amin'ny avo Izy; Nofenoiny rariny sy fahamarinana Ziona.",
+      "text_plain": "manerinerina jehovah fa mitoetra any amin ny avo izy nofenoiny rariny sy fahamarinana ziona",
+      "title": null
+    },
+    {
+      "book_id": 24,
+      "chapter": 40,
+      "verse_number": 11,
+      "text": "Ary koa, ny Jiosy rehetra izay tany Moaba sy tany amin'ny taranak'i Amona sy tany Edoma ary izay tany amin'ny tany rehetra dia nahare fa ny mpanjakan'i Babylona efa namela ny Joda hisy sisa sady efa nanendry an'i Gedalia, zanak'i Ahikama, zanak'i Safana, ho mpanapaka azy,",
+      "text_plain": "ary koa ny jiosy rehetra izay tany moaba sy tany amin ny taranak i amona sy tany edoma ary izay tany amin ny tany rehetra dia nahare fa ny mpanjakan i babylona efa namela ny joda hisy sisa sady efa nanendry an i gedalia zanak i ahikama zanak i safana ho mpanapaka azy",
+      "title": null
+    },
+    {
+      "book_id": 24,
+      "chapter": 40,
+      "verse_number": 14,
+      "text": "ka nanao taminy hoe: Moa fantatrao tokoa va fa Balisa, mpanjakan'ny taranak'i Amona, dia naniraka an'Isimaela, zanak'i Netania, hamono anao? Nefa tsy nino azy Gedalia, zanak'i Ahikama.",
+      "text_plain": "ka nanao taminy hoe moa fantatrao tokoa va fa balisa mpanjakan ny taranak i amona dia naniraka an isimaela zanak i netania hamono anao nefa tsy nino azy gedalia zanak i ahikama",
+      "title": null
+    },
+    {
+      "book_id": 24,
+      "chapter": 51,
+      "verse_number": 33,
+      "text": "Fa izao no lazain'i Jehovah, Tompon'ny maro, Andriamanitry ny Isiraely: Babylona zanakavavy dia tahaka ny famoloana amin'ny andro anosena azy; Ary raha mbola tsy toy inona dia ho avy ny andro hijinjana azy.",
+      "text_plain": "fa izao no lazain i jehovah tompon ny maro andriamanitry ny isiraely babylona zanakavavy dia tahaka ny famoloana amin ny andro anosena azy ary raha mbola tsy toy inona dia ho avy ny andro hijinjana azy",
+      "title": null
+    },
+    {
+      "book_id": 26,
+      "chapter": 45,
+      "verse_number": 17,
+      "text": "Fa ny mpanjaka kosa no hiantoka ny fanatitra dorana sy ny fanatitra hohanina ary ny fanatitra aidina amin'ny andro firavoravoana sy ny voaloham-bolana ary ny Sabata, dia amin'ny fotoam-pivavahana rehetra tandreman'ny taranak'Isiraely; eny, izy no hiantota ny fanatitra noho ny ota sy ny fanatitra hohanina sy ny fanatitra dorana ary ny fanati-Pihavanana, mba hanaovana fanavotana ho an'ny taranak'Isiraely.",
+      "text_plain": "fa ny mpanjaka kosa no hiantoka ny fanatitra dorana sy ny fanatitra hohanina ary ny fanatitra aidina amin ny andro firavoravoana sy ny voaloham bolana ary ny sabata dia amin ny fotoam pivavahana rehetra tandreman ny taranak isiraely eny izy no hiantota ny fanatitra noho ny ota sy ny fanatitra hohanina sy ny fanatitra dorana ary ny fanati pihavanana mba hanaovana fanavotana ho an ny taranak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 40,
+      "chapter": 1,
+      "verse_number": 15,
+      "text": "ary Elihoda niteraka an'i Eleazara; ary Eleazara niteraka an'i Matana; ary Matana niteraka an'i Jakoba;",
+      "text_plain": "ary elihoda niteraka an i eleazara ary eleazara niteraka an i matana ary matana niteraka an i jakoba",
+      "title": null
+    },
+    {
+      "book_id": 40,
+      "chapter": 3,
+      "verse_number": 5,
+      "text": "Ary Jerosalema sy Jodia rehetra mbamin'ny tany rehetra amoron'i Jordana dia nivoaka nankany amin'i Jaona,",
+      "text_plain": "ary jerosalema sy jodia rehetra mbamin ny tany rehetra amoron i jordana dia nivoaka nankany amin i jaona",
+      "title": null
+    },
+    {
+      "book_id": 40,
+      "chapter": 10,
+      "verse_number": 6,
+      "text": "fa aleo mankany amin'ny ondry very amin'ny taranak'Isiraely.",
+      "text_plain": "fa aleo mankany amin ny ondry very amin ny taranak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 40,
+      "chapter": 15,
+      "verse_number": 24,
+      "text": "Ary Izy namaly ka nanao hoe: Tsy nirahina Aho afa-tsy ho amin'ny ondry very amin'ny taranak'Isiraely.",
+      "text_plain": "ary izy namaly ka nanao hoe tsy nirahina aho afa tsy ho amin ny ondry very amin ny taranak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 40,
+      "chapter": 19,
+      "verse_number": 28,
+      "text": "Fa hoy Jesoa taminy: Lazaiko aminareo marina tokoa fa rehefa mby amin'ny fanavaozana*, ka hipetraka amin'ny seza fiandrianan'ny voninahiny ny Zanak'olona, ianareo koa, izay nanaraka Ahy, dia hipetraka amin'ny seza fiandrianana roa ambin'ny folo ka hitsara ny firenen'Isiraely roa ambin'ny folo. [*Grika:fiteraham-baovao]",
+      "text_plain": "fa hoy jesoa taminy lazaiko aminareo marina tokoa fa rehefa mby amin ny fanavaozana ka hipetraka amin ny seza fiandrianan ny voninahiny ny zanak olona ianareo koa izay nanaraka ahy dia hipetraka amin ny seza fiandrianana roa ambin ny folo ka hitsara ny firenen isiraely roa ambin ny folo grika fiteraham baovao",
+      "title": null
+    },
+    {
+      "book_id": 40,
+      "chapter": 22,
+      "verse_number": 32,
+      "text": "Izaho no Andriamanitr'i Abrahama sy Andriamanitr'Isaka ary Andriamanitr'i Jakoba (Eksodosy 3:6)? Andriamanitra tsy an'ny maty, fa an'ny velona.",
+      "text_plain": "izaho no andriamanitr i abrahama sy andriamanitr isaka ary andriamanitr i jakoba eksodosy 3 6 andriamanitra tsy an ny maty fa an ny velona",
+      "title": null
+    },
+    {
+      "book_id": 41,
+      "chapter": 12,
+      "verse_number": 26,
+      "text": "Ka ny amin'ny hananganana ny maty, tsy mbola novakinareo va ny eo amin'ny bokin'i Mosesy, eo amin'ilay teny milaza ny Voaroy, dia ny nanaovan'Andriamanitra taminy hoe: Izaho no Andriamanitr'i Abrahama sy Andriamanitr'Isaka ary Andriamanitr'i Jakoba? (Eksodosy 3:6.)",
+      "text_plain": "ka ny amin ny hananganana ny maty tsy mbola novakinareo va ny eo amin ny bokin i mosesy eo amin ilay teny milaza ny voaroy dia ny nanaovan andriamanitra taminy hoe izaho no andriamanitr i abrahama sy andriamanitr isaka ary andriamanitr i jakoba eksodosy 3 6",
+      "title": null
+    },
+    {
+      "book_id": 42,
+      "chapter": 1,
+      "verse_number": 16,
+      "text": "Ary maro amin'ny Zanak'Isiraely no hampodiny amin'i Jehovah Andriamaniny.",
+      "text_plain": "ary maro amin ny zanak isiraely no hampodiny amin i jehovah andriamaniny",
+      "title": null
+    },
+    {
+      "book_id": 42,
+      "chapter": 1,
+      "verse_number": 54,
+      "text": "Niahy an'Isiraely mpanompony Izy, fa nahatsiaro ny famindram-pony",
+      "text_plain": "niahy an isiraely mpanompony izy fa nahatsiaro ny famindram pony",
+      "title": null
+    },
+    {
+      "book_id": 42,
+      "chapter": 3,
+      "verse_number": 34,
+      "text": "zanak'i Jakoba, zanak'Isaka, zanak'i Abrahama, zanak'i Tera, zanak'i Nahora,",
+      "text_plain": "zanak i jakoba zanak isaka zanak i abrahama zanak i tera zanak i nahora",
+      "title": null
+    },
+    {
+      "book_id": 42,
+      "chapter": 22,
+      "verse_number": 30,
+      "text": "mba hihinana sy hisotro eo amin'ny latabatro amin'ny fanjakako ianareo sady hipetraka ambony seza fiandrianana hitsara ny firenen'Isiraely roa ambin'ny folo,",
+      "text_plain": "mba hihinana sy hisotro eo amin ny latabatro amin ny fanjakako ianareo sady hipetraka ambony seza fiandrianana hitsara ny firenen isiraely roa ambin ny folo",
+      "title": null
+    },
+    {
+      "book_id": 43,
+      "chapter": 21,
+      "verse_number": 9,
+      "text": "Raha vao niakatra teo an-tanety izy, dia nahita afon'arina teo sy hazandrano teo amboniny ary mofo.",
+      "text_plain": "raha vao niakatra teo an tanety izy dia nahita afon arina teo sy hazandrano teo amboniny ary mofo",
+      "title": null
+    },
+    {
+      "book_id": 44,
+      "chapter": 2,
+      "verse_number": 36,
+      "text": "Koa aoka ho fantatry ny taranak'Isiraely rehetra marimarina fa iny Jesoa nohomboanareo tamin'ny hazo fijaliana iny dia efa nataon'Andriamanitra ho Tompo sy Kristy.",
+      "text_plain": "koa aoka ho fantatry ny taranak isiraely rehetra marimarina fa iny jesoa nohomboanareo tamin ny hazo fijaliana iny dia efa nataon andriamanitra ho tompo sy kristy",
+      "title": null
+    },
+    {
+      "book_id": 44,
+      "chapter": 5,
+      "verse_number": 21,
+      "text": "Ary rehefa nandre izany izy, dia niditra maraina koa teo an-kianjan'ny tempoly ka nampianatra. Ary rehefa tonga ny mpisoronabe sy ny namany, dia nampiangona ny Synedriona sy ny loholona rehetra tamin'ny Zanak'Isiraely izy ka naniraka nankao amin'ny tranomaizina haka ny Apostoly.",
+      "text_plain": "ary rehefa nandre izany izy dia niditra maraina koa teo an kianjan ny tempoly ka nampianatra ary rehefa tonga ny mpisoronabe sy ny namany dia nampiangona ny synedriona sy ny loholona rehetra tamin ny zanak isiraely izy ka naniraka nankao amin ny tranomaizina haka ny apostoly",
+      "title": null
+    },
+    {
+      "book_id": 44,
+      "chapter": 7,
+      "verse_number": 23,
+      "text": "Ary rehefa ho efa-polo taona izy, dia velona tao am-pony ny hamangy ny Zanak'Isiraely, rahalahiny",
+      "text_plain": "ary rehefa ho efa polo taona izy dia velona tao am pony ny hamangy ny zanak isiraely rahalahiny",
+      "title": null
+    },
+    {
+      "book_id": 44,
+      "chapter": 7,
+      "verse_number": 37,
+      "text": "Izany no Mosesy izay nilaza tamin'ny Zanak'Isiraely hoe: Mpaminany no hatsangan'Andriamanitra ho anareo avy amin'ny rahalahinareo, tahaka ahy (Deoteronomia 18:15).",
+      "text_plain": "izany no mosesy izay nilaza tamin ny zanak isiraely hoe mpaminany no hatsangan andriamanitra ho anareo avy amin ny rahalahinareo tahaka ahy deoteronomia 18 15",
+      "title": null
+    },
+    {
+      "book_id": 44,
+      "chapter": 7,
+      "verse_number": 42,
+      "text": "Fa Andriamanitra nihodina, dia nanolotra azy hanompo izay eny amin'ny lanitra; araka ny voasoratra eo amin'ny bokin'ny mpaminany hoe: Moa nanatitra zavatra voavono sy fanatitra ho Ahy efa-polo taona tany an'efitra va ianareo, ry taranak'Isiraely?",
+      "text_plain": "fa andriamanitra nihodina dia nanolotra azy hanompo izay eny amin ny lanitra araka ny voasoratra eo amin ny bokin ny mpaminany hoe moa nanatitra zavatra voavono sy fanatitra ho ahy efa polo taona tany an efitra va ianareo ry taranak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 44,
+      "chapter": 9,
+      "verse_number": 15,
+      "text": "Fa hoy ny Tompo taminy: Mandehana, fa fanaka voafidy izy ho fitondrana ny anarako eo anatrehan'ny jentilisa sy ny mpanjaka ary ny Zanak'Isiraely;",
+      "text_plain": "fa hoy ny tompo taminy mandehana fa fanaka voafidy izy ho fitondrana ny anarako eo anatrehan ny jentilisa sy ny mpanjaka ary ny zanak isiraely",
+      "title": null
+    },
+    {
+      "book_id": 44,
+      "chapter": 10,
+      "verse_number": 36,
+      "text": "Ianareo mahalala ny teny izay nampitondrainy ho amin'ny Zanak'Isiraely, mitory teny soa milaza fiadanana amin'ny alalan'i Jesoa Kristy (Izy no Tompon'izao rehetra izao),",
+      "text_plain": "ianareo mahalala ny teny izay nampitondrainy ho amin ny zanak isiraely mitory teny soa milaza fiadanana amin ny alalan i jesoa kristy izy no tompon izao rehetra izao",
+      "title": null
+    },
+    {
+      "book_id": 45,
+      "chapter": 9,
+      "verse_number": 7,
+      "text": "Ary na dia taranak'i Abrahama aza ireo, tsy dia ary zanany avokoa; fa avy amin'Isaka no hantsoina izay taranaka ho anao (Genesisy 21:12).",
+      "text_plain": "ary na dia taranak i abrahama aza ireo tsy dia ary zanany avokoa fa avy amin isaka no hantsoina izay taranaka ho anao genesisy 21 12",
+      "title": null
+    },
+    {
+      "book_id": 45,
+      "chapter": 9,
+      "verse_number": 10,
+      "text": "Ary tsy izany ihany, fa Rebeka koa dia nanan'anaka tamin'ny anankiray, dia tamin'Isaka razantsika;",
+      "text_plain": "ary tsy izany ihany fa rebeka koa dia nanan anaka tamin ny anankiray dia tamin isaka razantsika",
+      "title": null
+    },
+    {
+      "book_id": 45,
+      "chapter": 9,
+      "verse_number": 27,
+      "text": "Ary Isaia milaza ny amin'ny Isiraely hoe: Na dia toy ny fasika any amin'ny ranomasina aza ny isan'ny Zanak'Isiraely, dia izay sisa ihany no hovonjena;",
+      "text_plain": "ary isaia milaza ny amin ny isiraely hoe na dia toy ny fasika any amin ny ranomasina aza ny isan ny zanak isiraely dia izay sisa ihany no hovonjena",
+      "title": null
+    },
+    {
+      "book_id": 48,
+      "chapter": 3,
+      "verse_number": 22,
+      "text": "Fa ny Soratra Masina efa nanidy azy rehetra teo amin'ny fahotana, mba homena ny mino ny teny fikasana noho ny finoana an'i Jesoa Kristy.",
+      "text_plain": "fa ny soratra masina efa nanidy azy rehetra teo amin ny fahotana mba homena ny mino ny teny fikasana noho ny finoana an i jesoa kristy",
+      "title": null
+    },
+    {
+      "book_id": 48,
+      "chapter": 4,
+      "verse_number": 27,
+      "text": "Fa voasoratra hoe: Mifalia, ramomba, izay tsy miteraka; Miantsoa sy minanananà, ianao izay tsy mbola mihetsi-jaza; Fa ny zanaky ny mpitondratena dia maro noho ny an'ny manam-bady (Isaia 54:1).",
+      "text_plain": "fa voasoratra hoe mifalia ramomba izay tsy miteraka miantsoa sy minananana ianao izay tsy mbola mihetsi jaza fa ny zanaky ny mpitondratena dia maro noho ny an ny manam bady isaia 54 1",
+      "title": null
+    },
+    {
+      "book_id": 48,
+      "chapter": 4,
+      "verse_number": 28,
+      "text": "Fa isika, ry rahalahy, dia zanaky ny teny fikasana tahaka an'Isaka.",
+      "text_plain": "fa isika ry rahalahy dia zanaky ny teny fikasana tahaka an isaka",
+      "title": null
+    },
+    {
+      "book_id": 50,
+      "chapter": 3,
+      "verse_number": 5,
+      "text": "fa voafora tamin'ny andro fahavalo aho, avy amin'ny fototr'Isiraely, dia avy amin'ny firenen'i Benjamina; Hebreo sady avy amin'ny Hebreo aho; araka ny lalàna, dia Fariseo;",
+      "text_plain": "fa voafora tamin ny andro fahavalo aho avy amin ny fototr isiraely dia avy amin ny firenen i benjamina hebreo sady avy amin ny hebreo aho araka ny lalana dia fariseo",
+      "title": null
+    },
+    {
+      "book_id": 52,
+      "chapter": 1,
+      "verse_number": 3,
+      "text": "sady tsy mitsahatra mahatsiaro ny asanareo amin'ny finoana sy ny fikelezanareo aina amin'ny fitiavana ary ny faharetanareo amin'ny fanantenana an'i Jesoa Kristy Tompontsika eo imason'Andriamanitra Raintsika;",
+      "text_plain": "sady tsy mitsahatra mahatsiaro ny asanareo amin ny finoana sy ny fikelezanareo aina amin ny fitiavana ary ny faharetanareo amin ny fanantenana an i jesoa kristy tompontsika eo imason andriamanitra raintsika",
+      "title": null
+    },
+    {
+      "book_id": 58,
+      "chapter": 8,
+      "verse_number": 8,
+      "text": "Fa manome tsiny ny olona Izy manao hoe: \"Indro, avy ny andro, hoy Jehovah, Izay hanaovako fanekena vaovao amin'ny taranak'Isiraely sy ny taranak'i Joda,",
+      "text_plain": "fa manome tsiny ny olona izy manao hoe indro avy ny andro hoy jehovah izay hanaovako fanekena vaovao amin ny taranak isiraely sy ny taranak i joda",
+      "title": null
+    },
+    {
+      "book_id": 58,
+      "chapter": 8,
+      "verse_number": 10,
+      "text": "Fa izao no fanekena hataoko amin'ny taranak'Isiraely, Rehefa afaka izany andro izany, hoy Jehovah: Dia hataoko ao an-tsainy ny lalàko, Sady hosoratako ao am-pony, Ary Izaho ho Andriamaniny, ary izy ho oloko;",
+      "text_plain": "fa izao no fanekena hataoko amin ny taranak isiraely rehefa afaka izany andro izany hoy jehovah dia hataoko ao an tsainy ny lalako sady hosoratako ao am pony ary izaho ho andriamaniny ary izy ho oloko",
+      "title": null
+    },
+    {
+      "book_id": 58,
+      "chapter": 9,
+      "verse_number": 14,
+      "text": "mainka fa ny ran'i Kristy, Izay nanatitra ny tenany tsy manan-tsiny ho an'Andriamanitra, tamin'ny alalan'ny Fanahy mandrakizay, no hahadio ny fieritreretanareo ho afaka amin'ny asa maty mba hanompoanareo an'Andriamanitra velona.",
+      "text_plain": "mainka fa ny ran i kristy izay nanatitra ny tenany tsy manan tsiny ho an andriamanitra tamin ny alalan ny fanahy mandrakizay no hahadio ny fieritreretanareo ho afaka amin ny asa maty mba hanompoanareo an andriamanitra velona",
+      "title": null
+    },
+    {
+      "book_id": 58,
+      "chapter": 11,
+      "verse_number": 9,
+      "text": "Finoana no nivahiniany tany amin'ny tany nolazain'ny teny fikasana, toy ny any an-tanin'olona, mitoetra an-day, mbamin'Isaka sy Jakoba, mpiara-mandova izany teny fikasana izany aminy;",
+      "text_plain": "finoana no nivahiniany tany amin ny tany nolazain ny teny fikasana toy ny any an tanin olona mitoetra an day mbamin isaka sy jakoba mpiara mandova izany teny fikasana izany aminy",
+      "title": null
+    },
+    {
+      "book_id": 58,
+      "chapter": 11,
+      "verse_number": 17,
+      "text": "Finoana no nanateran'i Abrahama an'Isaka, raha nizahan-toetra izy; eny, ny zananilahy tokana no naterin'ilay efa nandray tsara ny teny fikasana,",
+      "text_plain": "finoana no nanateran i abrahama an isaka raha nizahan toetra izy eny ny zananilahy tokana no naterin ilay efa nandray tsara ny teny fikasana",
+      "title": null
+    },
+    {
+      "book_id": 58,
+      "chapter": 11,
+      "verse_number": 20,
+      "text": "Finoana no nitsofan'Isaka rano an'i Jakoba sy Esao ny amin'ny zavatra ho avy.",
+      "text_plain": "finoana no nitsofan isaka rano an i jakoba sy esao ny amin ny zavatra ho avy",
+      "title": null
+    },
+    {
+      "book_id": 58,
+      "chapter": 11,
+      "verse_number": 22,
+      "text": "Finoana no nilazan'i Josefa ny fialan'ny Zanak'Isiraely, rehefa ho faty izy, sy nanafarany ny amin'ny taolany.",
+      "text_plain": "finoana no nilazan i josefa ny fialan ny zanak isiraely rehefa ho faty izy sy nanafarany ny amin ny taolany",
+      "title": null
+    },
+    {
+      "book_id": 59,
+      "chapter": 2,
+      "verse_number": 21,
+      "text": "Tsy nohamarinina tamin'ny asa va Abrahama razantsika tamin'ny nanaterany an'Isaka zanany teo ambonin'ny alitara?",
+      "text_plain": "tsy nohamarinina tamin ny asa va abrahama razantsika tamin ny nanaterany an isaka zanany teo ambonin ny alitara",
+      "title": null
+    },
+    {
+      "book_id": 65,
+      "chapter": 1,
+      "verse_number": 25,
+      "text": "ho an'Andriamanitra tokana, Mpamonjy antsika, amin'ny alalan'i Jesoa Kristy Tompontsika anie, ny voninahitra sy ny fahalehibiazana, ny fanjakana sy ny fahefana hatramin'ny taloha indrindra sy ankehitriny ary mandrakizay. Amena.",
+      "text_plain": "ho an andriamanitra tokana mpamonjy antsika amin ny alalan i jesoa kristy tompontsika anie ny voninahitra sy ny fahalehibiazana ny fanjakana sy ny fahefana hatramin ny taloha indrindra sy ankehitriny ary mandrakizay amena",
+      "title": null
+    },
+    {
+      "book_id": 66,
+      "chapter": 2,
+      "verse_number": 14,
+      "text": "Kanefa manan-teny kely aminao Aho, fa misy eo aminao izay mitàna ny fampianaran'i Balama, ilay nanome fo an'i Balaka hanisy fahatafintohinana teo anoloan'ny Zanak'Isiraely, hihinana hena naterina tamin'ny sampy sy hijangajanga.",
+      "text_plain": "kanefa manan teny kely aminao aho fa misy eo aminao izay mitana ny fampianaran i balama ilay nanome fo an i balaka hanisy fahatafintohinana teo anoloan ny zanak isiraely hihinana hena naterina tamin ny sampy sy hijangajanga",
+      "title": null
+    },
+    {
+      "book_id": 66,
+      "chapter": 7,
+      "verse_number": 4,
+      "text": "Ary nahare ny isan'izay voaisy tombo-kase aho: efatra arivo amby efatra alina amby iray hetsy no voaisy tombo-kase avy tamin'ny firenen'ny Zanak'Isiraely rehetra.",
+      "text_plain": "ary nahare ny isan izay voaisy tombo kase aho efatra arivo amby efatra alina amby iray hetsy no voaisy tombo kase avy tamin ny firenen ny zanak isiraely rehetra",
+      "title": null
+    },
+    {
+      "book_id": 66,
+      "chapter": 21,
+      "verse_number": 12,
+      "text": "ary manana mànda lehibe sady avo sy vavahady roa ambin'ny folo izy, ary eo amin'ny vavahady dia misy anjely roa ambin'ny folo, ary misy anarana voasoratra eo, dia ny an'ny firenena roa ambin'ny folo amin'ny Zanak'Isiraely;",
+      "text_plain": "ary manana manda lehibe sady avo sy vavahady roa ambin ny folo izy ary eo amin ny vavahady dia misy anjely roa ambin ny folo ary misy anarana voasoratra eo dia ny an ny firenena roa ambin ny folo amin ny zanak isiraely",
+      "title": null
+    }
+  ],
+  "books": []
+}
