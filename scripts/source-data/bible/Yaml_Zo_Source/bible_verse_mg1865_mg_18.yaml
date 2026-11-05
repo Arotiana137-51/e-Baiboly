@@ -885,7 +885,7 @@ mg1865::mg_18::6::2:
   verse_number: 2
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Enga anie ka holanjaina tokoa ny fahasosorako, ka hampifandaniaina amin''ny mizana izy sy ny fahoriako!'
+  verse_text: 'Enga anie ka holanjaina tokoa ny fahasosorako, ka hampifandanjaina amin''ny mizana izy sy ny fahoriako!'
 mg1865::mg_18::6::3:
   verse_version: mg1865
   verse_book: mg_18
@@ -3613,7 +3613,7 @@ mg1865::mg_18::19::24:
   verse_number: 24
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Enga anie ka ho voasoratra amin''ny vy fanoratana sady voasy firaka eo amin''ny vatolampy ho mandrakizay izy!'
+  verse_text: 'Enga anie ka ho voasoratra amin''ny vy fanoratana sady voaisy firaka eo amin''ny vatolampy ho mandrakizay izy!'
 mg1865::mg_18::19::25:
   verse_version: mg1865
   verse_book: mg_18

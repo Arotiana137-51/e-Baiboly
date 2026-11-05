@@ -1,0 +1,23 @@
+{
+  "version": 20261105,
+  "appliesTo": "hymns",
+  "hymns": [],
+  "hymnVerses": [
+    {
+      "hymn_id": "ffpm_407",
+      "verse_number": 1,
+      "heading": null,
+      "text": "O ry Raiko izay malala,\nTonga aho zanakao,\nIzay nania, fa adala, \nKa mifona Aminao ;\nMamelà ny fahotako\nTeo anatrehanao ;\nAry ny fahadalako\nAza mba tsarovanao !",
+      "text_plain": "o ry raiko izay malala tonga aho zanakao izay nania fa adala ka mifona aminao mamela ny fahotako teo anatrehanao ary ny fahadalako aza mba tsarovanao",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ff_53",
+      "verse_number": 1,
+      "heading": null,
+      "text": "Tsy ho toy izao, Jesoa\nity mpanomponao\nRaha toa tsy tao tokoa\nny fahasoavanao\n'Zay nanohana \n'lay hery kely\ntao am-poko\nNahazoako mba nanao\nasam-panompoako.",
+      "text_plain": "tsy ho toy izao jesoa ity mpanomponao raha toa tsy tao tokoa ny fahasoavanao zay nanohana lay hery kely tao am poko nahazoako mba nanao asam panompoako",
+      "is_chorus": 0
+    }
+  ]
+}
