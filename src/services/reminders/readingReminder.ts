@@ -5,6 +5,7 @@ import notifee, {
   AndroidImportance,
   AndroidStyle,
   AndroidVisibility,
+  AuthorizationStatus,
   RepeatFrequency,
   TriggerType,
   type NotificationIOS,
@@ -411,9 +412,16 @@ export const deleteReminderSlot = async (slotId: string): Promise<void> => {
  * already re-arm each trigger after it fires and after device reboot; this
  * closes the remaining gap where Android force-stop or an aggressive OEM
  * battery manager silently drops a pending alarm with no signal to JS.
+ *
+ * Skipped while notifications are off: iOS 27 rejects a notification added
+ * without permission ("Source is not authorized", UNErrorDomain 2003) where
+ * older versions dropped it silently. Turning them off is the user's choice,
+ * not a failure; the first launch after they turn them back on re-arms.
  */
 export const ensureRemindersScheduled = async (): Promise<void> => {
   try {
+    const {authorizationStatus} = await notifee.getNotificationSettings();
+    if (authorizationStatus < AuthorizationStatus.AUTHORIZED) return;
     const slots = await getReminderSlots();
     for (const slot of slots) {
       if (slot.enabled) {
