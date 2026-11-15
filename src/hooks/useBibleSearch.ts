@@ -12,6 +12,11 @@ import {
   containsJesusNameVariant,
   makeJesusNameLikeParams,
 } from '../utils/searchSynonyms';
+import {
+  LOOSE_CANDIDATE_LIMIT,
+  makeLooseFtsQuery,
+  rankLooseMatches,
+} from '../utils/looseVerseMatch';
 
 type BibleCandidateRow = {
   book_id: number;
@@ -56,6 +61,48 @@ const likeWhereFor = (params: string[], column = 'v.text'): string =>
   params.length === 1
     ? `${column} LIKE ?`
     : `(${params.map(() => `${column} LIKE ?`).join(' OR ')})`;
+
+// The last try for a phrase that found nothing word for word: the verses
+// holding most of it (see looseVerseMatch). Within one book when `bookId` is
+// given. Lower score = better, as with bm25. Empty on any failure: this only
+// ever adds results.
+const findLooseMatches = async (
+  normalizedQuery: string,
+  bookId?: number,
+): Promise<BibleCandidateRow[]> => {
+  const match = makeLooseFtsQuery(normalizedQuery);
+  if (!match) return [];
+  try {
+    const {rows} = await bibleDatabaseService.executeQuerySilent<BibleCandidateRow>(
+      `
+        SELECT
+          v.book_id,
+          b.name as book_name,
+          b.testament as testament,
+          v.chapter,
+          v.verse_number,
+          v.text,
+          bm25(VersesFts) as score
+        FROM VersesFts f
+        JOIN Verses v ON v.id = f.rowid
+        JOIN Books b ON b.id = v.book_id
+        WHERE VersesFts MATCH ?${bookId != null ? ' AND v.book_id = ?' : ''}
+        ORDER BY score ASC
+        LIMIT ${LOOSE_CANDIDATE_LIMIT}
+      `,
+      bookId != null ? [match, bookId] : [match],
+    );
+    // The share of the phrase held comes first; bm25 (small and negative)
+    // only orders verses holding the same share.
+    return rankLooseMatches(normalizedQuery, rows).map(({coverage, ...row}) => ({
+      ...row,
+      score: -coverage * 1000 + (typeof row.score === 'number' ? row.score : 0),
+    }));
+  } catch (e: unknown) {
+    console.warn('Loose verse search unavailable:', e instanceof Error ? e.message : e);
+    return [];
+  }
+};
 
 export const useBibleSearch = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -138,6 +185,11 @@ export const useBibleSearch = () => {
             )
           ).rows as BibleCandidateRow[];
         }
+      }
+
+      // Still nothing: a phrase remembered not quite word for word.
+      if (candidateRows.length === 0 && !matchWholeWord) {
+        candidateRows = await findLooseMatches(normalizedQuery);
       }
 
       // Group by book, keeping the BEST-scoring verse per book (lower bm25 /
@@ -274,6 +326,13 @@ export const useBibleSearch = () => {
             )
           ).rows as any[];
         }
+      }
+
+      // Same last try as searchBible, kept in reading order like the rest.
+      if (rows.length === 0 && !matchWholeWord) {
+        rows = (await findLooseMatches(normalizedQuery, bookId)).sort(
+          (a, b) => a.chapter - b.chapter || a.verse_number - b.verse_number,
+        );
       }
 
       const verseResults: BibleVerseResult[] = [];
